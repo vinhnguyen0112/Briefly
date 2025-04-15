@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "CocCoc_ISAL",
+  "version": "1.0",
+  "description": "Web extension for Capstone2025 by ISAL",
+  "permissions": ["activeTab", "scripting"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["content.js"]
+    }
+  ]
+}
