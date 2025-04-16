@@ -1,9 +1,9 @@
-let sidebarInjected = false;
-
 // create and inject the sidebar UI
 function injectSidebar() {
-  if (sidebarInjected) return;
-  sidebarInjected = true;
+  // only inject if not already done
+  // differentiate with window sidebar
+  if (window.isalSidebarInjected) return;
+  window.isalSidebarInjected = true;
   
   console.log("ISAL Assistant: Injecting sidebar");
   
@@ -103,7 +103,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   
   if (message.action === 'toggle_sidebar') {
     // ensure sidebar is injected first
-    if (!sidebarInjected) {
+    if (!window.isalSidebarInjected) {
       injectSidebar();
     }
     toggleSidebar();
