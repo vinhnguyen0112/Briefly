@@ -1,19 +1,25 @@
 {
   "manifest_version": 3,
-  "name": "CocCoc_ISAL",
+  "name": "ISAL Assistant",
   "version": "1.0",
-  "description": "Web extension for Capstone2025 by ISAL",
-  "permissions": ["activeTab", "scripting"],
+  "description": "ISAL very own Browser Assistant",
+  "permissions": ["activeTab", "scripting", "storage", "tabs"],
+  "host_permissions": ["<all_urls>"],
   "background": {
     "service_worker": "background.js"
   },
-  "action": {
-    "default_popup": "popup.html"
-  },
+  "action": {},
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["content.js"],
+      "css": ["styles/content.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["sidebar.html", "styles/*", "scripts/*", "popup.html"],
+      "matches": ["<all_urls>"]
     }
   ]
 }
