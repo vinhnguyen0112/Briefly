@@ -69,6 +69,15 @@ export async function getConfig() {
   });
 }
 
+export async function saveConfig(config) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ 'config': config }, () => {
+      console.log('CocBot: Config saved', config);
+      resolve(config);
+    });
+  });
+}
+
 // Notes management
 export async function getNotesForUrl(url) {
   return new Promise((resolve) => {

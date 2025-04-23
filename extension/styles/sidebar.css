@@ -1089,4 +1089,13 @@ body.sidebar-resizing * {
 
 .button-secondary:hover {
   background-color: var(--border);
+}
+
+.cocbot-title {
+  cursor: pointer;
+  transition: color 0.2s ease;
+}
+
+.cocbot-title:hover {
+  color: var(--primary-color, #4a86e8);
 } 

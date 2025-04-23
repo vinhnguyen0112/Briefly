@@ -16,8 +16,26 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // load config
   getConfig().then(config => {
-    window.currentConfig = config;
-    console.log('CocBot: Got the settings', config);
+    if (config) {
+      window.currentConfig = config;
+      console.log('CocBot: Got the settings', config);
+    } else {
+      // Set default config if none exists
+      window.currentConfig = {
+        personality: 'Be friendly and concise, and stick to the facts in the content.',
+        maxWordCount: 150,
+        detailLevel: 'medium'
+      };
+      console.log('CocBot: Using default settings', window.currentConfig);
+    }
+  }).catch(error => {
+    console.error('CocBot: Error loading config', error);
+    // Set default config on error
+    window.currentConfig = {
+      personality: 'Be friendly and concise, and stick to the facts in the content.',
+      maxWordCount: 150,
+      detailLevel: 'medium'
+    };
   });
   
   // set width from last time

@@ -7,6 +7,9 @@ export const elements = {
   contentViewerScreen: document.getElementById('content-viewer-screen'),
   notesScreen: document.getElementById('notes-screen'),
   
+  // Header elements
+  cocbotTitle: document.getElementById('cocbot-title'),
+  
   // Content viewer elements
   contentDisplay: document.getElementById('content-display'),
   

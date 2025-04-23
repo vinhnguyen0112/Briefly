@@ -51,6 +51,11 @@ export async function processUserQuery(query) {
 // openai api communication
 export async function callOpenAI(apiKey, messages) {
   try {
+    // Estimate max tokens based on config maxWordCount if available
+    // Approximate tokens to be ~1.3x the number of words
+    const config = state.currentConfig || {};
+    const maxTokens = config.maxWordCount ? Math.ceil(config.maxWordCount * 1.3) : 1500;
+    
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -61,7 +66,7 @@ export async function callOpenAI(apiKey, messages) {
         model: 'gpt-3.5-turbo',
         messages: messages,
         temperature: 0.7,
-        max_tokens: 1500
+        max_tokens: maxTokens
       })
     });
     
@@ -89,12 +94,39 @@ export async function callOpenAI(apiKey, messages) {
 }
 
 export async function constructPromptWithPageContent(query, pageContent, history, config) {
+  // Set default values if config is missing
+  const maxWordCount = config?.maxWordCount || 150;
+  const responseStyle = config?.responseStyle || 'conversational';
+  
+  // Customize instructions based on response style
+  let styleInstructions = '';
+  switch(responseStyle) {
+    case 'conversational':
+      styleInstructions = `Use a friendly, conversational tone with everyday language.
+Explain concepts in simple terms that are easy to understand.
+Keep your response around ${maxWordCount} words.`;
+      break;
+    case 'educational':
+      styleInstructions = `Present information in a structured, educational format.
+Include clear explanations with examples where helpful.
+Organize your response with logical flow and keep it around ${maxWordCount} words.`;
+      break;
+    case 'technical':
+      styleInstructions = `Use precise terminology and provide thorough analysis.
+Include technical details appropriate for someone with domain knowledge.
+Maintain accuracy and depth while keeping your response around ${maxWordCount} words.`;
+      break;
+    default:
+      styleInstructions = `Keep your response around ${maxWordCount} words.`;
+  }
+  
   const systemPrompt = {
     role: 'system',
     content: `You are a helpful assistant that helps users understand web page content.
 You have access to the content of the page the user is currently viewing, which is provided below.
 Answer the user's questions based on this content. If the answer is not in the content, say so.
-${config?.personality || 'Be friendly and concise, and stick to the facts in the content.'}`
+${config?.personality || 'Be helpful and informative, focusing on the content.'}
+${styleInstructions}`
   };
   
   let contextMessage = {
