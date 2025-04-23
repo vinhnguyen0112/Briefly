@@ -197,6 +197,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Support direct extraction request from background script
     const content = extractPageContent();
     sendResponse({ success: true, content: content });
+  } else if (message.action === 'url_changed') {
+    console.log("CocBot: URL change detected:", message.url);
+    
+    // If sidebar is active, notify it to refresh content
+    const iframe = document.getElementById('isal-sidebar-iframe');
+    const container = document.getElementById('isal-sidebar-container');
+    
+    // Only update if the sidebar is currently open
+    if (iframe && container && container.classList.contains('active')) {
+      console.log("CocBot: Notifying sidebar to refresh content for new URL");
+      
+      iframe.contentWindow.postMessage({
+        action: 'refresh_page_content',
+        url: message.url
+      }, '*');
+    }
+    
+    sendResponse({ success: true });
   }
   // Keep the message channel open for the async response in toggle_sidebar
   return true; 
@@ -208,3 +226,57 @@ if (document.readyState === 'loading') {
 } else {
   injectSidebar();
 }
+
+// Track URL changes in single-page applications (SPA) that use History API
+let lastUrl = location.href;
+
+// Set up an observer to detect URL changes
+const urlObserver = new MutationObserver(() => {
+  if (lastUrl !== location.href) {
+    console.log('CocBot: URL change detected via History API navigation');
+    const newUrl = location.href;
+    
+    // Handle URL change in the same way as a normal navigation
+    const iframe = document.getElementById('isal-sidebar-iframe');
+    const container = document.getElementById('isal-sidebar-container');
+    
+    // Only update if the sidebar is currently open
+    if (iframe && container && container.classList.contains('active')) {
+      console.log("CocBot: Notifying sidebar to refresh content for new URL (SPA navigation)");
+      
+      iframe.contentWindow.postMessage({
+        action: 'refresh_page_content',
+        url: newUrl
+      }, '*');
+    }
+    
+    lastUrl = newUrl;
+  }
+});
+
+// Start observing
+urlObserver.observe(document, { subtree: true, childList: true });
+
+// Also handle popstate events (back/forward navigation)
+window.addEventListener('popstate', () => {
+  if (lastUrl !== location.href) {
+    console.log('CocBot: URL change detected via popstate event');
+    const newUrl = location.href;
+    
+    // Handle URL change in the same way as a normal navigation
+    const iframe = document.getElementById('isal-sidebar-iframe');
+    const container = document.getElementById('isal-sidebar-container');
+    
+    // Only update if the sidebar is currently open
+    if (iframe && container && container.classList.contains('active')) {
+      console.log("CocBot: Notifying sidebar to refresh content for popstate navigation");
+      
+      iframe.contentWindow.postMessage({
+        action: 'refresh_page_content',
+        url: newUrl
+      }, '*');
+    }
+    
+    lastUrl = newUrl;
+  }
+});

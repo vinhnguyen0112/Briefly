@@ -111,6 +111,25 @@ chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
       tabId: tabId 
     });
     isProcessingClick = false;
+    
+    // Clear cached content when URL changes
+    if (changeInfo.url) {
+      console.log('CocBot: URL changed, clearing cached content');
+      popupContent = null;
+      
+      // Notify sidebar to refresh content for the new page
+      try {
+        chrome.tabs.sendMessage(tabId, { 
+          action: 'url_changed',
+          url: changeInfo.url
+        }).catch(error => {
+          // Ignore errors; the content script might not be injected yet
+          console.log('CocBot: Could not notify sidebar of URL change (might not be open)');
+        });
+      } catch (e) {
+        // Ignore errors; the content script might not be injected yet
+      }
+    }
   }
 });
 
@@ -340,10 +359,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === 'extract_page_content') {
-    console.log('CocBot: Received extract_page_content request');
+    console.log('CocBot: Received extract_page_content request', message.forceRefresh ? '(forced refresh)' : '');
     
-    // Check if we have cached content first
-    if (popupContent) {
+    // Check if we have cached content first and don't need to force refresh
+    if (popupContent && !message.forceRefresh) {
       console.log('CocBot: Using cached content');
       sendResponse({ success: true, content: popupContent });
       

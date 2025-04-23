@@ -1,7 +1,7 @@
 // ui interaction stuff
 import { elements } from './dom-elements.js';
 import { state, saveSidebarWidth } from './state.js';
-import { renderContentInSidebar, requestPageContent } from './content-handler.js';
+import { renderContentInSidebar, requestPageContent, updateContentStatus } from './content-handler.js';
 
 // close all panels
 export function closeAllPanels() {
@@ -226,6 +226,36 @@ export function handleContentMessage(message) {
       if (state.isNotesOpen && state.pageContent.url !== state.currentPageUrl) {
         state.currentPageUrl = state.pageContent.url;
         openNotesPanel();
+      }
+      break;
+      
+    case 'refresh_page_content':
+      console.log('CocBot: URL changed, requesting fresh content');
+      
+      // Reset content extraction state
+      state.contentFetchAttempts = 0;
+      state.pageContent = null;
+      
+      // Request fresh content
+      requestPageContent();
+      
+      // If in welcome mode, reset any generated questions
+      if (state.welcomeMode) {
+        state.generatedQuestions = null;
+        const questionsContainer = document.querySelector('.generated-questions');
+        if (questionsContainer) {
+          questionsContainer.style.display = 'none';
+        }
+      }
+      
+      // Show loading indicator if content viewer is open
+      if (elements.contentViewerScreen.style.display !== 'none') {
+        elements.contentDisplay.innerHTML = `
+          <div class="content-viewer-loading">
+            <div class="spinner"></div>
+            <p>Loading content for new page...</p>
+          </div>
+        `;
       }
       break;
   }

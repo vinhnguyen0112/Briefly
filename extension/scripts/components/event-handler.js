@@ -303,7 +303,7 @@ function setupQuickActions() {
           query = 'What are the key points of this page?';
           break;
         case 'explain':
-          query = 'Explain the content of this page ELI5.';
+          query = 'Explain the content of this page as if I\'m a beginner.';
           break;
       }
       

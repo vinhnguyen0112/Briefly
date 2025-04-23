@@ -18,7 +18,26 @@ export function requestPageContent() {
   // track attempts
   state.contentFetchAttempts++;
   
-  chrome.runtime.sendMessage({ action: 'extract_page_content' }, (response) => {
+  // Show content loading message in the content viewer if it's open
+  if (elements.contentViewerScreen.style.display !== 'none') {
+    elements.contentDisplay.innerHTML = `
+      <div class="content-viewer-loading">
+        <div class="spinner"></div>
+        <p>Refreshing page content...</p>
+      </div>
+    `;
+  }
+  
+  // Clear the previous content to force a fresh extraction
+  state.pageContent = null;
+  
+  chrome.runtime.sendMessage({ action: 'extract_page_content', forceRefresh: true }, (response) => {
+    if (!response) {
+      console.error('CocBot: No response from background script');
+      showContentError('Communication error with extension background. Please refresh the page and try again.');
+      return;
+    }
+    
     if (response && response.success) {
       console.log('CocBot: Got page content!');
       state.pageContent = response.content;
@@ -26,19 +45,64 @@ export function requestPageContent() {
       // update ui
       updateContentStatus();
       
+      // If content viewer is open, update it
+      if (elements.contentViewerScreen.style.display !== 'none') {
+        renderContentInSidebar(state.pageContent);
+      }
+      
       // reset counter on success
       state.contentFetchAttempts = 0;
     } else {
-      console.log('CocBot: No content yet, will try again', state.contentFetchAttempts, 'of', state.maxContentFetchAttempts);
+      console.log('CocBot: Content extraction failed:', response?.error || 'Unknown error');
+      
+      // If we have a partial content result, still use it
+      if (response.content && response.content.title) {
+        console.log('CocBot: Using partial content result');
+        state.pageContent = response.content;
+        state.pageContent.extractionSuccess = false;
+        updateContentStatus();
+        
+        // If content viewer is open, update it with the partial content
+        if (elements.contentViewerScreen.style.display !== 'none') {
+          renderContentInSidebar(state.pageContent);
+        }
+      } else {
+        // Show error in content viewer if it's open
+        if (elements.contentViewerScreen.style.display !== 'none') {
+          showContentError(response?.error || 'Failed to extract page content');
+        }
+      }
       
       // retry up to max attempts
       if (state.contentFetchAttempts < state.maxContentFetchAttempts) {
+        console.log(`CocBot: Will retry in 2 seconds (attempt ${state.contentFetchAttempts} of ${state.maxContentFetchAttempts})`);
         setTimeout(() => {
           requestPageContent();
         }, 2000);
+      } else {
+        console.error('CocBot: Max content fetch attempts reached, giving up');
+        showContentError('Failed to extract page content after multiple attempts. Please try refreshing the page.');
       }
     }
   });
+}
+
+// Helper function to show content extraction errors
+function showContentError(errorMessage) {
+  if (elements.contentViewerScreen.style.display !== 'none') {
+    elements.contentDisplay.innerHTML = `
+      <div class="content-viewer-ui-error">
+        <p>${errorMessage}</p>
+        <button id="retry-content-extraction" class="button" style="margin-top: 15px;">Retry Extraction</button>
+      </div>
+    `;
+    
+    // Add event listener for retry button
+    document.getElementById('retry-content-extraction')?.addEventListener('click', () => {
+      state.contentFetchAttempts = 0;
+      requestPageContent();
+    });
+  }
 }
 
 // display content in sidebar
@@ -95,29 +159,69 @@ export function openContentViewerPopup() {
     </div>
   `;
   
-  if (!state.pageContent) {
-    console.log('CocBot: No content yet, getting it');
-    
-    // try to extract content
-    chrome.runtime.sendMessage({ action: 'extract_page_content' }, (response) => {
-      if (response && response.success) {
-        console.log('CocBot: Got the content!');
-        state.pageContent = response.content;
-        renderContentInSidebar(state.pageContent);
-      } else {
-        console.error('CocBot: Failed to get content', response?.error);
-        elements.contentDisplay.innerHTML = `
-          <div class="content-viewer-ui-error">
-            <p>Couldn't get page content: ${response?.error || "Unknown error"}</p>
-          </div>
-        `;
-      }
-    });
-    return;
-  }
+  const maxRetries = 2;
+  let retryCount = 0;
   
-  // already have content, show it
-  renderContentInSidebar(state.pageContent);
+  const tryExtractContent = () => {
+    if (!state.pageContent || (state.pageContent && state.pageContent.extractionSuccess === false)) {
+      console.log(`CocBot: No valid content yet, getting it (attempt ${retryCount + 1})`);
+      
+      // try to extract content
+      chrome.runtime.sendMessage({ action: 'extract_page_content', forceRefresh: retryCount > 0 }, (response) => {
+        if (response && response.success) {
+          console.log('CocBot: Got the content!');
+          state.pageContent = response.content;
+          renderContentInSidebar(state.pageContent);
+        } else {
+          if (retryCount < maxRetries) {
+            retryCount++;
+            console.log(`CocBot: Content extraction failed, retrying (${retryCount}/${maxRetries})...`);
+            
+            // Show retrying message
+            elements.contentDisplay.innerHTML = `
+              <div class="content-viewer-loading">
+                <div class="spinner"></div>
+                <p>Retry ${retryCount}/${maxRetries}: Processing page content...</p>
+              </div>
+            `;
+            
+            // Wait 1.5 seconds before retrying
+            setTimeout(tryExtractContent, 1500);
+          } else {
+            console.error('CocBot: Failed to get content after retries', response?.error);
+            
+            // If we have a partial content result, still use it
+            if (response && response.content && response.content.title) {
+              console.log('CocBot: Using partial content result');
+              state.pageContent = response.content;
+              state.pageContent.extractionSuccess = false;
+              renderContentInSidebar(state.pageContent);
+            } else {
+              // Show error if all retries failed
+              elements.contentDisplay.innerHTML = `
+                <div class="content-viewer-ui-error">
+                  <p>Couldn't get page content: ${response?.error || "Unknown error"}</p>
+                  <button id="retry-content-extraction" class="button" style="margin-top: 15px;">Retry Extraction</button>
+                </div>
+              `;
+              
+              // Add event listener for retry button
+              document.getElementById('retry-content-extraction')?.addEventListener('click', () => {
+                state.contentFetchAttempts = 0;
+                requestPageContent();
+              });
+            }
+          }
+        }
+      });
+      return;
+    }
+    
+    // already have content, show it
+    renderContentInSidebar(state.pageContent);
+  };
+  
+  tryExtractContent();
 }
 
 // update page context in welcome screen
@@ -274,14 +378,33 @@ export async function generateAndDisplayQuestions() {
 export function setupContentExtractionReliability() {
   // listen for page changes and refresh content accordingly
   setInterval(() => {
-    if (document.visibilityState === 'visible' && !state.pageContent) {
-      console.log('CocBot: No content and tab is visible, retrying extraction');
+    // Check if we don't have content or if extraction was unsuccessful
+    const needsContentRefresh = !state.pageContent || 
+                              (state.pageContent && state.pageContent.extractionSuccess === false);
+    
+    if (document.visibilityState === 'visible' && needsContentRefresh) {
+      console.log('CocBot: Tab is visible and content needs refresh, retrying extraction');
       state.contentFetchAttempts = 0; // reset counter
       requestPageContent();
     }
   }, 5000);
   
-  // add a debug button in dev mode
+  // Also attempt content extraction when the tab becomes visible
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      // Only request content if we don't have it or if extraction previously failed
+      const needsContentRefresh = !state.pageContent || 
+                                (state.pageContent && state.pageContent.extractionSuccess === false);
+      
+      if (needsContentRefresh) {
+        console.log('CocBot: Tab became visible and content needs refresh');
+        state.contentFetchAttempts = 0;
+        requestPageContent();
+      }
+    }
+  });
+  
+  // Add a debug button in dev mode
   if (location.hostname === 'localhost' || location.search.includes('debug=true')) {
     const debugButton = document.createElement('button');
     debugButton.textContent = 'Debug Content';
