@@ -3,14 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ISAL Assistant</title>
+  <title>CocBot</title>
   <link rel="stylesheet" href="styles/sidebar.css">
+  <link rel="stylesheet" href="styles/config.css">
+  <link rel="stylesheet" href="styles/content-viewer.css">
 </head>
 <body>
   <div class="sidebar">
+    <div id="sidebar-resize-handle" class="resize-handle"></div>
     <div class="sidebar-header">
-      <h2>ISAL Assistant</h2>
+      <h2>CocBot</h2>
       <div class="sidebar-actions">
+        <button id="view-content-button" class="icon-button" title="View Page Content">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+            <circle cx="12" cy="12" r="3"></circle>
+          </svg>
+        </button>
+        <button id="notes-button" class="icon-button" title="Notes">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+          </svg>
+        </button>
+        <button id="config-button" class="icon-button" title="Configure">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
+        </button>
         <button id="settings-button" class="icon-button" title="Settings">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
@@ -21,29 +49,183 @@
       </div>
     </div>
     
-    <div class="sidebar-content" id="chat-container">
-      <!-- Chat messages -->
-    </div>
-    <!-- HTML sucks-->
-    <div class="sidebar-footer">
-      <form id="chat-form">
-        <div class="input-container">
-          <textarea id="user-input" placeholder="Ask me anything..." rows="1"></textarea>
-          <button type="submit" id="send-button" class="icon-button">
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <line x1="22" y1="2" x2="11" y2="13"></line>
-              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-            </svg>
-          </button>
+    <div class="sidebar-content-wrapper">
+      <!-- Welcome screen (shown by default) -->
+      <div id="welcome-screen">
+        <div class="welcome-content">
+          <div class="welcome-logo">
+            <h1>CocBot</h1>
+          </div>
+          
+          <!-- Quick action buttons -->
+          <div class="quick-actions">
+            <h3>Quick Actions</h3>
+            <div class="action-buttons-container">
+              <button class="action-button" data-action="summarize">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="21" y1="6" x2="3" y2="6"></line>
+                  <line x1="17" y1="12" x2="3" y2="12"></line>
+                  <line x1="13" y1="18" x2="3" y2="18"></line>
+                </svg>
+                Summarize
+              </button>
+              <button class="action-button" data-action="keypoints">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
+                  <line x1="4" y1="22" x2="4" y2="15"></line>
+                </svg>
+                Key Points
+              </button>
+              <button class="action-button" data-action="explain">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"></circle>
+                  <line x1="12" y1="16" x2="12" y2="12"></line>
+                  <line x1="12" y1="8" x2="12.01" y2="8"></line>
+                </svg>
+                Explain
+              </button>
+            </div>
+          </div>
+          
+          <!-- Generated questions -->
+          <div class="generated-questions" style="display: none;">
+            <h3>Questions about this page</h3>
+            <div class="question-buttons-container">
+              <!-- Questions will be added here dynamically -->
+              <div class="question-loading">
+                <div class="spinner-small"></div>
+                <span>Generating questions...</span>
+              </div>
+            </div>
+          </div>
+          
+          <div class="welcome-search">
+            <form id="welcome-form">
+              <input type="text" id="welcome-input" placeholder="ask me anything" />
+              <button type="submit" class="welcome-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </form>
+          </div>
         </div>
-      </form>
-      <div class="api-key-container">
-        <input type="password" id="api-key" placeholder="Enter OpenAI API Key" />
-        <button id="save-api-key" class="button">Save Key</button>
+      </div>
+      
+      <!-- Chat screen (hidden initially) -->
+      <div id="chat-screen" style="display: none;">
+        <div class="sidebar-content" id="chat-container">
+          <!-- Chat messages will appear here -->
+        </div>
+        
+        <div class="sidebar-footer">
+          <form id="chat-form">
+            <div class="input-container">
+              <textarea id="user-input" placeholder="Ask me anything..." rows="1"></textarea>
+              <button type="submit" id="send-button" class="icon-button">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="22" y1="2" x2="11" y2="13"></line>
+                  <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                </svg>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+      
+      <!-- Notes screen (hidden initially) -->
+      <div id="notes-screen" style="display: none;">
+        <div class="notes-header">
+          <h3>Page Notes</h3>
+          <div class="notes-actions">
+            <button id="add-note-button" class="icon-button" title="Add Note">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="12" y1="5" x2="12" y2="19"></line>
+                <line x1="5" y1="12" x2="19" y2="12"></line>
+              </svg>
+            </button>
+            <button id="close-notes-button" class="icon-button" title="Close Notes">×</button>
+          </div>
+        </div>
+        
+        <div id="notes-container" class="notes-content">
+          <!-- Notes list will appear here -->
+          <div class="notes-empty" id="notes-empty-state">
+            <p>No notes for this page yet.</p>
+            <button id="create-first-note" class="button">Create your first note</button>
+          </div>
+          <div id="notes-list">
+            <!-- Notes will be added here dynamically -->
+          </div>
+        </div>
+        
+        <!-- Note editor (hidden initially) -->
+        <div id="note-editor" style="display: none;">
+          <div class="note-editor-header">
+            <h4>Edit Note</h4>
+            <button id="close-editor-button" class="icon-button" title="Close Editor">×</button>
+          </div>
+          <textarea id="note-content" placeholder="Write your note here..."></textarea>
+          <div class="note-editor-actions">
+            <button id="save-note-button" class="button">Save</button>
+            <button id="cancel-note-button" class="button button-secondary">Cancel</button>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Content viewer screen (hidden initially) -->
+      <div id="content-viewer-screen" style="display: none;">
+        <div class="content-viewer-header">
+          <h3>Page Content Viewer</h3>
+          <div class="content-viewer-actions">
+            <button id="refresh-content-button" class="icon-button" title="Refresh Content">
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+              </svg>
+            </button>
+            <button id="close-content-button" class="icon-button" title="Close Content Viewer">×</button>
+          </div>
+        </div>
+        <div id="content-display" class="content-viewer-content">
+          <div class="content-viewer-loading">
+            <div class="spinner"></div>
+            <p>Processing page content...</p>
+          </div>
+        </div>
+      </div>
+      
+      <!-- API key container (shown as needed) -->
+      <div class="api-key-container" style="display: none;">
+        <div class="settings-panel">
+          <div class="settings-header">
+            <h3>API Key Settings</h3>
+          </div>
+          <div class="settings-content">
+            <p>Enter your OpenAI API key to use the assistant:</p>
+            <div class="api-key-input-container">
+              <input type="password" id="api-key" placeholder="Enter OpenAI API Key" />
+              <button id="save-api-key" class="button">Save Key</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Configuration container (hidden initially) -->
+    <div id="config-container" class="config-container" style="display: none;">
+      <div class="config-header">
+        <h3>Response Settings</h3>
+        <button id="config-close" class="config-close" title="Close">×</button>
+      </div>
+      <div id="config-content">
+        <!-- Configuration UI will be rendered here -->
       </div>
     </div>
   </div>
   
-  <script src="scripts/sidebar.js"></script>
+  <!-- Load scripts in correct order -->
+  <script src="components/utils/ContentViewer.js"></script>
+  <script type="module" src="scripts/sidebar.js"></script>
 </body>
 </html> 

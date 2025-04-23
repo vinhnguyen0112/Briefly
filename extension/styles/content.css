@@ -1,15 +1,15 @@
 #isal-sidebar-container {
   position: fixed;
   top: 0;
-  right: -350px; /* Start off-screen */
+  right: -350px;
   height: 100vh;
   width: 350px;
-  z-index: 2147483647; /* Highest z-index to ensure it's on top */
+  z-index: 2147483647; 
   transition: right 0.3s ease;
 }
 
 #isal-sidebar-container.active {
-  right: 0; /* Slide in when active */
+  right: 0; 
 }
 
 #isal-sidebar-iframe {
