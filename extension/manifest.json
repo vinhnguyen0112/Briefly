@@ -1,19 +1,46 @@
 {
   "manifest_version": 3,
-  "name": "CocCoc_ISAL",
-  "version": "1.0",
-  "description": "Web extension for Capstone2025 by ISAL",
-  "permissions": ["activeTab", "scripting"],
+  "name": "CocBot",
+  "version": "1.0.0",
+  "description": "A Chrome extension that helps you read and understand webpages with the power of AI.",
+  "icons": {
+    "16": "icons/logo.png",
+    "48": "icons/logo.png",
+    "128": "icons/logo.png"
+  },
+  "permissions": [
+    "storage",
+    "activeTab",
+    "sidePanel",
+    "scripting"
+  ],
+  "host_permissions": [
+    "https://api.openai.com/*"
+  ],
   "background": {
-    "service_worker": "background.js"
+    "service_worker": "scripts/background.js"
   },
   "action": {
-    "default_popup": "popup.html"
+    "default_icon": {
+      "16": "icons/logo.png",
+      "48": "icons/logo.png",
+      "128": "icons/logo.png"
+    }
+  },
+  "side_panel": {
+    "default_path": "sidebar.html"
   },
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content.js"]
+      "js": ["scripts/content.js"],
+      "css": ["styles/content.css"]
+    }
+  ],
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/*", "sidebar.html", "styles/*", "components/*"],
+      "matches": ["<all_urls>"]
     }
   ]
 }

@@ -1,0 +1,666 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ISAL Assistant Mockup</title>
+  <style>
+    /* Root variables for ShadCN-inspired colors */
+    :root {
+      --background: hsl(0 0% 100%);
+      --foreground: hsl(240 10% 3.9%);
+      --muted: hsl(240 4.8% 95.9%);
+      --muted-foreground: hsl(240 3.8% 46.1%);
+      --border: hsl(240 5.9% 90%);
+      --input: hsl(240 5.9% 90%);
+      --primary: hsl(240 5.9% 10%);
+      --primary-foreground: hsl(0 0% 98%);
+      --ring: hsl(240 5% 64.9%);
+      --radius: 0.5rem;
+    }
+
+    /* Base styles */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    }
+    
+    body {
+      margin: 0;
+      padding: 0;
+      background-color: #f5f5f5;
+      color: var(--foreground);
+      font-size: 14px;
+      line-height: L.5;
+    }
+    
+    /* Mockup container */
+    .mockup-container {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      overflow: hidden;
+    }
+    
+    .mockup-page {
+      width: calc(100% - 350px);
+      height: 100%;
+      padding: 20px;
+      box-sizing: border-box;
+      background-color: white;
+    }
+    
+    /* Sample page content */
+    .sample-content {
+      max-width: 800px;
+      margin: 40px auto;
+    }
+    
+    .sample-content h1 {
+      font-size: 24px;
+      margin-bottom: 20px;
+    }
+    
+    .sample-content p {
+      line-height: 1.6;
+      margin-bottom: 16px;
+    }
+
+    /* Sidebar styles */
+    .sidebar {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: 320px;
+      height: 100vh;
+      background-color: var(--background);
+      box-shadow: -5px 0 15px rgba(0, 0, 0, 0.1);
+      display: flex;
+      flex-direction: column;
+      z-index: 10000;
+      border-left: 1px solid var(--border);
+    }
+
+    .sidebar-header {
+      padding: 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .sidebar-header h2 {
+      font-size: 18px;
+      font-weight: 600;
+    }
+
+    .sidebar-actions {
+      display: flex;
+      gap: 8px;
+    }
+
+    .sidebar-actions button {
+      position: relative;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+      z-index: 10001;
+    }
+
+    /* Make sure the settings icon is visible */
+    #settings-button {
+      background-color: var(--muted);
+      color: var(--muted-foreground);
+      font-size: 18px;
+      border: none;
+      cursor: pointer !important;
+      pointer-events: auto !important;
+    }
+
+    #settings-button:hover {
+      opacity: 0.8;
+    }
+
+    .sidebar-content-wrapper {
+      position: relative;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .sidebar-footer {
+      border-top: 1px solid var(--border);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .input-container {
+      display: flex;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background-color: var(--background);
+      padding: 8px 12px;
+      gap: 8px;
+      align-items: flex-end;
+    }
+
+    #user-input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      resize: none;
+      font-size: 14px;
+      color: var(--foreground);
+      max-height: 150px;
+    }
+
+    .button, .icon-button {
+      background-color: var(--primary);
+      color: var(--primary-foreground);
+      border: none;
+      padding: 8px 12px;
+      border-radius: var(--radius);
+      cursor: pointer;
+      font-size: 14px;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .button:hover, .icon-button:hover {
+      opacity: 0.9;
+    }
+
+    .icon-button {
+      width: 28px;
+      height: 28px;
+      padding: 0;
+    }
+
+    #close-sidebar {
+      background: var(--muted);
+      color: var(--muted-foreground);
+      font-size: 18px;
+    }
+
+    /* Chat messages styling */
+    .message {
+      padding: 10px 12px;
+      border-radius: var(--radius);
+      max-width: 100%;
+      word-wrap: break-word;
+    }
+
+    .user-message {
+      background-color: var(--muted);
+      color: var(--foreground);
+      align-self: flex-end;
+      margin-left: 30px;
+    }
+
+    .assistant-message {
+      background-color: var(--primary);
+      color: var(--primary-foreground);
+      align-self: flex-start;
+      margin-right: 30px;
+    }
+
+    .api-key-container {
+      display: flex;
+      gap: 8px;
+    }
+
+    #api-key {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background-color: var(--input);
+      color: var(--foreground);
+      font-size: 14px;
+    }
+
+    #api-key:focus {
+      outline: 2px solid var(--ring);
+      outline-offset: 2px;
+    }
+
+    /* Welcome screen styles */
+    #welcome-screen {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      height: calc(100vh - 60px);
+      padding: 0 20px;
+    }
+
+    .welcome-content {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 40px;
+      width: 100%;
+      max-width: 300px;
+    }
+
+    .welcome-logo {
+      text-align: center;
+    }
+
+    .welcome-logo h1 {
+      font-size: 24px;
+      font-weight: 600;
+      margin: 0;
+      color: var(--primary);
+    }
+
+    .welcome-search {
+      width: 100%;
+    }
+
+    #welcome-form {
+      position: relative;
+      width: 100%;
+    }
+
+    #welcome-input {
+      width: 100%;
+      padding: 12px 45px 12px 15px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #welcome-input:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+    }
+
+    .welcome-button {
+      position: absolute;
+      right: 10px;
+      top: 50%;
+      transform: translateY(-50%);
+      background: none;
+      border: none;
+      color: var(--primary);
+      cursor: pointer;
+      padding: 5px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Animation styles */
+    .animating-transition #welcome-screen {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 100;
+      background-color: var(--background);
+      transition: transform 0.5s ease-in-out;
+    }
+
+    .animating-transition #welcome-form {
+      transition: all 0.5s cubic-bezier(0.22, 1, 0.36, 1);
+    }
+
+    .animating-transition .welcome-content {
+      transition: opacity 0.3s ease-in-out;
+    }
+
+    .sidebar.animating {
+      overflow: hidden;
+    }
+
+    .move-to-bottom .welcome-content {
+      opacity: 0;
+    }
+
+    .move-to-bottom #welcome-form {
+      position: absolute;
+      bottom: 16px;
+      left: 16px;
+      right: 16px;
+      margin: 0;
+      width: calc(100% - 32px);
+      z-index: 200;
+      transform: scale(1);
+    }
+
+    .move-to-bottom #welcome-input {
+      height: auto;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    .move-to-bottom #welcome-screen {
+      height: 100%;
+      transform: translateY(calc(100vh - 160px));
+    }
+
+    /* Mock extension icon */
+    #mock-extension-icon {
+      position: fixed;
+      top: 20px;
+      left: 20px;
+      width: 40px;
+      height: 40px;
+      background-color: #f0f0f0;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+      z-index: 10002;
+      transition: background-color 0.2s;
+    }
+
+    #mock-extension-icon:hover {
+      background-color: #e0e0e0;
+    }
+
+    #mock-extension-icon svg {
+      width: 24px;
+      height: 24px;
+      fill: #555;
+    }
+
+    /* Hide/show sidebar */
+    .sidebar.hidden {
+      transform: translateX(100%);
+      transition: transform 0.3s ease-in-out;
+    }
+
+    .sidebar {
+      transform: translateX(0);
+      transition: transform 0.3s ease-in-out;
+    }
+  </style>
+</head>
+<body>
+  <div class="mockup-container">
+    <!-- Mock extension icon -->
+    <div id="mock-extension-icon" title="Toggle Extension">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
+        <path fill="none" d="M0 0h24v24H0z"/>
+        <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm0-2a8 8 0 1 0 0-16 8 8 0 0 0 0 16zm-1-5h2v2h-2v-2zm0-8h2v6h-2V7z"/>
+      </svg>
+    </div>
+
+    <div class="mockup-page">
+      <div class="sample-content">
+        <h1>Sample Webpage</h1>
+        <p>This is a mockup to visualize how the ISAL Assistant sidebar would appear on a webpage. The sidebar is shown on the right side of this page.</p>
+        <p>You can use this mockup to test the welcome screen animation. Type a message in the "ask me anything" box and press Enter.</p>
+        <p>Click the icon in the top-left corner to toggle the sidebar, just like the actual extension.</p>
+      </div>
+    </div>
+    
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <h2>CocCoc & ISAL</h2>
+        <div class="sidebar-actions">
+          <button id="settings-button" class="icon-button" title="Settings">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="3"></circle>
+              <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+            </svg>
+          </button>
+          <button id="close-sidebar" class="icon-button" title="Close">×</button>
+        </div>
+      </div>
+      
+      <div class="sidebar-content-wrapper">
+        <!-- Welcome screen (shown by default) -->
+        <div id="welcome-screen">
+          <div class="welcome-content">
+            <div class="welcome-logo">
+              <h1>Coc Coc & ISAL</h1>
+            </div>
+            <div class="welcome-search">
+              <form id="welcome-form">
+                <input type="text" id="welcome-input" placeholder="ask me anything" />
+                <button type="submit" class="welcome-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Chat screen (hidden initially) -->
+        <div id="chat-screen" style="display: none;">
+          <div class="sidebar-content" id="chat-container">
+            <!-- Chat messages will appear here -->
+          </div>
+          
+          <div class="sidebar-footer">
+            <form id="chat-form">
+              <div class="input-container">
+                <textarea id="user-input" placeholder="Ask me anything..." rows="1"></textarea>
+                <button type="submit" id="send-button" class="icon-button">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                    <line x1="22" y1="2" x2="11" y2="13"></line>
+                    <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                  </svg>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </div>
+      
+      <!-- API key container (shown as needed) -->
+      <div class="api-key-container" style="display: none;">
+        <input type="password" id="api-key" placeholder="Enter OpenAI API Key" />
+        <button id="save-api-key" class="button">Save Key</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // DOM Elements
+    const welcomeScreen = document.getElementById('welcome-screen');
+    const chatScreen = document.getElementById('chat-screen');
+    const welcomeForm = document.getElementById('welcome-form');
+    const welcomeInput = document.getElementById('welcome-input');
+    const chatForm = document.getElementById('chat-form');
+    const userInput = document.getElementById('user-input');
+    const chatContainer = document.getElementById('chat-container');
+    const sidebar = document.querySelector('.sidebar');
+    const mockExtensionIcon = document.getElementById('mock-extension-icon');
+    
+    // State variables
+    let welcomeMode = true;
+    let sidebarVisible = true;
+    let isAnimating = false;
+    
+    // Setup event listeners
+    document.getElementById('settings-button').addEventListener('click', function() {
+      document.querySelector('.api-key-container').style.display = 'flex';
+    });
+    
+    document.getElementById('close-sidebar').addEventListener('click', function() {
+      toggleSidebar(false);
+    });
+    
+    // Mock extension icon click
+    mockExtensionIcon.addEventListener('click', function() {
+      if (isAnimating) return; // Prevent clicks during animation
+      
+      if (sidebarVisible) {
+        toggleSidebar(false);
+      } else {
+        toggleSidebar(true);
+      }
+    });
+    
+    // Function to toggle sidebar visibility
+    function toggleSidebar(show) {
+      isAnimating = true;
+      
+      if (show === undefined) {
+        show = !sidebarVisible;
+      }
+      
+      if (show) {
+        sidebar.classList.remove('hidden');
+        sidebarVisible = true;
+        
+        // Focus the welcome input if in welcome mode
+        if (welcomeMode) {
+          setTimeout(() => {
+            welcomeInput.focus();
+            isAnimating = false;
+          }, 300);
+        } else {
+          setTimeout(() => {
+            userInput.focus();
+            isAnimating = false;
+          }, 300);
+        }
+      } else {
+        sidebar.classList.add('hidden');
+        sidebarVisible = false;
+        setTimeout(() => {
+          isAnimating = false;
+        }, 300);
+      }
+      
+      // Update extension icon appearance
+      mockExtensionIcon.style.backgroundColor = show ? '#e0e0e0' : '#f0f0f0';
+    }
+    
+    // Handle welcome form submission with animation
+    welcomeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const query = welcomeInput.value.trim();
+      if (!query) return;
+      
+      // Transfer the input text to chat input
+      userInput.value = query;
+      
+      // Start animation
+      switchToChat();
+      
+      // Process the query after animation completes
+      setTimeout(() => {
+        // Add user message to chat
+        const userMsg = document.createElement('div');
+        userMsg.className = 'message user-message';
+        userMsg.textContent = query;
+        chatContainer.appendChild(userMsg);
+        
+        // Clear input
+        userInput.value = '';
+        
+        // Show typing indicator (simulated response)
+        setTimeout(() => {
+          const assistantMsg = document.createElement('div');
+          assistantMsg.className = 'message assistant-message';
+          assistantMsg.textContent = 'This is a mockup response to "' + query + '". In the real extension, this would be generated by the OpenAI API.';
+          chatContainer.appendChild(assistantMsg);
+          chatContainer.scrollTop = chatContainer.scrollHeight;
+        }, 1000);
+      }, 600);
+      
+      // Clear welcome input
+      welcomeInput.value = '';
+    });
+    
+    // Handle chat form submission
+    chatForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const message = userInput.value.trim();
+      if (!message) return;
+      
+      const userMsg = document.createElement('div');
+      userMsg.className = 'message user-message';
+      userMsg.textContent = message;
+      chatContainer.appendChild(userMsg);
+      
+      userInput.value = '';
+      userInput.style.height = 'auto';
+      
+      setTimeout(() => {
+        const assistantMsg = document.createElement('div');
+        assistantMsg.className = 'message assistant-message';
+        assistantMsg.textContent = 'This is a mockup response to "' + message + '". In the real extension, this would be generated by the OpenAI API.';
+        chatContainer.appendChild(assistantMsg);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }, 1000);
+    });
+    
+    // Auto-resize textarea
+    userInput.addEventListener('input', function() {
+      this.style.height = 'auto';
+      this.style.height = (this.scrollHeight) + 'px';
+    });
+    
+    // Switch from welcome screen to chat screen with animation
+    function switchToChat() {
+      isAnimating = true;
+      
+      // Step 1: Start animation
+      sidebar.classList.add('animating', 'animating-transition');
+      
+      // Step 2: Move welcome form to bottom
+      setTimeout(() => {
+        sidebar.classList.add('move-to-bottom');
+      }, 50); // Small delay to ensure transitions work
+      
+      // Step 3: After animation completes, swap screens
+      setTimeout(() => {
+        welcomeMode = false;
+        
+        // Hide welcome screen, show chat screen
+        welcomeScreen.style.display = 'none';
+        chatScreen.style.display = 'flex';
+        chatScreen.style.flexDirection = 'column';
+        chatScreen.style.height = 'calc(100vh - 60px)';
+        
+        // Focus the chat input
+        userInput.focus();
+        
+        // Remove animation classes
+        sidebar.classList.remove('animating', 'animating-transition', 'move-to-bottom');
+        
+        // Auto-resize chat input if needed
+        userInput.style.height = 'auto';
+        userInput.style.height = (userInput.scrollHeight) + 'px';
+        
+        isAnimating = false;
+      }, 550); // Slightly longer than the CSS transition
+    }
+    
+    // For demonstration, initially show the sidebar
+    // If you want it hidden by default, uncomment the next line
+    // toggleSidebar(false);
+  </script>
+</body>
+</html> 
