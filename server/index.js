@@ -15,22 +15,16 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(
-  session({
-    store: new RedisStore({
-      client: redisClient,
-    }),
-    secret: process.env.SESSION_STORE_SECRET,
-    resave: false,
-    saveUninitialized: false,
-    cookie: {
-      maxAge: 1000 * 60 * 60 * 24,
-      httpOnly: true,
-      secure: false,
-      sameSite: "lax",
-    },
-  })
-);
+// app.use(
+//   session({
+//     store: new RedisStore({
+//       client: redisClient,
+//     }),
+//     secret: process.env.SESSION_STORE_SECRET,
+//     resave: false,
+//     saveUninitialized: false,
+//   })
+// );
 
 // Middleware
 app.use(cors());

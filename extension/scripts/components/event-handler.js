@@ -41,7 +41,6 @@ export function setupEventListeners() {
   });
 
   // Cocbot authentication button events
-  // setupAuthenticationButtons();
   elements.googleLoginButton.addEventListener("click", () => {
     chrome.runtime.sendMessage(
       { action: "google_authentication" },

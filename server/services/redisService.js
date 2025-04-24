@@ -32,7 +32,7 @@ const RedisService = {
   async set(key, value, expiration = 60 * 60) {
     try {
       const data = JSON.stringify(value);
-      await redisClient.set(key, data, "EX", expiration);
+      await redisClient.set(key, data, { EX: expiration });
     } catch (err) {
       console.error("Redis SET error: ", err);
     }
