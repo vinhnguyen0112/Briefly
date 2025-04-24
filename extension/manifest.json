@@ -8,15 +8,8 @@
     "48": "icons/logo.png",
     "128": "icons/logo.png"
   },
-  "permissions": [
-    "storage",
-    "activeTab",
-    "sidePanel",
-    "scripting"
-  ],
-  "host_permissions": [
-    "https://api.openai.com/*"
-  ],
+  "permissions": ["storage", "activeTab", "sidePanel", "scripting", "identity"],
+  "host_permissions": ["https://api.openai.com/*"],
   "background": {
     "service_worker": "scripts/background.js"
   },
@@ -42,5 +35,10 @@
       "resources": ["icons/*", "sidebar.html", "styles/*", "components/*"],
       "matches": ["<all_urls>"]
     }
-  ]
+  ],
+  "oauth2": {
+    "client_id": "833310676000-755pdr3r9isck33epnmom0e8v2vfcsvs.apps.googleusercontent.com",
+    "scopes": ["openid", "email", "profile"]
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAqCrSFlTXXX/SAv1YfzUwjxfM8HSaqRb3/cfnvI2nG0vW+e+rhG3rmY8hNrASWM+ntgMP+48Cnsmf61g65EDg8DSJl2hjy/8yXdV/6bRpoVcT8hKMfGxztKA532/9muBEMByImnSckW5NBtIfwYqvmfERczchBKVZ5iBFPkW8jMHVCi7+Se70nR3RC58+n/mvfTOvltpj5h1DvUgYm9K6EjIxh9t+QKDmOk3+RBoukVFQGZ4338jSdnEDuwMvY8gSi4eoH05UCHjYqEFr0BKhPNwNbySN7Skpurntnx2GvkplTkux/K8lZdRh7/D1iMtowzDagu9w4XHOlhyy8MRPEQIDAQAB"
 }
