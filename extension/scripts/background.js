@@ -570,15 +570,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("CocBot: Received request to authenticate with Google");
 
     authenticateWithGoogle()
-      .then(() => {
+      .then((sessionId) => {
+        console.log("Session ID: ", sessionId);
+        // Store sessionId into extension's local storage
+        chrome.storage.local.set({ currentSession: sessionId }, () => {
+          console.log("Session ID stored in local storage");
+        });
         sendResponse({ success: true });
       })
-      .catch((error) => {
-        console.error("CocBot: Google authentication error:", error);
-        sendResponse({
-          success: false,
-          error: "Google authentication failed: " + error.message,
-        });
+      .catch((err) => {
+        console.error(err);
+        sendResponse({ success: false, error: err.message });
       });
 
     return true; // Keep the message channel open for async response
@@ -590,11 +592,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Google authentcation communication
-function authenticateWithGoogle() {
-  console.log("Authenicating with Google function executed");
+// Google authentication communication
+const authenticateWithGoogle = async () => {
+  console.log("Authenticating with Google function executed");
   const manifest = chrome.runtime.getManifest();
-  // Set up authentcation URL
+
+  // Set up authentication URL
   const url = new URL(GOOGLE_AUTH_URL);
   url.searchParams.set("client_id", manifest.oauth2.client_id);
   url.searchParams.set("response_type", "id_token");
@@ -604,64 +607,64 @@ function authenticateWithGoogle() {
     `https://${chrome.runtime.id}.chromiumapp.org`
   );
   url.searchParams.set("scope", manifest.oauth2.scopes.join(" "));
-  chrome.identity.launchWebAuthFlow(
-    {
-      url: url.href,
-      interactive: true,
-    },
-    async (redirectedTo) => {
-      if (chrome.runtime.lastError) {
-        throw new Error(
-          "Failed to authenticate: " + chrome.runtime.lastError.message
-        );
-      } else {
-        // Authentication was sucessfull
-        const url = new URL(redirectedTo);
-        const params = new URLSearchParams(url.hash.replace("#", "")); // Replace # with ? to get the id token in the URL query
-        const idToken = params.get("id_token");
-        console.log("ID Token: ", idToken);
-        if (idToken) {
-          console.log(
-            "Google authentication successful, sending ID token to server"
-          );
 
-          try {
-            const response = await fetch(
-              `${SERVER_URL}/api/auth/google/callback`,
-              {
-                method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                },
-                body: JSON.stringify({ idToken }),
-              }
+  try {
+    const redirectedTo = await new Promise((resolve, reject) => {
+      chrome.identity.launchWebAuthFlow(
+        {
+          url: url.href,
+          interactive: true,
+        },
+        (redirectedUrl) => {
+          if (chrome.runtime.lastError) {
+            reject(
+              new Error(
+                "Failed to authenticate: " + chrome.runtime.lastError.message
+              )
             );
-
-            if (!response.ok) {
-              throw new Error(
-                `Server responded with status ${response.status}`
-              );
-            }
-
-            const data = await response.json();
-            console.log("Server response:", data);
-
-            if (data.success) {
-              console.log("Access and refresh tokens successfully initiated");
-              console.log("User ID: " + data.data);
-            } else {
-              console.error(
-                "Failed to initiate tokens:",
-                data.error || "Unknown error"
-              );
-            }
-          } catch (error) {
-            console.error("Error sending ID token to server:", error);
+          } else {
+            resolve(redirectedUrl);
           }
-        } else {
-          console.error("ID token not found in authentication response");
         }
-      }
+      );
+    });
+
+    // Authentication was successful
+    const redirectedUrl = new URL(redirectedTo);
+    const params = new URLSearchParams(redirectedUrl.hash.replace("#", ""));
+    const idToken = params.get("id_token");
+
+    if (!idToken) {
+      throw new Error("ID token not found in authentication response");
     }
-  );
-}
+
+    console.log("ID Token: ", idToken);
+    console.log("Google authentication successful, sending ID token to server");
+
+    const response = await fetch(`${SERVER_URL}/api/auth/google/callback`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ idToken }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status ${response.status}`);
+    }
+
+    const data = await response.json();
+    console.log("Server response:", data);
+
+    if (!data.success) {
+      throw new Error(
+        "Failed to initiate tokens: " + (data.error || "Unknown error")
+      );
+    }
+
+    return data.data;
+  } catch (error) {
+    console.error("Error during Google authentication:", error.message);
+    throw error;
+  }
+};

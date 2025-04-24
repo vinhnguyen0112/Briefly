@@ -46,7 +46,7 @@ export function setupEventListeners() {
     chrome.runtime.sendMessage(
       { action: "google_authentication" },
       (response) => {
-        console.log("Message passing with background work");
+        console.log("User authenticated via Google.");
       }
     );
   });

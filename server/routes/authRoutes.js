@@ -1,6 +1,11 @@
 const express = require("express");
 const { OAuth2Client } = require("google-auth-library");
-// const jwt = require("jsonwebtoken");
+const {
+  generateAccessToken,
+  generateRefreshToken,
+} = require("../services/authService");
+const session = require("express-session");
+const { RedisService } = require("../services/redisService");
 
 const router = express.Router();
 const client = new OAuth2Client();
@@ -11,11 +16,23 @@ router.post("/google/callback", async (req, res) => {
   const userId = await verifyIdToken(idToken);
 
   // Create access & refresh tokens
+  const accessToken = generateAccessToken({ userId });
+  const refreshToken = generateRefreshToken({ userId });
+
+  const sessionId = crypto.randomUUID();
+  console.log("Access token: ", accessToken);
+  console.log("Refresh token: ", refreshToken);
+  console.log("Session id: ", sessionId);
   // Send back sessionID to extension
+
+  await RedisService.set(sessionId, {
+    accessToken,
+    refreshToken,
+  });
 
   return res.status(200).json({
     success: true,
-    data: userId,
+    data: sessionId,
   });
 });
 

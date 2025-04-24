@@ -4,7 +4,10 @@ const dotenv = require("dotenv");
 const morgan = require("morgan");
 const { createClient } = require("redis");
 
-const authRoutes = require("./routes/auth");
+const authRoutes = require("./routes/authRoutes");
+const { RedisStore } = require("connect-redis");
+const { redisClient } = require("./services/redisService");
+const session = require("express-session");
 // Load environment variables
 dotenv.config();
 
@@ -12,22 +15,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Initialize Redis client.
-let redisClient = createClient();
-redisClient.connect().catch(console.error);
-
-// Initialize session store
-let redisStore = new RedisStore({
-  client: redisClient,
-  prefix: "myapp:",
-});
-
 app.use(
   session({
-    store: redisStore,
-    resave: false, // required: force lightweight session keep alive (touch)
-    saveUninitialized: false, // recommended: only save session when data exists
+    store: new RedisStore({
+      client: redisClient,
+    }),
     secret: process.env.SESSION_STORE_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      maxAge: 1000 * 60 * 60 * 24,
+      httpOnly: true,
+      secure: false,
+      sameSite: "lax",
+    },
   })
 );
 
