@@ -2,14 +2,34 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
-// const { auth } = require("express-openid-connect");
+const { createClient } = require("redis");
 
+const authRoutes = require("./routes/auth");
 // Load environment variables
 dotenv.config();
 
 // Initialize Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// Initialize Redis client.
+let redisClient = createClient();
+redisClient.connect().catch(console.error);
+
+// Initialize session store
+let redisStore = new RedisStore({
+  client: redisClient,
+  prefix: "myapp:",
+});
+
+app.use(
+  session({
+    store: redisStore,
+    resave: false, // required: force lightweight session keep alive (touch)
+    saveUninitialized: false, // recommended: only save session when data exists
+    secret: process.env.SESSION_STORE_SECRET,
+  })
+);
 
 // Middleware
 app.use(cors());
@@ -34,7 +54,6 @@ app.use(morgan("dev")); // HTTP request logging
 // app.use(auth(config));
 
 // Import routes
-const authRoutes = require("./routes/auth");
 // const queryRoutes = require("./routes/query");
 // const userRoutes = require("./routes/user");
 

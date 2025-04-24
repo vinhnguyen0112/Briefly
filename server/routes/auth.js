@@ -1,6 +1,6 @@
 const express = require("express");
 const { OAuth2Client } = require("google-auth-library");
-const jwt = require("jsonwebtoken");
+// const jwt = require("jsonwebtoken");
 
 const router = express.Router();
 const client = new OAuth2Client();
@@ -9,6 +9,9 @@ router.post("/google/callback", async (req, res) => {
   const { idToken } = req.body;
   console.log("Received id token: ", idToken);
   const userId = await verifyIdToken(idToken);
+
+  // Create access & refresh tokens
+  // Send back sessionID to extension
 
   return res.status(200).json({
     success: true,
@@ -28,15 +31,15 @@ const verifyIdToken = async (token) => {
   return userId;
 };
 
-const generateTokens = (userId) => {
-  const accessToken = jwt.sign({ userId }, "your_access_token_secret", {
-    expiresIn: "15m",
-  });
-  const refreshToken = jwt.sign({ userId }, "your_refresh_token_secret", {
-    expiresIn: "7d",
-  });
+// const generateTokens = (userId) => {
+//   const accessToken = jwt.sign({ userId }, "your_access_token_secret", {
+//     expiresIn: "15m",
+//   });
+//   const refreshToken = jwt.sign({ userId }, "your_refresh_token_secret", {
+//     expiresIn: "7d",
+//   });
 
-  return { accessToken, refreshToken };
-};
+//   return { accessToken, refreshToken };
+// };
 
 module.exports = router;
