@@ -1,15 +1,21 @@
-const jwt = require("jsonwebtoken");
+const { OAuth2Client } = require("google-auth-library");
 
-function generateAccessToken(payload) {
-  return jwt.sign(payload, process.env.ACCESS_TOKEN_SECRET, {
-    expiresIn: "15m",
-  });
-}
+const client = new OAuth2Client();
 
-function generateRefreshToken(payload) {
-  return jwt.sign(payload, process.env.REFRESH_TOKEN_SECRET, {
-    expiresIn: "7d",
-  });
-}
+const verifyIdToken = async (token) => {
+  try {
+    const ticket = await client.verifyIdToken({
+      idToken: token,
+    });
+    const payload = ticket.getPayload();
 
-module.exports = { generateAccessToken, generateRefreshToken };
+    console.log("Payload: ", payload);
+
+    const userId = payload["sub"];
+    return userId;
+  } catch (error) {
+    throw error;
+  }
+};
+
+module.exports = { verifyIdToken };

@@ -1,6 +1,30 @@
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const SERVER_URL = "http://localhost:3000";
 
+// Security test
+export const testSecurity = async () => {
+  console.log("Security test function executed");
+
+  try {
+    const response = await fetch(`${SERVER_URL}/api/auth/test`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with status ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    console.log(data);
+  } catch (error) {
+    console.error("Error during security test:", error.message);
+  }
+};
+
 // Google authentication communication
 export const authenticateWithGoogle = async () => {
   console.log("Authenticating with Google function executed");

@@ -48,10 +48,6 @@ app.use(morgan("dev")); // HTTP request logging
 // // Auth middleware
 // app.use(auth(config));
 
-// Import routes
-// const queryRoutes = require("./routes/query");
-// const userRoutes = require("./routes/user");
-
 // Routes
 app.use("/api/auth", authRoutes);
 // app.use("/api/query", queryRoutes);

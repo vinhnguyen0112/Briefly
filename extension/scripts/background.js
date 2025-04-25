@@ -1,4 +1,7 @@
-import { authenticateWithGoogle } from "./components/auth-handler.js";
+import {
+  authenticateWithGoogle,
+  testSecurity,
+} from "./components/auth-handler.js";
 import { saveUserSession } from "./components/state.js";
 
 //  first install
@@ -587,8 +590,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true; // Keep the message channel open for async response
   }
   if (message.action === "test") {
-    console.log("CocBot: Test message received");
-    sendResponse({ success: true, message: "Test successful" });
-    return;
+    console.log("CocBot: Received request to test security and authentication");
+    testSecurity().then(() => {
+      sendResponse({ success: true, message: "Test successful" });
+    });
+
+    return true;
   }
 });

@@ -50,6 +50,10 @@ export function setupEventListeners() {
     );
   });
 
+  elements.testButton.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "test" });
+  });
+
   // CocBot title click to return to welcome screen
   elements.cocbotTitle.addEventListener("click", () => {
     if (!state.welcomeMode) {

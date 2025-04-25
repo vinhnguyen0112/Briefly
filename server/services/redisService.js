@@ -11,32 +11,23 @@ redisClient
     process.exit(1);
   });
 
-const RedisService = {
-  async get(key) {
-    try {
-      const rawData = await redisClient.get(key);
-      return JSON.parse(rawData);
-    } catch (err) {
-      console.error("Redis GET error: ", err);
-    }
-  },
+const refreshSession = async (sessionId) => {
+  const SESSION_TTL = 60 * 60 * 24 * 7; // 7 days in seconds
+  try {
+    const exists = await redisClient.exists(sessionId);
 
-  async remove(key) {
-    try {
-      await redisClient.del(key);
-    } catch (err) {
-      console.error("Redis DELETE error: ", err);
+    if (!exists) {
+      throw new Error("Session does not exist");
     }
-  },
 
-  async set(key, value, expiration = 60 * 60) {
-    try {
-      const data = JSON.stringify(value);
-      await redisClient.set(key, data, { EX: expiration });
-    } catch (err) {
-      console.error("Redis SET error: ", err);
-    }
-  },
+    await redisClient.expire(sessionId, SESSION_TTL);
+    console.log(
+      `Session ${sessionId} lifetime reset to ${SESSION_TTL} seconds.`
+    );
+  } catch (error) {
+    console.error("Error resetting session lifetime:", error.message);
+    throw error;
+  }
 };
 
-module.exports = { redisClient, RedisService };
+module.exports = { redisClient, refreshSession };
