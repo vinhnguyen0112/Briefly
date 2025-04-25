@@ -162,6 +162,28 @@ export async function switchLanguage(language) {
   
   await updatePageLanguage();
   
+  state.generatedQuestions = null;
+  const questionsContainer = document.querySelector('.generated-questions');
+  if (questionsContainer) {
+    const buttonContainer = document.querySelector('.question-buttons-container');
+    if (buttonContainer) {
+      buttonContainer.innerHTML = `
+        <div class="question-loading">
+          <div class="spinner-small"></div>
+          <span data-i18n="generatingQuestions">${translate('generatingQuestions')}</span>
+        </div>
+      `;
+    }
+    
+    questionsContainer.style.display = 'block';
+  }
+  
+  if (state.pageContent && state.welcomeMode) {
+    // dynamically to avoid circular dependencies
+    const contentHandler = await import('./content-handler.js');
+    contentHandler.generateAndDisplayQuestions();
+  }
+  
   return translate('languageChanged');
 }
 

@@ -15,18 +15,28 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   });
   
-  // Initialize internationalization
-  initializeLanguage().then(() => {
-    console.log('CocBot: Internationalization initialized');
-  });
-  
-  // load language preference
+  // load language preference first
   getLanguage().then(language => {
     console.log('CocBot: Language preference:', language);
+    
+    state.language = language;
+    
     const languageToggle = document.getElementById('language-toggle');
     if (languageToggle) {
       languageToggle.checked = language === 'vi';
+      
+      const enLabel = document.getElementById('en-label');
+      const viLabel = document.getElementById('vi-label');
+      
+      if (enLabel && viLabel) {
+        enLabel.classList.toggle('active', language === 'en');
+        viLabel.classList.toggle('active', language === 'vi');
+      }
     }
+    
+    return initializeLanguage();
+  }).then(() => {
+    console.log('CocBot: Internationalization initialized');
   });
   
   // load config

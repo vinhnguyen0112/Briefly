@@ -186,20 +186,44 @@ export async function generateQuestionsFromContent(pageContent) {
       return { success: false, error: 'No API key' };
     }
     
-    const systemPrompt = {
-      role: 'system',
-      content: `You are an AI that generates 3 interesting questions about web page content. 
+
+    const language = state.language || 'en';
+    
+    let systemPromptContent;
+    if (language === 'vi') {
+      systemPromptContent = `Bạn là một AI tạo ra các câu hỏi thú vị về nội dung trang web.
+Hãy tạo 3 câu hỏi bằng tiếng Việt mà sẽ hữu ích cho người đọc trang này.
+Phản hồi của bạn CHỈ nên là một mảng gồm 3 câu hỏi tiếng Việt, định dạng dưới dạng mảng JSON các chuỗi.
+Ví dụ: ["Câu hỏi 1 bằng tiếng Việt?", "Câu hỏi 2 bằng tiếng Việt?", "Câu hỏi 3 bằng tiếng Việt?"]
+Không bao gồm bất kỳ thứ gì khác.`;
+    } else {
+      systemPromptContent = `You are an AI that generates 3 interesting questions about web page content. 
 Generate questions that would be useful to a reader of this page.
 Your response should be ONLY an array of 3 questions, formatted as a JSON array of strings.
-Do not include anything else, not even a JSON wrapper object.`
+Do not include anything else, not even a JSON wrapper object.`;
+    }
+    
+    const systemPrompt = {
+      role: 'system',
+      content: systemPromptContent
     };
+    
+    let contentPromptText = `Here is the web page content:
+Title: ${pageContent.title}
+${pageContent.content.substring(0, 3000)}`;
+
+    if (language === 'vi') {
+      contentPromptText += `\n\nHãy tạo 3 câu hỏi bằng TIẾNG VIỆT về nội dung này.`;
+    } else {
+      contentPromptText += `\n\nGenerate 3 questions in ENGLISH about this content.`;
+    }
     
     const contentPrompt = {
       role: 'user',
-      content: `Here is the web page content:
-Title: ${pageContent.title}
-${pageContent.content.substring(0, 3000)}`
+      content: contentPromptText
     };
+    
+    const temperature = language === 'vi' ? 0.3 : 0.7;
     
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -210,7 +234,7 @@ ${pageContent.content.substring(0, 3000)}`
       body: JSON.stringify({
         model: 'gpt-4o-mini',
         messages: [systemPrompt, contentPrompt],
-        temperature: 0.7,
+        temperature: temperature,
         max_tokens: 500
       })
     });
