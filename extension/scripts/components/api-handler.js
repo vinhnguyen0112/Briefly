@@ -63,7 +63,7 @@ export async function callOpenAI(apiKey, messages) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: messages,
         temperature: 0.7,
         max_tokens: maxTokens
@@ -97,6 +97,7 @@ export async function constructPromptWithPageContent(query, pageContent, history
   // Set default values if config is missing
   const maxWordCount = config?.maxWordCount || 150;
   const responseStyle = config?.responseStyle || 'conversational';
+  const language = state.language || 'en';
   
   // Customize instructions based on response style
   let styleInstructions = '';
@@ -120,11 +121,20 @@ Maintain accuracy and depth while keeping your response around ${maxWordCount} w
       styleInstructions = `Keep your response around ${maxWordCount} words.`;
   }
   
+  // language instructions
+  let languageInstructions = '';
+  if (language === 'vi') {
+    languageInstructions = `Respond entirely in Vietnamese. Use natural, fluent Vietnamese expressions and terminology.`;
+  } else {
+    languageInstructions = `Respond in English.`;
+  }
+  
   const systemPrompt = {
     role: 'system',
     content: `You are a helpful assistant that helps users understand web page content.
 You have access to the content of the page the user is currently viewing, which is provided below.
 Answer the user's questions based on this content. If the answer is not in the content, say so.
+${languageInstructions}
 ${config?.personality || 'Be helpful and informative, focusing on the content.'}
 ${styleInstructions}`
   };
@@ -198,7 +208,7 @@ ${pageContent.content.substring(0, 3000)}`
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model: 'gpt-3.5-turbo',
+        model: 'gpt-4o-mini',
         messages: [systemPrompt, contentPrompt],
         temperature: 0.7,
         max_tokens: 500
