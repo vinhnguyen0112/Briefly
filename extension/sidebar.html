@@ -12,21 +12,21 @@
   <div class="sidebar">
     <div id="sidebar-resize-handle" class="resize-handle"></div>
     <div class="sidebar-header">
-      <h2 id="cocbot-title" class="cocbot-title">CocBot</h2>
+      <h2 id="cocbot-title" class="cocbot-title" data-i18n="title">CocBot</h2>
       <div class="sidebar-actions">
-        <button id="view-content-button" class="icon-button" title="View Page Content">
+        <button id="view-content-button" class="icon-button" data-i18n-title="viewPageContent" title="View Page Content">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
             <circle cx="12" cy="12" r="3"></circle>
           </svg>
         </button>
-        <button id="notes-button" class="icon-button" title="Notes">
+        <button id="notes-button" class="icon-button" data-i18n-title="notes" title="Notes">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
             <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
           </svg>
         </button>
-        <button id="config-button" class="icon-button" title="Configure">
+        <button id="config-button" class="icon-button" data-i18n-title="configure" title="Configure">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <line x1="4" y1="21" x2="4" y2="14"></line>
             <line x1="4" y1="10" x2="4" y2="3"></line>
@@ -39,27 +39,39 @@
             <line x1="17" y1="16" x2="23" y2="16"></line>
           </svg>
         </button>
-        <button id="settings-button" class="icon-button" title="Settings">
+        <button id="settings-button" class="icon-button" data-i18n-title="settings" title="Settings">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="3"></circle>
             <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
           </svg>
         </button>
-        <button id="close-sidebar" class="icon-button" title="Close">×</button>
+        <button id="close-sidebar" class="icon-button" data-i18n-title="close" title="Close">×</button>
       </div>
     </div>
     
     <div class="sidebar-content-wrapper">
+      <!-- Language toggle below settings -->
+      <div class="language-toggle-section">
+        <div class="language-toggle-container">
+          <span class="toggle-label">EN</span>
+          <label class="switch">
+            <input type="checkbox" id="language-toggle">
+            <span class="slider round"></span>
+          </label>
+          <span class="toggle-label">VI</span>
+        </div>
+      </div>
+      
       <!-- Welcome screen (shown by default) -->
       <div id="welcome-screen">
         <div class="welcome-content">
           <div class="welcome-logo">
-            <h1>CocBot</h1>
+            <h1 data-i18n="title">CocBot</h1>
           </div>
           
           <!-- Quick action buttons -->
           <div class="quick-actions">
-            <h3>Quick Actions</h3>
+            <h3 data-i18n="quickActions">Quick Actions</h3>
             <div class="action-buttons-container">
               <button class="action-button" data-action="summarize">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -67,14 +79,14 @@
                   <line x1="17" y1="12" x2="3" y2="12"></line>
                   <line x1="13" y1="18" x2="3" y2="18"></line>
                 </svg>
-                Summarize
+                <span data-i18n="summarize">Summarize</span>
               </button>
               <button class="action-button" data-action="keypoints">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path>
                   <line x1="4" y1="22" x2="4" y2="15"></line>
                 </svg>
-                Key Points
+                <span data-i18n="keyPoints">Key Points</span>
               </button>
               <button class="action-button" data-action="explain">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -82,26 +94,26 @@
                   <line x1="12" y1="16" x2="12" y2="12"></line>
                   <line x1="12" y1="8" x2="12.01" y2="8"></line>
                 </svg>
-                Explain
+                <span data-i18n="explain">Explain</span>
               </button>
             </div>
           </div>
           
           <!-- Generated questions -->
           <div class="generated-questions" style="display: none;">
-            <h3>Questions about this page</h3>
+            <h3 data-i18n="questionsAboutPage">Questions about this page</h3>
             <div class="question-buttons-container">
               <!-- Questions will be added here dynamically -->
               <div class="question-loading">
                 <div class="spinner-small"></div>
-                <span>Generating questions...</span>
+                <span data-i18n="generatingQuestions">Generating questions...</span>
               </div>
             </div>
           </div>
           
           <div class="welcome-search">
             <form id="welcome-form">
-              <input type="text" id="welcome-input" placeholder="ask me anything" />
+              <input type="text" id="welcome-input" data-i18n-placeholder="askMeAnything" placeholder="ask me anything" />
               <button type="submit" class="welcome-button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -122,7 +134,7 @@
         <div class="sidebar-footer">
           <form id="chat-form">
             <div class="input-container">
-              <textarea id="user-input" placeholder="Ask me anything..." rows="1"></textarea>
+              <textarea id="user-input" data-i18n-placeholder="askAnything" placeholder="Ask me anything..." rows="1"></textarea>
               <button type="submit" id="send-button" class="icon-button">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                   <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -137,7 +149,7 @@
       <!-- Notes screen (hidden initially) -->
       <div id="notes-screen" style="display: none;">
         <div class="notes-header">
-          <h3>Page Notes</h3>
+          <h3 data-i18n="pageNotes">Page Notes</h3>
           <div class="notes-actions">
             <button id="add-note-button" class="icon-button" title="Add Note">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -145,15 +157,15 @@
                 <line x1="5" y1="12" x2="19" y2="12"></line>
               </svg>
             </button>
-            <button id="close-notes-button" class="icon-button" title="Close Notes">×</button>
+            <button id="close-notes-button" class="icon-button" data-i18n-title="close" title="Close Notes">×</button>
           </div>
         </div>
         
         <div id="notes-container" class="notes-content">
           <!-- Notes list will appear here -->
           <div class="notes-empty" id="notes-empty-state">
-            <p>No notes for this page yet.</p>
-            <button id="create-first-note" class="button">Create your first note</button>
+            <p data-i18n="noNotes">No notes for this page yet.</p>
+            <button id="create-first-note" class="button" data-i18n="createFirstNote">Create your first note</button>
           </div>
           <div id="notes-list">
             <!-- Notes will be added here dynamically -->
@@ -163,13 +175,13 @@
         <!-- Note editor (hidden initially) -->
         <div id="note-editor" style="display: none;">
           <div class="note-editor-header">
-            <h4>Edit Note</h4>
-            <button id="close-editor-button" class="icon-button" title="Close Editor">×</button>
+            <h4 data-i18n="editNote">Edit Note</h4>
+            <button id="close-editor-button" class="icon-button" data-i18n-title="close" title="Close Editor">×</button>
           </div>
-          <textarea id="note-content" placeholder="Write your note here..."></textarea>
+          <textarea id="note-content" data-i18n-placeholder="writeNote" placeholder="Write your note here..."></textarea>
           <div class="note-editor-actions">
-            <button id="save-note-button" class="button">Save</button>
-            <button id="cancel-note-button" class="button button-secondary">Cancel</button>
+            <button id="save-note-button" class="button" data-i18n="save">Save</button>
+            <button id="cancel-note-button" class="button button-secondary" data-i18n="cancel">Cancel</button>
           </div>
         </div>
       </div>
@@ -177,20 +189,20 @@
       <!-- Content viewer screen (hidden initially) -->
       <div id="content-viewer-screen" style="display: none;">
         <div class="content-viewer-header">
-          <h3>Page Content Viewer</h3>
+          <h3 data-i18n="pageContentViewer">Page Content Viewer</h3>
           <div class="content-viewer-actions">
-            <button id="refresh-content-button" class="icon-button" title="Refresh Content">
+            <button id="refresh-content-button" class="icon-button" data-i18n-title="refreshContent" title="Refresh Content">
               <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
               </svg>
             </button>
-            <button id="close-content-button" class="icon-button" title="Close Content Viewer">×</button>
+            <button id="close-content-button" class="icon-button" data-i18n-title="close" title="Close Content Viewer">×</button>
           </div>
         </div>
         <div id="content-display" class="content-viewer-content">
           <div class="content-viewer-loading">
             <div class="spinner"></div>
-            <p>Processing page content...</p>
+            <p data-i18n="processingContent">Processing page content...</p>
           </div>
         </div>
       </div>
@@ -199,13 +211,13 @@
       <div class="api-key-container" style="display: none;">
         <div class="settings-panel">
           <div class="settings-header">
-            <h3>API Key Settings</h3>
+            <h3 data-i18n="apiKeySettings">API Key Settings</h3>
           </div>
           <div class="settings-content">
-            <p>Enter your OpenAI API key to use the assistant:</p>
+            <p data-i18n="enterApiKeyMessage">Enter your OpenAI API key to use the assistant:</p>
             <div class="api-key-input-container">
-              <input type="password" id="api-key" placeholder="Enter OpenAI API Key" />
-              <button id="save-api-key" class="button">Save Key</button>
+              <input type="password" id="api-key" data-i18n-placeholder="enterApiKey" placeholder="Enter OpenAI API Key" />
+              <button id="save-api-key" class="button" data-i18n="save">Save Key</button>
             </div>
           </div>
         </div>
@@ -215,8 +227,8 @@
     <!-- Configuration container (hidden initially) -->
     <div id="config-container" class="config-container" style="display: none;">
       <div class="config-header">
-        <h3>Response Settings</h3>
-        <button id="config-close" class="config-close" title="Close">×</button>
+        <h3 data-i18n="responseSettings">Response Settings</h3>
+        <button id="config-close" class="config-close" data-i18n-title="close" title="Close">×</button>
       </div>
       <div id="config-content">
         <!-- Configuration UI will be rendered here -->
@@ -227,5 +239,82 @@
   <!-- Load scripts in correct order -->
   <script src="components/utils/ContentViewer.js"></script>
   <script type="module" src="scripts/sidebar.js"></script>
+  
+  <style>
+    /* Language toggle section styles */
+    .language-toggle-section {
+      display: flex;
+      justify-content: flex-end;
+      padding: 8px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .language-toggle-container {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    
+    .toggle-label {
+      font-size: 0.75rem;
+      color: var(--muted-foreground);
+      font-weight: 500;
+    }
+    
+    .switch {
+      position: relative;
+      display: inline-block;
+      width: 36px;
+      height: 20px;
+    }
+    
+    .switch input {
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }
+    
+    .slider {
+      position: absolute;
+      cursor: pointer;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: var(--border);
+      transition: .4s;
+    }
+    
+    .slider:before {
+      position: absolute;
+      content: "";
+      height: 14px;
+      width: 14px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .4s;
+    }
+    
+    input:checked + .slider {
+      background-color: var(--primary);
+    }
+    
+    input:focus + .slider {
+      box-shadow: 0 0 1px var(--primary);
+    }
+    
+    input:checked + .slider:before {
+      transform: translateX(16px);
+    }
+    
+    .slider.round {
+      border-radius: 20px;
+    }
+    
+    .slider.round:before {
+      border-radius: 50%;
+    }
+  </style>
 </body>
 </html> 

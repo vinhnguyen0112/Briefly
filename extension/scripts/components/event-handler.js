@@ -1,5 +1,5 @@
 import { elements } from './dom-elements.js';
-import { state, getApiKey, saveApiKey, getConfig, saveConfig } from './state.js';
+import { state, getApiKey, saveApiKey, getConfig, saveConfig, getLanguage, saveLanguage } from './state.js';
 import { 
   handleResize, 
   stopResize, 
@@ -23,6 +23,7 @@ import {
   closeNoteEditor, 
   handleSaveNote 
 } from './notes-handler.js';
+import { switchLanguage } from './i18n.js';
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
@@ -286,6 +287,17 @@ export function setupEventListeners() {
   elements.closeEditorButton.addEventListener('click', () => {
     closeNoteEditor();
   });
+  
+  // language toggle
+  elements.languageToggle?.addEventListener('change', (e) => {
+    const language = e.target.checked ? 'vi' : 'en';
+    
+    // Use the new internationalization module to switch language
+    switchLanguage(language).then(message => {
+      // Notify the user about language change
+      addMessageToChat(message, 'assistant');
+    });
+  });
 }
 
 // set up quick action buttons
@@ -324,7 +336,8 @@ function renderConfigUI(containerId, onSave) {
     return;
   }
   
-  getConfig().then(config => {
+  // both config and language
+  Promise.all([getConfig(), getLanguage()]).then(([config, language]) => {
     const maxWordCount = config?.maxWordCount || 150;
     const responseStyle = config?.responseStyle || 'conversational';
     
@@ -371,6 +384,19 @@ function renderConfigUI(containerId, onSave) {
                 </div>
               </label>
             </div>
+          </div>
+          
+          <div class="form-group">
+            <label class="form-label">Response Language:</label>
+            <div class="toggle-container">
+              <span class="toggle-label ${language === 'en' ? 'active' : ''}">English</span>
+              <label class="switch">
+                <input type="checkbox" id="language-toggle-config" ${language === 'vi' ? 'checked' : ''}>
+                <span class="slider round"></span>
+              </label>
+              <span class="toggle-label ${language === 'vi' ? 'active' : ''}">Tiếng Việt</span>
+            </div>
+            <div class="help-text">Select the language for assistant responses</div>
           </div>
           
           <div class="form-actions">
@@ -509,6 +535,77 @@ function renderConfigUI(containerId, onSave) {
           outline: 2px solid var(--primary-light, #93c5fd);
           outline-offset: 2px;
         }
+        .toggle-container {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          margin: 5px 0;
+        }
+        
+        .toggle-label {
+          font-size: 0.875rem;
+          color: var(--muted-color, #6b7280);
+        }
+        
+        .toggle-label.active {
+          color: var(--text-color, #111827);
+          font-weight: 500;
+        }
+        
+        .switch {
+          position: relative;
+          display: inline-block;
+          width: 48px;
+          height: 24px;
+        }
+        
+        .switch input {
+          opacity: 0;
+          width: 0;
+          height: 0;
+        }
+        
+        .slider {
+          position: absolute;
+          cursor: pointer;
+          top: 0;
+          left: 0;
+          right: 0;
+          bottom: 0;
+          background-color: var(--border-color, #e5e7eb);
+          transition: .4s;
+        }
+        
+        .slider:before {
+          position: absolute;
+          content: "";
+          height: 18px;
+          width: 18px;
+          left: 3px;
+          bottom: 3px;
+          background-color: white;
+          transition: .4s;
+        }
+        
+        input:checked + .slider {
+          background-color: var(--primary-color, #4a86e8);
+        }
+        
+        input:focus + .slider {
+          box-shadow: 0 0 1px var(--primary-color, #4a86e8);
+        }
+        
+        input:checked + .slider:before {
+          transform: translateX(24px);
+        }
+        
+        .slider.round {
+          border-radius: 24px;
+        }
+        
+        .slider.round:before {
+          border-radius: 50%;
+        }
       </style>
     `;
     
@@ -534,9 +631,19 @@ function renderConfigUI(containerId, onSave) {
       });
     });
     
+    // dpdate toggle labels when language is changed
+    const languageToggle = document.getElementById('language-toggle-config');
+    const toggleLabels = document.querySelectorAll('.toggle-label');
+    
+    languageToggle.addEventListener('change', () => {
+      toggleLabels[0].classList.toggle('active');
+      toggleLabels[1].classList.toggle('active');
+    });
+    
     document.getElementById('save-config').addEventListener('click', () => {
       const maxWordCount = parseInt(document.getElementById('max-word-count').value);
       const responseStyle = document.querySelector('input[name="response-style"]:checked').value;
+      const language = document.getElementById('language-toggle-config').checked ? 'vi' : 'en';
       
       // Use a default personality that aligns with the backend
       const personality = 'Be helpful and informative, focusing on the content.';
@@ -548,7 +655,11 @@ function renderConfigUI(containerId, onSave) {
         responseStyle
       };
       
-      saveConfig(newConfig).then(() => {
+      // both config and language
+      Promise.all([
+        saveConfig(newConfig),
+        saveLanguage(language)
+      ]).then(() => {
         if (onSave) onSave(newConfig);
       });
     });
