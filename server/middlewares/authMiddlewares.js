@@ -38,9 +38,8 @@ export const verifySession = async (req, res, next) => {
       message: "Session not found",
     });
   } else {
-    // Append session info for onward processing
-    req.sessionId = sessionId;
-    req.sessionId.data = sessionData;
-    return next();
+    return res.status(200).json({
+      success: true,
+    });
   }
 };

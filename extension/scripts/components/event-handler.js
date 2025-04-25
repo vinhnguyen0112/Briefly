@@ -42,12 +42,15 @@ export function setupEventListeners() {
 
   // Cocbot authentication button events
   elements.googleLoginButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage(
-      { action: "google_authentication" },
-      (response) => {
-        console.log("User authenticated via Google.");
-      }
-    );
+    chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
+      console.log("Authenticating user via Google.");
+    });
+  });
+
+  elements.facebookLoginButton.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
+      console.log("Authenticating user via Facebook.");
+    });
   });
 
   elements.testButton.addEventListener("click", () => {

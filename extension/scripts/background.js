@@ -1,5 +1,7 @@
 import {
+  authenticateWithFacebook,
   authenticateWithGoogle,
+  signOut,
   testSecurity,
 } from "./components/auth-handler.js";
 import { saveUserSession } from "./components/state.js";
@@ -569,7 +571,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   }
 
-  if (message.action === "google_authentication") {
+  if (message.action === "google_login") {
     console.log("CocBot: Received request to authenticate with Google");
 
     authenticateWithGoogle()
@@ -588,6 +590,34 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
 
     return true; // Keep the message channel open for async response
+  }
+  if (message.action === "facebook_login") {
+    console.log("CocBot: Received request to authenticate with Facebook");
+    authenticateWithFacebook()
+      .then((sessionId) => {
+        console.log("Sessions ID: ", sessionId);
+        saveUserSession(sessionId)
+          .then(() => sendResponse({ success: true }))
+          .catch((err) => {
+            throw err;
+          });
+      })
+      .catch((err) => console.error(err));
+
+    return true;
+  }
+  if (message.action === "logout") {
+    console.log("CocBot: Received request to logout");
+    signOut.then((success) => {
+      if (success) {
+        console.log("Sign out sucessfully");
+        sendResponse({ success: true });
+      } else {
+        sendResponse({ success: false });
+      }
+    });
+
+    return true;
   }
   if (message.action === "test") {
     console.log("CocBot: Received request to test security and authentication");

@@ -12,6 +12,7 @@ export const elements = {
 
   // Authentication elements
   googleLoginButton: document.getElementById("google-login-button"),
+  facebookLoginButton: document.getElementById("facebook-login-button"),
 
   // Test elements
   testButton: document.getElementById("test-button"),

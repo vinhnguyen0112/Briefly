@@ -4,7 +4,10 @@ const {
   verifyOrigin,
   verifySession,
 } = require("../middlewares/authMiddlewares");
-const { authenticateWithGoogle } = require("../controllers/authControllers");
+const {
+  authenticateWithGoogle,
+  authenticateWithFacebook,
+} = require("../controllers/authControllers");
 
 const router = express.Router();
 
@@ -19,8 +22,10 @@ router.post("/test", verifyOrigin, (req, res) => {
 // Check if session is valid (call upon extension load)
 router.post("/session-check", verifySession);
 
-// Authentication routes
+// Authentication redirects
 router.post("/google/callback", verifyOrigin, authenticateWithGoogle);
-router.post("/facebook/callback", verifyOrigin);
+router.post("/facebook/callback", verifyOrigin, authenticateWithFacebook);
 
+// Sign out
+// router.post("/logout");
 module.exports = router;

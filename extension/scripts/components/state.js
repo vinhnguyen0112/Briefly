@@ -60,17 +60,26 @@ export function saveSidebarWidth(width) {
 // User session management
 export async function getUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["user_session"], (result) => {
-      resolve(result.user_session);
+    chrome.storage.local.get(["sessionId"], (result) => {
+      resolve(result.sessionId);
     });
   });
 }
 
 export async function saveUserSession(sessionId) {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ user_session: sessionId }, () => {
+    chrome.storage.local.set({ sessionId }, () => {
       console.log("CocBot: User session saved", sessionId);
       resolve(sessionId);
+    });
+  });
+}
+
+export async function clearUserSession(sessionId) {
+  return new Promise((resolve) => {
+    chrome.storage.local.remove({ sessionId }, () => {
+      console.log("CocBot: User session removed", sessionId);
+      resolve(true);
     });
   });
 }
