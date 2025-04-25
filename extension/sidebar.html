@@ -50,15 +50,15 @@
     </div>
     
     <div class="sidebar-content-wrapper">
-      <!-- Language toggle below settings -->
+      <!-- Language toggle -->
       <div class="language-toggle-section">
         <div class="language-toggle-container">
-          <span class="toggle-label">EN</span>
+          <span class="toggle-label" id="en-label">EN</span>
           <label class="switch">
             <input type="checkbox" id="language-toggle">
             <span class="slider round"></span>
           </label>
-          <span class="toggle-label">VI</span>
+          <span class="toggle-label" id="vi-label">VI</span>
         </div>
       </div>
       
@@ -99,18 +99,7 @@
             </div>
           </div>
           
-          <!-- Generated questions -->
-          <div class="generated-questions" style="display: none;">
-            <h3 data-i18n="questionsAboutPage">Questions about this page</h3>
-            <div class="question-buttons-container">
-              <!-- Questions will be added here dynamically -->
-              <div class="question-loading">
-                <div class="spinner-small"></div>
-                <span data-i18n="generatingQuestions">Generating questions...</span>
-              </div>
-            </div>
-          </div>
-          
+          <!-- Ask me anything input box -->
           <div class="welcome-search">
             <form id="welcome-form">
               <input type="text" id="welcome-input" data-i18n-placeholder="askMeAnything" placeholder="ask me anything" />
@@ -121,6 +110,24 @@
                 </svg>
               </button>
             </form>
+          </div>
+          
+          <!-- Spacer to push content to bottom -->
+          <div class="welcome-spacer"></div>
+          
+          <!-- Generated questions moved to bottom -->
+          <div class="welcome-footer">
+            <div class="generated-questions" style="display: none;">
+              <h3 data-i18n="questionsAboutPage">Questions about this page</h3>
+              <div class="question-buttons-container">
+                <div class="question-loading">
+                  <div class="spinner-small"></div>
+                  <span data-i18n="generatingQuestions">Generating questions...</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- Page context indicator will be added here dynamically -->
           </div>
         </div>
       </div>
@@ -241,7 +248,6 @@
   <script type="module" src="scripts/sidebar.js"></script>
   
   <style>
-    /* Language toggle section styles */
     .language-toggle-section {
       display: flex;
       justify-content: flex-end;
