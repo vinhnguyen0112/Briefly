@@ -1,5 +1,4 @@
-import { response } from "express";
-import { clearUserSession, getUserSession } from "./state";
+import { clearUserSession, getUserSession } from "./state.js";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const FACEBOOK_AUTH_URL = "https://www.facebook.com/v22.0/dialog/oauth";
@@ -29,21 +28,46 @@ export const testSecurity = async () => {
   }
 };
 
-const isAuthenticated = async () => {
+// Check if user is authenticated (session still exists & is valid)
+export const isUserAuthenticated = async () => {
   try {
+    // No user session
     const sessionId = await getUserSession();
-    if (!sessionId) return false;
+    console.log("Session ID: ", sessionId);
+    if (!sessionId) {
+      return false;
+    }
 
-    const response = await fetch(`${SERVER_URL}/api/auth/session-check`);
+    // Expired session & invalid sessionId
+    const isValid = await isSessionValid(sessionId);
+    return isValid;
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// Validate the user session,
+// should be schedule to run periodically in the background
+// and on extension open
+export const isSessionValid = async (sessionId) => {
+  try {
+    const response = await fetch(`${SERVER_URL}/api/auth/session-validate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ sessionId }),
+    });
+
     if (!response.ok) {
-      throw new Error("Failed to logout on server");
+      return false;
     }
 
     const data = await response.json();
     console.log(data);
-    if (data.data.success) {
-    }
+    return data.success;
   } catch (err) {
+    console.error(err);
     throw err;
   }
 };

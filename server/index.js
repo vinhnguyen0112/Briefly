@@ -2,12 +2,8 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const morgan = require("morgan");
-const { createClient } = require("redis");
 
 const authRoutes = require("./routes/authRoutes");
-const { RedisStore } = require("connect-redis");
-const { redisClient } = require("./services/redisService");
-const session = require("express-session");
 // Load environment variables
 dotenv.config();
 

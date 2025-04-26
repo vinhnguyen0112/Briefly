@@ -5,6 +5,7 @@ import {
   setupContentExtractionReliability,
 } from "./components/content-handler.js";
 import { processUserQuery } from "./components/api-handler.js";
+import { isUserAuthenticated } from "./components/auth-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -18,6 +19,11 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   // check for user session
+  isUserAuthenticated().then((isAuthenticated) => {
+    console.log(
+      isAuthenticated ? "User is authenticated" : "User is not authenticated"
+    );
+  });
 
   // load config
   getConfig()

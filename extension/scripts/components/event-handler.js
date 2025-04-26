@@ -40,19 +40,21 @@ export function setupEventListeners() {
     window.parent.postMessage({ action: "close_sidebar" }, "*");
   });
 
-  // Cocbot authentication button events
+  // Google authentication button
   elements.googleLoginButton.addEventListener("click", () => {
     chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
       console.log("Authenticating user via Google.");
     });
   });
 
+  // Facebook authentication button
   elements.facebookLoginButton.addEventListener("click", () => {
     chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
       console.log("Authenticating user via Facebook.");
     });
   });
 
+  // General testing button (multiple purposes)
   elements.testButton.addEventListener("click", () => {
     chrome.runtime.sendMessage({ action: "test" });
   });

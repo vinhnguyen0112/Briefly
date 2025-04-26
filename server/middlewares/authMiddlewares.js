@@ -19,27 +19,33 @@ export const verifyOrigin = (req, res, next) => {
   );
 };
 
-export const verifySession = async (req, res, next) => {
-  const { sessionId } = req.body;
+export const validateSession = async (req, res, next) => {
+  try {
+    console.log(req.body);
+    const { sessionId } = req.body;
 
-  // No sessionId provided
-  if (!sessionId) {
-    return res.status(400).json({
-      success: false,
-      message: "Session ID is required",
-    });
-  }
+    // No sessionId provided
+    if (!sessionId) {
+      return res.status(200).json({
+        success: false,
+        message: "Session ID is required",
+      });
+    }
 
-  const sessionData = await redisClient.get(sessionId);
-  // Session ID unexists
-  if (!sessionData) {
-    return res.status(404).json({
-      success: false,
-      message: "Session not found",
-    });
-  } else {
-    return res.status(200).json({
-      success: true,
-    });
+    const sessionData = await redisClient.get(`sess:${sessionId}`);
+    // Session ID unexists
+    if (!sessionData) {
+      return res.status(200).json({
+        success: false,
+        message: "Session not found",
+      });
+    } else {
+      return res.status(200).json({
+        success: true,
+        message: "Session found & is valid",
+      });
+    }
+  } catch (err) {
+    next(err);
   }
 };

@@ -60,7 +60,7 @@ export function saveSidebarWidth(width) {
 // User session management
 export async function getUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["sessionId"], (result) => {
+    chrome.storage.local.get("sessionId", (result) => {
       resolve(result.sessionId);
     });
   });

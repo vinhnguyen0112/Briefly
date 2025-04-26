@@ -67,3 +67,17 @@ export const authenticateWithFacebook = async (req, res, next) => {
     return next(err);
   }
 };
+
+export const signOut = async (req, res, next) => {
+  try {
+    const { sessionId } = req.body;
+    await redisClient.del(`sess:${sessionId}`);
+
+    return res.status(200).json({
+      success: true,
+      message: "Session deleted",
+    });
+  } catch (err) {
+    return next(err);
+  }
+};
