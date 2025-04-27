@@ -40,24 +40,8 @@ export function setupEventListeners() {
     window.parent.postMessage({ action: "close_sidebar" }, "*");
   });
 
-  // Google authentication button
-  elements.googleLoginButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
-      console.log("Authenticating user via Google.");
-    });
-  });
-
-  // Facebook authentication button
-  elements.facebookLoginButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
-      console.log("Authenticating user via Facebook.");
-    });
-  });
-
-  // General testing button (multiple purposes)
-  elements.testButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "test" });
-  });
+  // Set up authentication buttons
+  setupAuthenticationButtons();
 
   // CocBot title click to return to welcome screen
   elements.cocbotTitle.addEventListener("click", () => {
@@ -343,6 +327,36 @@ function setupQuickActions() {
         switchToChat();
         processUserQuery(query);
       }
+    });
+  });
+}
+
+function setupAuthenticationButtons() {
+  // Google authentication button
+  elements.googleLoginButton.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
+      console.log("User authenticated via Google");
+    });
+  });
+
+  // Facebook authentication button
+  elements.facebookLoginButton.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
+      console.log("User authenticated via Facebook");
+    });
+  });
+
+  // Sign out button
+  elements.signOutButton.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "sign_out" }, (response) => {
+      console.log("User signed out");
+    });
+  });
+
+  // Check auth state button
+  elements.checkAuthStateButton.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "check_auth_state" }, (response) => {
+      console.log("User auth state: ", response.authState);
     });
   });
 }

@@ -1,7 +1,7 @@
-import { redisClient } from "../services/redisService.js";
+const { checkSession } = require("../helpers/redisHelper");
 
 // Verify the origin of the request to ensure it's from our Chrome extension
-export const verifyOrigin = (req, res, next) => {
+const verifyOrigin = (req, res, next) => {
   const origin = req.get("Origin");
 
   console.log("Request origin: ", origin);
@@ -12,40 +12,28 @@ export const verifyOrigin = (req, res, next) => {
     return next();
   }
 
-  return next(
-    new Error(
-      "Unauthorized request from non-browser context or invalid origin."
-    )
-  );
+  return next(new Error("Unauthorized request from invalid origin."));
 };
 
-export const validateSession = async (req, res, next) => {
+// Validate the session
+const validateSession = async (req, res, next) => {
   try {
-    console.log(req.body);
     const { sessionId } = req.body;
+    const result = await checkSession(sessionId);
 
-    // No sessionId provided
-    if (!sessionId) {
-      return res.status(200).json({
-        success: false,
-        message: "Session ID is required",
-      });
+    if (result.isValid) {
+      // Pass session data onward
+      req.sessionData = result.sessionData;
+      next();
     }
-
-    const sessionData = await redisClient.get(`sess:${sessionId}`);
-    // Session ID unexists
-    if (!sessionData) {
-      return res.status(200).json({
-        success: false,
-        message: "Session not found",
-      });
-    } else {
-      return res.status(200).json({
-        success: true,
-        message: "Session found & is valid",
-      });
+    // return right away if session invalid
+    // consider changing to throwing error for easier handling on frontend
+    else {
+      return res.json({ success: false, message: result.message });
     }
   } catch (err) {
-    next(err);
+    return next(err);
   }
 };
+
+module.exports = { verifyOrigin, validateSession };

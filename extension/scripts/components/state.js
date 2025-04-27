@@ -75,10 +75,10 @@ export async function saveUserSession(sessionId) {
   });
 }
 
-export async function clearUserSession(sessionId) {
+export async function clearUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.remove({ sessionId }, () => {
-      console.log("CocBot: User session removed", sessionId);
+    chrome.storage.local.remove("sessionId", () => {
+      console.log("CocBot: User session removed");
       resolve(true);
     });
   });

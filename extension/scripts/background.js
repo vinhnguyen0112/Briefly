@@ -1,8 +1,8 @@
 import {
   authenticateWithFacebook,
   authenticateWithGoogle,
+  isUserAuthenticated,
   signOut,
-  testSecurity,
 } from "./components/auth-handler.js";
 import { saveUserSession } from "./components/state.js";
 
@@ -606,25 +606,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
-  if (message.action === "logout") {
-    console.log("CocBot: Received request to logout");
-    signOut.then((success) => {
-      if (success) {
-        console.log("Sign out sucessfully");
-        sendResponse({ success: true });
-      } else {
-        sendResponse({ success: false });
-      }
-    });
+  if (message.action === "sign_out") {
+    console.log("CocBot: Received request to sign out");
+    signOut()
+      .then((success) => {
+        if (success) {
+          console.log("Sign out sucessfully");
+          sendResponse({ success: true });
+        } else {
+          sendResponse({ success: false });
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        sendResponse({ success: false, message: err.message });
+      });
 
     return true;
   }
-  if (message.action === "test") {
-    console.log("CocBot: Received request to test security and authentication");
-    testSecurity().then(() => {
-      sendResponse({ success: true, message: "Test successful" });
-    });
-
+  if (message.action === "check_auth_state") {
+    console.log("CocBot: Received request to check auth state");
+    isUserAuthenticated().then((isValid) =>
+      sendResponse({ authState: isValid ? "Authenticated" : "Unauthenticated" })
+    );
     return true;
   }
 });

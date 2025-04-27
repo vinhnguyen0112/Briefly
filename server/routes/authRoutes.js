@@ -1,5 +1,4 @@
 const express = require("express");
-const { redisClient } = require("../services/redisService");
 const {
   verifyOrigin,
   validateSession,
@@ -12,21 +11,24 @@ const {
 
 const router = express.Router();
 
-// Route for authentication & security testing
-router.post("/test", verifyOrigin, (req, res) => {
-  return res.status(200).json({
-    success: true,
-    message: "Test done",
-  });
-});
-
-// Check if session is valid (call upon extension load)
-router.post("/session-validate", verifyOrigin, validateSession);
+// Check if session is valid on serverside (for testing purpose)
+router.post(
+  "/session-validate",
+  verifyOrigin,
+  validateSession,
+  // If request passed validateSession, session is guaranteed to be valid
+  (req, res) => {
+    res.json({
+      success: true,
+      message: "Session is valid",
+    });
+  }
+);
 
 // Authentication redirects
 router.post("/google/callback", verifyOrigin, authenticateWithGoogle);
 router.post("/facebook/callback", verifyOrigin, authenticateWithFacebook);
 
 // Sign out
-router.post("/logout", verifyOrigin, signOut);
+router.post("/signout", verifyOrigin, signOut);
 module.exports = router;

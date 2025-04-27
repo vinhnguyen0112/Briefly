@@ -4,41 +4,17 @@ const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const FACEBOOK_AUTH_URL = "https://www.facebook.com/v22.0/dialog/oauth";
 const SERVER_URL = "http://localhost:3000";
 
-// Security test
-export const testSecurity = async () => {
-  console.log("Security test function executed");
-
-  try {
-    const response = await fetch(`${SERVER_URL}/api/auth/test`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`Server responded with status ${response.status}`);
-    }
-
-    const data = await response.json();
-
-    console.log(data);
-  } catch (error) {
-    console.error("Error during security test:", error.message);
-  }
-};
-
-// Check if user is authenticated (session still exists & is valid)
+// Check if user is authenticated on server
 export const isUserAuthenticated = async () => {
   try {
-    // No user session
+    // Check for ongoing session
     const sessionId = await getUserSession();
     console.log("Session ID: ", sessionId);
     if (!sessionId) {
       return false;
     }
 
-    // Expired session & invalid sessionId
+    // Check for session validity
     const isValid = await isSessionValid(sessionId);
     return isValid;
   } catch (err) {
@@ -46,10 +22,8 @@ export const isUserAuthenticated = async () => {
   }
 };
 
-// Validate the user session,
-// should be schedule to run periodically in the background
-// and on extension open
-export const isSessionValid = async (sessionId) => {
+// Validate the user session on server
+const isSessionValid = async (sessionId) => {
   try {
     const response = await fetch(`${SERVER_URL}/api/auth/session-validate`, {
       method: "POST",
@@ -72,13 +46,14 @@ export const isSessionValid = async (sessionId) => {
   }
 };
 
+// Sign the user out
 export const signOut = async () => {
   try {
     const sessionId = await getUserSession();
     if (!sessionId) throw new Error("Session ID not found.");
 
     // Sign user out on server side first
-    const response = await fetch(`${SERVER_URL}/api/auth/signOut`, {
+    const response = await fetch(`${SERVER_URL}/api/auth/signout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -87,13 +62,12 @@ export const signOut = async () => {
     });
 
     if (!response.ok) {
-      throw new Error("Logout request failed");
+      throw new Error("Signout request failed");
     }
 
     // Clear user session in storage
-    return await clearUserSession(sessionId);
+    return await clearUserSession();
   } catch (err) {
-    console.log("Logout error: ", err.message);
     throw err;
   }
 };
@@ -122,6 +96,7 @@ export const authenticateWithFacebook = async () => {
   }
 };
 
+// Configure the Faccebook authentication endpoints
 const buildFacebookAuthUrl = (manifest) => {
   const url = new URL(FACEBOOK_AUTH_URL);
   url.searchParams.set("client_id", manifest.oauth2.facebook_client_id);
@@ -133,6 +108,7 @@ const buildFacebookAuthUrl = (manifest) => {
   return url.href;
 };
 
+// Extract token from redirected URL
 const extractAccessToken = (redirectedTo) => {
   const redirectedUrl = new URL(redirectedTo);
   const params = new URLSearchParams(redirectedUrl.hash.replace("#", ""));
@@ -145,6 +121,7 @@ const extractAccessToken = (redirectedTo) => {
   return accessToken;
 };
 
+// Send token to server for verification & session
 const sendAccessTokenToServer = async (accessToken) => {
   const response = await fetch(`${SERVER_URL}/api/auth/facebook/callback`, {
     method: "POST",
@@ -191,6 +168,7 @@ export const authenticateWithGoogle = async () => {
   }
 };
 
+// Configure Google authentication endpoints
 const buildGoogleAuthUrl = (manifest) => {
   const url = new URL(GOOGLE_AUTH_URL);
   url.searchParams.set("client_id", manifest.oauth2.client_id);
@@ -226,6 +204,7 @@ const launchAuthFlow = (authUrl) => {
   });
 };
 
+// Extract ID token from redirectedURL
 const extractIdToken = (redirectedTo) => {
   const redirectedUrl = new URL(redirectedTo);
   const params = new URLSearchParams(redirectedUrl.hash.replace("#", ""));
@@ -238,6 +217,7 @@ const extractIdToken = (redirectedTo) => {
   return idToken;
 };
 
+// Send ID token to server for verification & session
 const sendIdTokenToServer = async (idToken) => {
   const response = await fetch(`${SERVER_URL}/api/auth/google/callback`, {
     method: "POST",

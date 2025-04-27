@@ -1,33 +1,36 @@
-import { verifyIdToken } from "../services/authService.js";
-import { redisClient } from "../services/redisService.js";
+const { verifyGoogleIdToken } = require("../helpers/authHelper");
+const {
+  redisClient,
+  createSession,
+  deleteSession,
+} = require("../helpers/redisHelper");
 
 const FACEBOOK_TOKEN_DEBUG_URL = "https://graph.facebook.com/debug_token";
 
-export const authenticateWithGoogle = async (req, res, next) => {
+// Authenticate ID token to create user session
+const authenticateWithGoogle = async (req, res, next) => {
   try {
     const { idToken } = req.body;
+    console.log("Received ID token: ", idToken);
     // Verify ID token
-    const userId = await verifyIdToken(idToken);
+    const userId = await verifyGoogleIdToken(idToken);
 
     // Create session on server-side
-    const sessionId = crypto.randomUUID();
-    const sessionData = {
+    const sessionId = await createSession({
       userId,
-    };
-    await redisClient.set(`sess:${sessionId}`, JSON.stringify(sessionData), {
-      EX: 60 * 60 * 24 * 7, // Expires in 7 days
     });
-    return res.status(200).json({
+    return res.json({
       success: true,
       sessionId,
     });
   } catch (error) {
-    console.error("Error during Google authentication:", error.message);
+    console.error("Error during Google authentication:", error);
     return next(error);
   }
 };
 
-export const authenticateWithFacebook = async (req, res, next) => {
+// Authenticate access token to create user session
+const authenticateWithFacebook = async (req, res, next) => {
   try {
     const { accessToken } = req.body;
 
@@ -52,14 +55,10 @@ export const authenticateWithFacebook = async (req, res, next) => {
     console.log(data.data);
 
     // Create session on server-side
-    const sessionId = crypto.randomUUID();
-    const sessionData = {
+    const sessionId = await createSession({
       userId: data.data.user_id,
-    };
-    await redisClient.set(`sess:${sessionId}`, JSON.stringify(sessionData), {
-      EX: 60 * 60 * 24 * 7, // Expires in 7 days
     });
-    return res.status(200).json({
+    return res.json({
       success: true,
       sessionId,
     });
@@ -68,16 +67,25 @@ export const authenticateWithFacebook = async (req, res, next) => {
   }
 };
 
-export const signOut = async (req, res, next) => {
+// Sign user out by deleting their session
+const signOut = async (req, res, next) => {
   try {
     const { sessionId } = req.body;
-    await redisClient.del(`sess:${sessionId}`);
+    if (!sessionId) {
+      return res.json({
+        success: false,
+        message: "No session Id",
+      });
+    }
+    const success = await deleteSession(sessionId);
 
-    return res.status(200).json({
-      success: true,
-      message: "Session deleted",
+    return res.json({
+      success,
+      message: success ? "Session deleted" : "Invalid session Id",
     });
   } catch (err) {
     return next(err);
   }
 };
+
+module.exports = { authenticateWithGoogle, authenticateWithFacebook, signOut };
