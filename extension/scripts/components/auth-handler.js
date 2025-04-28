@@ -1,10 +1,46 @@
-import { clearUserSession, getUserSession } from "./state.js";
+import {
+  clearUserSession,
+  getAnonQueryCount,
+  getUserSession,
+  setAnonQueryCount,
+} from "./state.js";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const FACEBOOK_AUTH_URL = "https://www.facebook.com/v22.0/dialog/oauth";
 const SERVER_URL = "http://localhost:3000";
 
+export const setUpAnonQueryCount = async () => {
+  try {
+    const count = await getAnonQueryCount();
+    if (!count) await setAnonQueryCount(0);
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+// Check if user session is still valid upon extension launch
+// If not then clear the user session, this will not force an sign in,
+// but rather update the UI to reflect that user is not signed in
+export function validateUserSession() {
+  return new Promise((resolve, reject) => {
+    getUserSession()
+      .then((sessionId) => {
+        if (sessionId) {
+          isSessionValid(sessionId)
+            .then((isValid) => {
+              resolve(isValid);
+            })
+            .catch(reject);
+        } else {
+          resolve(); // Resolve if no session exists
+        }
+      })
+      .catch(reject);
+  });
+}
+
 // Check if user is authenticated on server
+// This function is used to verify current session on extension startup
 export const isUserAuthenticated = async () => {
   try {
     // Check for ongoing session
@@ -22,8 +58,8 @@ export const isUserAuthenticated = async () => {
   }
 };
 
-// Validate the user session on server
-const isSessionValid = async (sessionId) => {
+// Validate if the session is still valid on server
+export const isSessionValid = async (sessionId) => {
   try {
     const response = await fetch(`${SERVER_URL}/api/auth/session-validate`, {
       method: "POST",
@@ -44,6 +80,14 @@ const isSessionValid = async (sessionId) => {
     console.error(err);
     throw err;
   }
+};
+
+// Check if user need to sign in to proceed their action
+// This function is used to handle when user are making anonymous queries
+export const isSignInNeeded = async () => {
+  const sessionId = await getUserSession();
+  const anonQueryCount = await getAnonQueryCount();
+  return anonQueryCount >= 3 && !sessionId; // No session found & anon query count exceed 3
 };
 
 // Sign the user out

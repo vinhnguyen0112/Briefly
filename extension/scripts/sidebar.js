@@ -1,15 +1,31 @@
-import { loadSidebarWidth, getApiKey, getConfig } from "./components/state.js";
+import {
+  loadSidebarWidth,
+  getApiKey,
+  getConfig,
+  getUserSession,
+  clearUserSession,
+} from "./components/state.js";
 import { setupEventListeners } from "./components/event-handler.js";
 import {
   requestPageContent,
   setupContentExtractionReliability,
 } from "./components/content-handler.js";
 import { processUserQuery } from "./components/api-handler.js";
-import { isUserAuthenticated } from "./components/auth-handler.js";
+import {
+  isSessionValid,
+  isUserAuthenticated,
+  setUpAnonQueryCount,
+  validateUserSession,
+} from "./components/auth-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
+
+  // Validate the user session first before anything
+  validateUserSession().then((isValid) => {
+    // Clear session + Update UI if session not valid
+  });
 
   // check for api key
   getApiKey().then((key) => {
@@ -18,11 +34,9 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // check for user session
-  isUserAuthenticated().then((isAuthenticated) => {
-    console.log(
-      isAuthenticated ? "User is authenticated" : "User is not authenticated"
-    );
+  // Set up anon query count
+  setUpAnonQueryCount().then(() => {
+    console.log("Anon query count set up.");
   });
 
   // load config

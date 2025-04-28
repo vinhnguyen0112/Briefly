@@ -57,27 +57,44 @@ export function saveSidebarWidth(width) {
   });
 }
 
+// Anon query management
+export async function getAnonQueryCount() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get("anon_query_count", (result) => {
+      resolve(result.anon_query_count);
+    });
+  });
+}
+
+export async function setAnonQueryCount(count) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ anon_query_count: count }, (result) => {
+      resolve(true);
+    });
+  });
+}
+
 // User session management
 export async function getUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.get("sessionId", (result) => {
-      resolve(result.sessionId);
+    chrome.storage.local.get("session_id", (result) => {
+      resolve(result.session_id);
     });
   });
 }
 
 export async function saveUserSession(sessionId) {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ sessionId }, () => {
+    chrome.storage.local.set({ session_id: sessionId }, () => {
       console.log("CocBot: User session saved", sessionId);
-      resolve(sessionId);
+      resolve(true);
     });
   });
 }
 
 export async function clearUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.remove("sessionId", () => {
+    chrome.storage.local.remove("session_id", () => {
       console.log("CocBot: User session removed");
       resolve(true);
     });
