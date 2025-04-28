@@ -359,7 +359,11 @@ function setupAuthenticationButtons() {
       console.log("User auth state: ", response.authState);
     });
   });
+
+  elements.accountButton.addEventListener("click", () => renderAccountUI());
 }
+
+function renderAccountUI() {}
 
 // external function for rendering UI config
 function renderConfigUI(containerId, onSave) {
@@ -617,3 +621,5 @@ function renderConfigUI(containerId, onSave) {
     });
   });
 }
+
+function renderAuthenticationUI() {}

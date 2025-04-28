@@ -15,6 +15,7 @@ export const elements = {
   facebookLoginButton: document.getElementById("facebook-login-button"),
   signOutButton: document.getElementById("sign-out-button"),
   checkAuthStateButton: document.getElementById("check-auth-state-button"),
+  accountButton: document.getElementById("account-button"),
 
   // Content viewer elements
   contentDisplay: document.getElementById("content-display"),
