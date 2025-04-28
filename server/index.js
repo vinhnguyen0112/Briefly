@@ -1,3 +1,6 @@
+// Load environment variables
+require('dotenv').config()
+
 const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
@@ -5,8 +8,7 @@ const morgan = require("morgan");
 
 const authRoutes = require("./routes/authRoutes");
 const { redisClient } = require("./helpers/redisHelper");
-// Load environment variables
-dotenv.config();
+const imageCaptionRoutes = require('./routes/imageCaptionRoutes');
 
 // Initialize Express app
 const app = express();
@@ -53,6 +55,9 @@ app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "CocBot API is running" });
 });
 
+// Mount route image-caption
+app.use('/api/image-caption', imageCaptionRoutes);
+
 // Error handling middleware
 app.use((err, req, res, next) => {
   console.error(err.stack);
@@ -66,3 +71,4 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`CocBot server running on port ${PORT}`);
 });
+
