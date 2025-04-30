@@ -1150,3 +1150,45 @@ body.sidebar-resizing * {
 .popup .button-secondary:hover {
   background-color: var(--border);
 }
+
+/* Sign-in alert popup styles */
+#signin-alert-popup {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: var(--background);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  z-index: 10002;
+  padding: 20px;
+  width: calc(var(--sidebar-width) * 0.8); /* Scale with sidebar width */
+  max-width: var(--sidebar-max-width); /* Ensure it doesn't exceed max width */
+  min-width: var(
+    --sidebar-min-width
+  ); /* Ensure it doesn't go below min width */
+  text-align: center;
+}
+
+#signin-alert-popup .popup-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--foreground);
+  margin-bottom: 12px;
+}
+
+#signin-alert-popup .popup-message {
+  font-size: 14px;
+  color: var(--muted-foreground);
+  margin-bottom: 20px;
+}
+
+#signin-alert-popup .button {
+  width: 100%;
+  margin-bottom: 10px;
+}
+
+#signin-alert-popup .button:last-child {
+  margin-bottom: 0;
+}
