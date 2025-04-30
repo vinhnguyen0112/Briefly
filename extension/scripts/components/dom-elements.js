@@ -13,9 +13,11 @@ export const elements = {
   // Authentication elements
   googleLoginButton: document.getElementById("google-login-button"),
   facebookLoginButton: document.getElementById("facebook-login-button"),
-  signOutButton: document.getElementById("sign-out-button"),
   checkAuthStateButton: document.getElementById("check-auth-state-button"),
   accountButton: document.getElementById("account-button"),
+  accountPopup: document.getElementById("account-popup"),
+  switchAccountButton: document.getElementById("switch-account-button"),
+  signOutButton: document.getElementById("sign-out-button"),
 
   // Content viewer elements
   contentDisplay: document.getElementById("content-display"),

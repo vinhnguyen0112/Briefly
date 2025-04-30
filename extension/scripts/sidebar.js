@@ -23,8 +23,9 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
 
   // Validate the user session first before anything
-  validateUserSession().then((isValid) => {
+  validateUserSession().then(async (isValid) => {
     // Clear session + Update UI if session not valid
+    await clearUserSession();
   });
 
   // check for api key

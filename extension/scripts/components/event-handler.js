@@ -5,6 +5,7 @@ import {
   saveApiKey,
   getConfig,
   saveConfig,
+  getUserSession,
 } from "./state.js";
 import {
   handleResize,
@@ -363,7 +364,34 @@ function setupAuthenticationButtons() {
   elements.accountButton.addEventListener("click", () => renderAccountUI());
 }
 
-function renderAccountUI() {}
+async function renderAccountUI() {
+  const popup = elements.accountPopup;
+
+  // Toggle the display state of the popup
+  if (popup.style.display === "none" || !popup.style.display) {
+    popup.style.display = "block";
+
+    // Fetch user session
+    const session = await getUserSession();
+
+    // Show or hide buttons based on session state
+    if (session) {
+      // User is authenticated
+      elements.switchAccountButton.style.display = "block";
+      elements.signOutButton.style.display = "block";
+      elements.googleLoginButton.style.display = "none";
+      elements.facebookLoginButton.style.display = "none";
+    } else {
+      // User is not authenticated
+      elements.switchAccountButton.style.display = "none";
+      elements.signOutButton.style.display = "none";
+      elements.googleLoginButton.style.display = "block";
+      elements.facebookLoginButton.style.display = "block";
+    }
+  } else {
+    popup.style.display = "none";
+  }
+}
 
 // external function for rendering UI config
 function renderConfigUI(containerId, onSave) {

@@ -173,15 +173,6 @@
                 </button>
                 <!-- Helper buttons to test authentication without replying on Postman -->
                 <!-- Delete when UI is completed -->
-                <button class="action-button" id="google-login-button">
-                  Google Login
-                </button>
-                <button class="action-button" id="facebook-login-button">
-                  Facebook Login
-                </button>
-                <button class="action-button" id="sign-out-button">
-                  Sign Out
-                </button>
                 <button class="action-button" id="check-auth-state-button">
                   Auth State
                 </button>
@@ -407,6 +398,21 @@
         <div id="config-content">
           <!-- Configuration UI will be rendered here -->
         </div>
+      </div>
+    </div>
+
+    <div id="account-popup" class="popup" style="display: none">
+      <div class="popup-content">
+        <button id="switch-account-button" class="button">
+          Switch Account
+        </button>
+        <button id="sign-out-button" class="button button-secondary">
+          Sign Out
+        </button>
+        <button class="button" id="google-login-button">Google Login</button>
+        <button class="button" id="facebook-login-button">
+          Facebook Login
+        </button>
       </div>
     </div>
 
