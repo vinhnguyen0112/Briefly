@@ -4,6 +4,7 @@ import {
   getConfig,
   getUserSession,
   clearUserSession,
+  state,
 } from "./components/state.js";
 import { setupEventListeners } from "./components/event-handler.js";
 import {
@@ -24,8 +25,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Validate the user session first before anything
   validateUserSession().then(async (isValid) => {
-    // Clear session + Update UI if session not valid
-    await clearUserSession();
+    // Set authentication state for authentication depedent UI
+    state.isAuthenticated = isValid;
+
+    // Clear user session from storage if user is unauthenticated
+    if (!isValid) {
+      await clearUserSession();
+    }
   });
 
   // check for api key

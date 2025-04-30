@@ -336,21 +336,36 @@ function setupAuthenticationButtons() {
   // Google authentication button
   elements.googleLoginButton.addEventListener("click", () => {
     chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
-      console.log("User authenticated via Google");
+      if (response.success) {
+        // Set authentication state and force close the account popup
+        state.isAuthenticated = true;
+        closeAccountPopupUI();
+        console.log("User authenticated via Google");
+      }
     });
   });
 
   // Facebook authentication button
   elements.facebookLoginButton.addEventListener("click", () => {
     chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
-      console.log("User authenticated via Facebook");
+      if (response.success) {
+        // Set authentication state and force close the account popup
+        state.isAuthenticated = true;
+        closeAccountPopupUI();
+        console.log("User authenticated via Facebook");
+      }
     });
   });
 
   // Sign out button
   elements.signOutButton.addEventListener("click", () => {
     chrome.runtime.sendMessage({ action: "sign_out" }, (response) => {
-      console.log("User signed out");
+      if (response.success) {
+        // Set authentication state and force close the account popup
+        state.isAuthenticated = false;
+        closeAccountPopupUI();
+        console.log("User signed out");
+      }
     });
   });
 
@@ -361,10 +376,38 @@ function setupAuthenticationButtons() {
     });
   });
 
-  elements.accountButton.addEventListener("click", () => renderAccountUI());
+  elements.accountButton.addEventListener("click", () =>
+    toggleAccountPopupUI()
+  );
 }
 
-async function renderAccountUI() {
+// Force close the account popup UI
+// Use this when user completed an action on the UI
+function closeAccountPopupUI() {
+  elements.accountPopup.style.display = "none";
+}
+
+// Force re-render the account popup UI
+// Use as an alternative to closeAccountPopupUI() if not UX friendly enough
+function renderToggleAccountPopupUI() {
+  if (state.isAuthenticated) {
+    // User is authenticated
+    elements.switchAccountButton.style.display = "block";
+    elements.signOutButton.style.display = "block";
+    elements.googleLoginButton.style.display = "none";
+    elements.facebookLoginButton.style.display = "none";
+  } else {
+    // User is not authenticated
+    elements.switchAccountButton.style.display = "none";
+    elements.signOutButton.style.display = "none";
+    elements.googleLoginButton.style.display = "block";
+    elements.facebookLoginButton.style.display = "block";
+  }
+}
+
+// Toggle on or off the account popup UI based on current state
+// And display appropriate buttons based on authentication state
+function toggleAccountPopupUI() {
   const popup = elements.accountPopup;
 
   // Toggle the display state of the popup
@@ -372,10 +415,10 @@ async function renderAccountUI() {
     popup.style.display = "block";
 
     // Fetch user session
-    const session = await getUserSession();
 
+    console.log("Authentication state: ", state.isAuthenticated);
     // Show or hide buttons based on session state
-    if (session) {
+    if (state.isAuthenticated) {
       // User is authenticated
       elements.switchAccountButton.style.display = "block";
       elements.signOutButton.style.display = "block";
@@ -649,5 +692,3 @@ function renderConfigUI(containerId, onSave) {
     });
   });
 }
-
-function renderAuthenticationUI() {}

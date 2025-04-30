@@ -4,7 +4,7 @@ import {
   isUserAuthenticated,
   signOut,
 } from "./components/auth-handler.js";
-import { saveUserSession } from "./components/state.js";
+import { saveUserSession, state } from "./components/state.js";
 
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
@@ -579,7 +579,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.log("Session ID: ", sessionId);
         // Store sessionId into extension's local storage
         saveUserSession(sessionId)
-          .then(() => sendResponse({ success: true }))
+          .then(() => {
+            sendResponse({ success: true });
+          })
           .catch((err) => {
             throw err;
           });
@@ -597,7 +599,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then((sessionId) => {
         console.log("Sessions ID: ", sessionId);
         saveUserSession(sessionId)
-          .then(() => sendResponse({ success: true }))
+          .then(() => {
+            sendResponse({ success: true });
+          })
           .catch((err) => {
             throw err;
           });

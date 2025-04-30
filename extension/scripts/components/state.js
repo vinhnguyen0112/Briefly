@@ -19,6 +19,7 @@ export const state = {
   currentPageUrl: "",
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
+  isAuthenticated: false,
 };
 
 // Load sidebar width from storage
@@ -77,7 +78,10 @@ export async function setAnonQueryCount(count) {
 // User session management
 export async function getUserSession() {
   return new Promise((resolve) => {
+    const start = performance.now();
     chrome.storage.local.get("session_id", (result) => {
+      const end = performance.now();
+      console.log(`Get user sessions took: ${end - start} s`);
       resolve(result.session_id);
     });
   });
