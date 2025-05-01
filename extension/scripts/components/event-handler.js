@@ -405,8 +405,8 @@ function renderToggleAccountPopupUI() {
     // User is not authenticated
     elements.switchAccountButton.style.display = "none";
     elements.signOutButton.style.display = "none";
-    elements.googleLoginButton.style.display = "block";
-    elements.facebookLoginButton.style.display = "block";
+    elements.googleLoginButton.style.display = "flex";
+    elements.facebookLoginButton.style.display = "flex";
   }
 }
 
@@ -433,8 +433,8 @@ function toggleAccountPopupUI() {
       // User is not authenticated
       elements.switchAccountButton.style.display = "none";
       elements.signOutButton.style.display = "none";
-      elements.googleLoginButton.style.display = "block";
-      elements.facebookLoginButton.style.display = "block";
+      elements.googleLoginButton.style.display = "flex";
+      elements.facebookLoginButton.style.display = "flex";
     }
   } else {
     popup.style.display = "none";
