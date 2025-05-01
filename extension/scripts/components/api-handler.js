@@ -1,13 +1,27 @@
-import { state, getApiKey } from "./state.js";
+import {
+  state,
+  getApiKey,
+  setAnonQueryCount,
+  incrementAnonQueryCount,
+} from "./state.js";
 import {
   addMessageToChat,
   addTypingIndicator,
   removeTypingIndicator,
 } from "./ui-handler.js";
 import { elements } from "./dom-elements.js";
+import { isSignInNeeded } from "./auth-handler.js";
+import { openSignInAlertPopup } from "./event-handler.js";
 
 // process a user query
+// If user is unauthenticated & reached their query limit, force sign in
 export async function processUserQuery(query) {
+  const notAllowed = await isSignInNeeded();
+  if (notAllowed) {
+    openSignInAlertPopup();
+    return;
+  }
+
   addMessageToChat(query, "user");
 
   const typingIndicator = addTypingIndicator();
@@ -49,6 +63,11 @@ export async function processUserQuery(query) {
 
       if (state.history.length > 6) {
         state.history = state.history.slice(state.history.length - 6);
+      }
+
+      // Increase anon query count if user is not authenticated
+      if (!state.isAuthenticated) {
+        await incrementAnonQueryCount();
       }
     } else {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");

@@ -303,6 +303,11 @@ export function setupEventListeners() {
   elements.closeEditorButton.addEventListener("click", () => {
     closeNoteEditor();
   });
+
+  elements.closeSignInAlertButton.addEventListener(
+    "click",
+    closeSignInAlertPopup
+  );
 }
 
 // set up quick action buttons
@@ -434,6 +439,26 @@ function toggleAccountPopupUI() {
   } else {
     popup.style.display = "none";
   }
+}
+
+export function openSignInAlertPopup() {
+  // Show the overlay and popup
+  elements.signInAlertOverlay.style.display = "flex";
+
+  // Add blur effect to the background
+  elements.sidebarContentWrapper.classList.add("sidebar-blurred");
+  elements.sidebarHeader.classList.add("sidebar-blurred");
+  elements.sidebarFooter.classList.add("sidebar-blurred");
+}
+
+function closeSignInAlertPopup() {
+  // Hide the overlay and popup
+  elements.signInAlertOverlay.style.display = "none";
+
+  // Remove blur effect from the background
+  elements.sidebarContentWrapper.classList.remove("sidebar-blurred");
+  elements.sidebarHeader.classList.remove("sidebar-blurred");
+  elements.sidebarFooter.classList.remove("sidebar-blurred");
 }
 
 // external function for rendering UI config

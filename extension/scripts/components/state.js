@@ -62,17 +62,22 @@ export function saveSidebarWidth(width) {
 export async function getAnonQueryCount() {
   return new Promise((resolve) => {
     chrome.storage.local.get("anon_query_count", (result) => {
-      resolve(result.anon_query_count);
+      resolve(result.anon_query_count || 0);
     });
   });
 }
 
 export async function setAnonQueryCount(count) {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ anon_query_count: count }, (result) => {
+    chrome.storage.local.set({ anon_query_count: count }, () => {
       resolve(true);
     });
   });
+}
+
+export async function incrementAnonQueryCount() {
+  const currentCount = await getAnonQueryCount();
+  await setAnonQueryCount(currentCount + 1);
 }
 
 // User session management

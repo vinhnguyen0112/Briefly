@@ -12,7 +12,9 @@
   --radius: 0.5rem;
 
   /* sidebar size params */
-  --sidebar-width: 320px;
+  /* Can we change this to 350px pls, cause the iframe is 350px, 
+  setting this to 320px add weird ahh spacing */
+  --sidebar-width: 350px;
   --sidebar-min-width: 280px;
   --sidebar-max-width: 500px;
 }
@@ -1151,8 +1153,34 @@ body.sidebar-resizing * {
   background-color: var(--border);
 }
 
+/* Overlay for sign-in alert */
+#sign-in-alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
+  z-index: 10001; /* Ensure it appears above other elements */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Blur effect for the background */
+.sidebar-content-wrapper,
+.sidebar-header,
+.sidebar-footer {
+  transition: filter 0.3s ease;
+}
+
+.sidebar-blurred {
+  filter: blur(4px); /* Apply blur effect */
+  pointer-events: none; /* Disable interactions */
+}
+
 /* Sign-in alert popup styles */
-#signin-alert-popup {
+#sign-in-alert-popup {
   position: fixed;
   top: 50%;
   left: 50%;
@@ -1171,24 +1199,24 @@ body.sidebar-resizing * {
   text-align: center;
 }
 
-#signin-alert-popup .popup-title {
+#sign-in-alert-popup .popup-title {
   font-size: 18px;
   font-weight: 600;
   color: var(--foreground);
   margin-bottom: 12px;
 }
 
-#signin-alert-popup .popup-message {
+#sign-in-alert-popup .popup-message {
   font-size: 14px;
   color: var(--muted-foreground);
   margin-bottom: 20px;
 }
 
-#signin-alert-popup .button {
+#sign-in-alert-popup .button {
   width: 100%;
   margin-bottom: 10px;
 }
 
-#signin-alert-popup .button:last-child {
+#sign-in-alert-popup .button:last-child {
   margin-bottom: 0;
 }

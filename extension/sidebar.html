@@ -409,24 +409,36 @@
         <button id="sign-out-button" class="button button-secondary">
           Sign Out
         </button>
-        <button class="button" id="google-login-button">Google Login</button>
+        <button class="button" id="google-login-button">
+          Sign in with Google
+        </button>
         <button class="button" id="facebook-login-button">
-          Facebook Login
+          Sign in with Facebook
         </button>
       </div>
     </div>
 
-    <div id="signin-alert-popup" class="popup" style="display: none">
-      <div class="popup-content">
-        <h3 class="popup-title">Sign In Required</h3>
-        <p class="popup-message">
-          You need to sign in to continue using this feature. Please sign in to
-          proceed.
-        </p>
-        <button id="signin-button" class="button">Sign In</button>
-        <button id="close-signin-popup" class="button button-secondary">
-          Close
-        </button>
+    <div id="sign-in-alert-overlay" class="overlay" style="display: none">
+      <div id="sign-in-alert-popup" class="popup">
+        <div class="popup-content">
+          <h3 class="popup-title">Sign In Required</h3>
+          <p class="popup-message">
+            You need to sign in to continue using this feature. Please sign in
+            to proceed.
+          </p>
+          <button class="button" id="google-login-button">
+            Sign in with Google
+          </button>
+          <button class="button" id="facebook-login-button">
+            Sign in with Facebook
+          </button>
+          <button
+            id="close-sign-in-alert-button"
+            class="button button-secondary"
+          >
+            Close
+          </button>
+        </div>
       </div>
     </div>
 

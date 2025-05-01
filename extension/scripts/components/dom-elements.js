@@ -19,6 +19,11 @@ export const elements = {
   switchAccountButton: document.getElementById("switch-account-button"),
   signOutButton: document.getElementById("sign-out-button"),
 
+  // Alert elements
+  signInAlertPopup: document.getElementById("sign-in-alert-popup"),
+  signInAlertOverlay: document.getElementById("sign-in-alert-overlay"),
+  closeSignInAlertButton: document.getElementById("close-sign-in-alert-button"),
+
   // Content viewer elements
   contentDisplay: document.getElementById("content-display"),
 

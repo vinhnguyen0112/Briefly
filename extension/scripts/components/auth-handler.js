@@ -3,6 +3,7 @@ import {
   getAnonQueryCount,
   getUserSession,
   setAnonQueryCount,
+  state,
 } from "./state.js";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
@@ -85,9 +86,9 @@ export const isSessionValid = async (sessionId) => {
 // Check if user need to sign in to proceed their action
 // This function is used to handle when user are making anonymous queries
 export const isSignInNeeded = async () => {
-  const sessionId = await getUserSession();
   const anonQueryCount = await getAnonQueryCount();
-  return anonQueryCount >= 3 && !sessionId; // No session found & anon query count exceed 3
+  // User is unauthenticated & anon query count exceed 3
+  return anonQueryCount >= 3 && !state.isAuthenticated;
 };
 
 // Sign the user out
