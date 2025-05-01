@@ -16,7 +16,6 @@ export const elements = {
   checkAuthStateButton: document.getElementById("check-auth-state-button"),
   accountButton: document.getElementById("account-button"),
   accountPopup: document.getElementById("account-popup"),
-  switchAccountButton: document.getElementById("switch-account-button"),
   signOutButton: document.getElementById("sign-out-button"),
 
   // Alert elements

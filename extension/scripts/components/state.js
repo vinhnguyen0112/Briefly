@@ -75,6 +75,8 @@ export async function setAnonQueryCount(count) {
   });
 }
 
+// Consider storing anon_query_count as state upon extension load
+// as an alternative for better performance
 export async function incrementAnonQueryCount() {
   const currentCount = await getAnonQueryCount();
   await setAnonQueryCount(currentCount + 1);

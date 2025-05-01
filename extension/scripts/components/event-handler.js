@@ -397,13 +397,11 @@ function closeAccountPopupUI() {
 function renderToggleAccountPopupUI() {
   if (state.isAuthenticated) {
     // User is authenticated
-    elements.switchAccountButton.style.display = "block";
     elements.signOutButton.style.display = "block";
     elements.googleLoginButton.style.display = "none";
     elements.facebookLoginButton.style.display = "none";
   } else {
     // User is not authenticated
-    elements.switchAccountButton.style.display = "none";
     elements.signOutButton.style.display = "none";
     elements.googleLoginButton.style.display = "flex";
     elements.facebookLoginButton.style.display = "flex";
@@ -425,13 +423,11 @@ function toggleAccountPopupUI() {
     // Show or hide buttons based on session state
     if (state.isAuthenticated) {
       // User is authenticated
-      elements.switchAccountButton.style.display = "block";
       elements.signOutButton.style.display = "block";
       elements.googleLoginButton.style.display = "none";
       elements.facebookLoginButton.style.display = "none";
     } else {
       // User is not authenticated
-      elements.switchAccountButton.style.display = "none";
       elements.signOutButton.style.display = "none";
       elements.googleLoginButton.style.display = "flex";
       elements.facebookLoginButton.style.display = "flex";

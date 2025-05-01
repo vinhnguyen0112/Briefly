@@ -84,7 +84,6 @@ export const isSessionValid = async (sessionId) => {
 };
 
 // Check if user need to sign in to proceed their action
-// This function is used to handle when user are making anonymous queries
 export const isSignInNeeded = async () => {
   const anonQueryCount = await getAnonQueryCount();
   // User is unauthenticated & anon query count exceed 3

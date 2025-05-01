@@ -13,9 +13,9 @@ import { elements } from "./dom-elements.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import { openSignInAlertPopup } from "./event-handler.js";
 
-// process a user query
-// If user is unauthenticated & reached their query limit, force sign in
+// Process a user query
 export async function processUserQuery(query) {
+  // If user is unauthenticated & exceeded their query limit, force sign in
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
     openSignInAlertPopup();

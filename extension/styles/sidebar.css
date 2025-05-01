@@ -163,6 +163,26 @@ body.sidebar-resizing * {
   color: var(--primary-foreground);
 }
 
+/* account button */
+#account-button {
+  background-color: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 18px;
+  border: none;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+#account-button:hover {
+  opacity: 0.8;
+}
+
+#account-button.active {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+}
+
 /* content view button */
 #view-content-button {
   background-color: var(--muted);
@@ -1128,7 +1148,7 @@ body.sidebar-resizing * {
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   z-index: 10001;
   padding: 16px;
-  width: 300px;
+  width: 200px;
 }
 
 /* Popup content */
