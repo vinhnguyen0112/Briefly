@@ -628,11 +628,4 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
-  if (message.action === "check_auth_state") {
-    console.log("CocBot: Received request to check auth state");
-    isUserAuthenticated().then((isValid) =>
-      sendResponse({ authState: isValid ? "Authenticated" : "Unauthenticated" })
-    );
-    return true;
-  }
 });

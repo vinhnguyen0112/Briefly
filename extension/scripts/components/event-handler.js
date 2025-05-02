@@ -374,13 +374,6 @@ function setupAuthenticationButtons() {
     });
   });
 
-  // Check auth state button
-  elements.checkAuthStateButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "check_auth_state" }, (response) => {
-      console.log("User auth state: ", response.authState);
-    });
-  });
-
   elements.accountButton.addEventListener("click", () =>
     toggleAccountPopupUI()
   );
@@ -397,7 +390,7 @@ function closeAccountPopupUI() {
 function renderToggleAccountPopupUI() {
   if (state.isAuthenticated) {
     // User is authenticated
-    elements.signOutButton.style.display = "block";
+    elements.signOutButton.style.display = "flex";
     elements.googleLoginButton.style.display = "none";
     elements.facebookLoginButton.style.display = "none";
   } else {
@@ -423,7 +416,7 @@ function toggleAccountPopupUI() {
     // Show or hide buttons based on session state
     if (state.isAuthenticated) {
       // User is authenticated
-      elements.signOutButton.style.display = "block";
+      elements.signOutButton.style.display = "flex";
       elements.googleLoginButton.style.display = "none";
       elements.facebookLoginButton.style.display = "none";
     } else {

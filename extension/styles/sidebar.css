@@ -1248,7 +1248,7 @@ body.sidebar-resizing * {
   align-items: center;
   justify-content: center;
   padding: 10px 16px;
-  gap: 10px;
+  gap: 8px;
   background-color: var(--muted);
   color: var(--foreground);
   border: 1px solid var(--border);
@@ -1265,4 +1265,12 @@ body.sidebar-resizing * {
 .auth-icon {
   flex-shrink: 0; /* Prevent the icon from shrinking */
   vertical-align: middle; /* Align the icon with the text */
+}
+
+/* Sign out button style */
+#sign-out-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }

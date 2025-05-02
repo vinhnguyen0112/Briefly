@@ -24,7 +24,7 @@ const validateSession = async (req, res, next) => {
     if (result.isValid) {
       // Pass session data onward
       req.sessionData = result.sessionData;
-      next();
+      return next();
     }
     // return right away if session invalid
     // consider changing to throwing error for easier handling on frontend
