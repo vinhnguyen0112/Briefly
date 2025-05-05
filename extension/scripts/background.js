@@ -1,10 +1,9 @@
 import {
   authenticateWithFacebook,
   authenticateWithGoogle,
-  isUserAuthenticated,
   signOut,
 } from "./components/auth-handler.js";
-import { openIndexedDB } from "./components/idb-handler.js";
+import { addConversation, addQuery } from "./components/idb-handler.js";
 import { saveUserSession, state } from "./components/state.js";
 
 //  first install
@@ -629,26 +628,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
-  if (message.action === "setup_storage") {
-    console.log("CocBot: Setting up IndexedDB storage");
-
-    openIndexedDB()
-      .then((response) => {
-        if (response.success) {
-          console.log("IndexedDB setup complete:", response);
-          sendResponse({
-            success: true,
-            db: response.db,
-            message: "Database setup complete",
-          });
-        } else {
-          console.error("Error setting up IndexedDB:", error);
-          sendResponse({ success: false, message: "Failed to setup storage" });
-        }
+  if (message.action === "add_conversation") {
+    console.log("CocBot: Adding new conversation");
+    addConversation(message.conversation)
+      .then((conversationId) => {
+        sendResponse({ success: true, conversationId });
       })
       .catch((error) => {
-        console.error("Error setting up IndexedDB:", error);
-        sendResponse({ success: false, message: error.message });
+        console.error("Error adding conversation:", error);
+        sendResponse({ success: false, error: error.message });
+      });
+
+    return true; // Keep the message channel open for async response
+  }
+
+  if (message.action === "add_query") {
+    console.log("CocBot: Adding new query");
+
+    addQuery(message.query)
+      .then((queryId) => {
+        sendResponse({ success: true, queryId });
+      })
+      .catch((error) => {
+        console.error("Error adding query:", error);
+        sendResponse({ success: false, error: error.message });
       });
 
     return true; // Keep the message channel open for async response

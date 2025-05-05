@@ -46,9 +46,22 @@ export function setupEventListeners() {
 
   // Set up test elements
   elements.testButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "setup_storage" }, (response) => {
-      console.log("Set up storage response:", response);
-    });
+    chrome.runtime.sendMessage(
+      {
+        action: "add_conversation",
+        conversation: {
+          title: "test conversation",
+          page_url: "https://example.com",
+        },
+      },
+      (response) => {
+        if (response.success) {
+          console.log("Conversation added with ID:", response.conversationId);
+        } else {
+          console.error("Failed to add conversation:", response.error);
+        }
+      }
+    );
   });
 
   // CocBot title click to return to welcome screen
