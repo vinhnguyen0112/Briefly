@@ -8,14 +8,7 @@
     "48": "icons/logo.png",
     "128": "icons/logo.png"
   },
-  "permissions": [
-    "storage",
-    "activeTab",
-    "sidePanel",
-    "scripting",
-    "identity",
-    "offscreen"
-  ],
+  "permissions": ["storage", "activeTab", "sidePanel", "scripting", "identity"],
   "host_permissions": ["https://api.openai.com/*"],
   "background": {
     "service_worker": "scripts/background.js",

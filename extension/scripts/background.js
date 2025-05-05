@@ -4,7 +4,7 @@ import {
   isUserAuthenticated,
   signOut,
 } from "./components/auth-handler.js";
-import { setupOffscreenDocument } from "./components/offscreen-handler.js";
+import { openIndexedDB } from "./components/idb-handler.js";
 import { saveUserSession, state } from "./components/state.js";
 
 //  first install
@@ -630,17 +630,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.action === "setup_storage") {
-    console.log("CocBot: Setting up storage for the first time");
+    console.log("CocBot: Setting up IndexedDB storage");
 
-    const offScreenPath = chrome.runtime.getURL("offscreen.html");
-    console.log("Offscreen path: ", offScreenPath);
-
-    setupOffscreenDocument(offScreenPath).then(() => {
-      // Set up storage using IndexedDB
-      chrome.runtime.sendMessage({
-        target: "offscreen",
-        action: "setup_storage",
+    openIndexedDB()
+      .then((response) => {
+        if (response.success) {
+          console.log("IndexedDB setup complete:", response);
+          sendResponse({
+            success: true,
+            db: response.db,
+            message: "Database setup complete",
+          });
+        } else {
+          console.error("Error setting up IndexedDB:", error);
+          sendResponse({ success: false, message: "Failed to setup storage" });
+        }
+      })
+      .catch((error) => {
+        console.error("Error setting up IndexedDB:", error);
+        sendResponse({ success: false, message: error.message });
       });
-    });
+
+    return true; // Keep the message channel open for async response
   }
 });

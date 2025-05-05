@@ -44,6 +44,13 @@ export function setupEventListeners() {
   // Set up authentication buttons
   setupAuthenticationButtons();
 
+  // Set up test elements
+  elements.testButton.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "setup_storage" }, (response) => {
+      console.log("Set up storage response:", response);
+    });
+  });
+
   // CocBot title click to return to welcome screen
   elements.cocbotTitle.addEventListener("click", () => {
     if (!state.welcomeMode) {

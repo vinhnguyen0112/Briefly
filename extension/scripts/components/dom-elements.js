@@ -22,6 +22,9 @@ export const elements = {
   signInAlertOverlay: document.getElementById("sign-in-alert-overlay"),
   closeSignInAlertButton: document.getElementById("close-sign-in-alert-button"),
 
+  // Test elements
+  testButton: document.getElementById("test-button"),
+
   // Content viewer elements
   contentDisplay: document.getElementById("content-display"),
 
