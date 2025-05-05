@@ -20,6 +20,7 @@ export const state = {
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
   isAuthenticated: false,
+  isCreatingOffscreen: false,
 };
 
 // Load sidebar width from storage
@@ -88,7 +89,7 @@ export async function getUserSession() {
     const start = performance.now();
     chrome.storage.local.get("session_id", (result) => {
       const end = performance.now();
-      console.log(`Get user sessions took: ${end - start} s`);
+      console.log(`Get user sessions took: ${end - start} ms`);
       resolve(result.session_id);
     });
   });
