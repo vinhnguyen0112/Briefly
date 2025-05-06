@@ -1,4 +1,4 @@
-const { checkSession } = require("../helpers/redisHelper");
+const { getSession } = require("../helpers/redisHelper");
 
 // Verify the origin of the request to ensure it's from our Chrome extension
 const verifyOrigin = (req, res, next) => {
@@ -19,7 +19,7 @@ const verifyOrigin = (req, res, next) => {
 const validateSession = async (req, res, next) => {
   try {
     const { sessionId } = req.body;
-    const result = await checkSession(sessionId);
+    const result = await getSession(sessionId);
 
     if (result.isValid) {
       // Pass session data onward

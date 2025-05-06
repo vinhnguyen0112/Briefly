@@ -1,11 +1,22 @@
 const redis = require("redis");
 
-const redisClient = redis.createClient();
+// Create redis cluster connection
+const redisCluster = redis.createCluster({
+  rootNodes: [
+    { url: `redis://${process.env.REDIS_HOST_1}:${process.env.REDIS_PORT}` },
+    { url: `redis://${process.env.REDIS_HOST_2}:${process.env.REDIS_PORT}` },
+    { url: `redis://${process.env.REDIS_HOST_3}:${process.env.REDIS_PORT}` },
+  ],
+  defaults: {
+    username: process.env.REDIS_USERNAME,
+    password: process.env.REDIS_PASSWORD,
+  },
+});
 
 // Create an user session
 const createSession = async (sessionData) => {
   const sessionId = crypto.randomUUID();
-  const setResult = await redisClient.set(
+  const setResult = await redisCluster.set(
     `sess:${sessionId}`,
     JSON.stringify(sessionData),
     {
@@ -18,17 +29,17 @@ const createSession = async (sessionData) => {
 
 // Delete user session
 const deleteSession = async (sessionId) => {
-  const delResult = await redisClient.del(`sess:${sessionId}`);
+  const delResult = await redisCluster.del(`sess:${sessionId}`);
   return delResult > 0;
 };
 
-// Check if session exists
-const checkSession = async (sessionId) => {
+// Get user session
+const getSession = async (sessionId) => {
   if (!sessionId) {
     return { isValid: false, message: "Session ID is required" };
   }
 
-  const sessionData = await redisClient.get(`sess:${sessionId}`);
+  const sessionData = await redisCluster.get(`sess:${sessionId}`);
   if (!sessionData) {
     return { isValid: false, message: "Session has expired" };
   }
@@ -39,11 +50,11 @@ const checkSession = async (sessionId) => {
 // Refresh session TTL
 const refreshSession = async (sessionId) => {
   try {
-    const exists = await redisClient.exists(sessionId);
+    const exists = await redisCluster.exists(sessionId);
     if (!exists) {
       throw new Error("Session does not exist");
     }
-    await redisClient.expire(sessionId, parseInt(process.env.SESSION_TTL));
+    await redisCluster.expire(sessionId, parseInt(process.env.SESSION_TTL));
     console.log(`Session ${sessionId} refeshed`);
   } catch (error) {
     console.error("Error refreshing session:", error.message);
@@ -52,9 +63,9 @@ const refreshSession = async (sessionId) => {
 };
 
 module.exports = {
-  redisClient,
+  redisCluster,
   createSession,
-  checkSession,
+  getSession,
   refreshSession,
   deleteSession,
 };
