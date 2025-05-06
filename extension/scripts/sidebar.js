@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // Set up anon query count
   setUpAnonQueryCount().then(() => {
-    console.log("Anon query count set up.");
+    console.log("Cocbot: Anon query count set up");
   });
 
   // load config

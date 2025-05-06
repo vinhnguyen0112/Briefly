@@ -36,7 +36,6 @@ function setupObjectStores(db) {
   if (!db.objectStoreNames.contains("conversations")) {
     const conversationsStore = db.createObjectStore("conversations", {
       keyPath: "id", // Primary key
-      autoIncrement: true,
     });
 
     // Define indexes
@@ -54,16 +53,12 @@ function setupObjectStores(db) {
   if (!db.objectStoreNames.contains("queries")) {
     const queriesStore = db.createObjectStore("queries", {
       keyPath: "id", // Primary key
-      autoIncrement: true,
     });
 
     // Define indexes for "queries"
     queriesStore.createIndex("conversation_id", "conversation_id", {
       unique: false,
     });
-    queriesStore.createIndex("query", "query", { unique: false });
-    queriesStore.createIndex("response", "response", { unique: false });
-    queriesStore.createIndex("model", "model", { unique: false });
     queriesStore.createIndex("created_at", "created_at", { unique: false });
   }
 
@@ -138,6 +133,74 @@ export function addQuery(query) {
           console.error("Error adding query:", event.target.error);
           reject(
             new Error("Failed to add query: " + event.target.error.message)
+          );
+        };
+      })
+      .catch((error) => {
+        reject(error);
+      });
+  });
+}
+
+/**
+ * Updates a conversation in the "conversations" object store.
+ * @param {number} conversationId - The ID of the conversation to update.
+ * @param {Object} updates - An object containing the fields to update.
+ * @returns {Promise} - Resolves if the update is successful, rejects with an error otherwise.
+ */
+export function updateConversation(conversationId, updates) {
+  return new Promise((resolve, reject) => {
+    openIndexedDB()
+      .then(({ db }) => {
+        const transaction = db.transaction("conversations", "readwrite");
+        const store = transaction.objectStore("conversations");
+
+        // Check if the conversation exists
+        const getRequest = store.get(conversationId);
+
+        getRequest.onsuccess = (event) => {
+          const conversation = event.target.result;
+
+          if (!conversation) {
+            // Conversation does not exist
+            reject(
+              new Error(`Conversation with ID ${conversationId} does not exist`)
+            );
+            return;
+          }
+
+          // Merge the updates into the existing conversation
+          const updatedConversation = {
+            ...conversation,
+            ...updates,
+          };
+
+          // Update the conversation in the store
+          const updateRequest = store.put(updatedConversation);
+
+          updateRequest.onsuccess = () => {
+            console.log(
+              `Conversation with ID ${conversationId} updated successfully`
+            );
+            resolve();
+          };
+
+          updateRequest.onerror = (event) => {
+            console.error("Error updating conversation:", event.target.error);
+            reject(
+              new Error(
+                "Failed to update conversation: " + event.target.error.message
+              )
+            );
+          };
+        };
+
+        getRequest.onerror = (event) => {
+          console.error("Error fetching conversation:", event.target.error);
+          reject(
+            new Error(
+              "Failed to fetch conversation: " + event.target.error.message
+            )
           );
         };
       })

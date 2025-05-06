@@ -301,5 +301,3 @@ window.addEventListener("popstate", () => {
     lastUrl = newUrl;
   }
 });
-
-console.log("User agent: ", navigator.userAgent);

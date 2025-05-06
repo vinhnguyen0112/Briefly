@@ -20,7 +20,6 @@ export const state = {
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
   isAuthenticated: false,
-  isCreatingOffscreen: false,
 };
 
 // Load sidebar width from storage
@@ -86,10 +85,8 @@ export async function incrementAnonQueryCount() {
 // User session management
 export async function getUserSession() {
   return new Promise((resolve) => {
-    const start = performance.now();
     chrome.storage.local.get("session_id", (result) => {
-      const end = performance.now();
-      console.log(`Get user sessions took: ${end - start} ms`);
+      console.log(`Cocbot: User session gotten`, result.session_id);
       resolve(result.session_id);
     });
   });
