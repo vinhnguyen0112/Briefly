@@ -1,5 +1,5 @@
 // Load environment variables
-require('dotenv').config()
+require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
@@ -8,7 +8,7 @@ const morgan = require("morgan");
 
 const authRoutes = require("./routes/authRoutes");
 const { redisClient } = require("./helpers/redisHelper");
-const imageCaptionRoutes = require('./routes/imageCaptionRoutes');
+const imageCaptionRoutes = require("./routes/imageCaptionRoutes");
 
 // Initialize Express app
 const app = express();
@@ -20,13 +20,13 @@ app.use(express.json({ limit: "10mb" })); // Larger limit for content processing
 app.use(morgan("dev")); // HTTP request logging
 
 // Connect to redis server
-redisClient
-  .connect()
-  .then(() => console.log("Redis connected successfully!"))
-  .catch((err) => {
-    console.error("Failed to connect to Redis:", err);
-    process.exit(1);
-  });
+// redisClient
+//   .connect()
+//   .then(() => console.log("Redis connected successfully!"))
+//   .catch((err) => {
+//     console.error("Failed to connect to Redis:", err);
+//     process.exit(1);
+//   });
 
 // // Auth0 config
 // const config = {
@@ -56,7 +56,7 @@ app.get("/api/health", (req, res) => {
 });
 
 // Mount route image-caption
-app.use('/api/image-caption', imageCaptionRoutes);
+app.use("/api/image-caption", imageCaptionRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {
@@ -71,4 +71,3 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`CocBot server running on port ${PORT}`);
 });
-

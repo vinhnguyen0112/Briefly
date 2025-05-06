@@ -5,6 +5,10 @@ import {
   signOut,
 } from "./components/auth-handler.js";
 import { saveUserSession } from "./components/state.js";
+import {
+  handleCaptionImages,
+  resetProcessedImages,
+} from "./components/caption-handler.js";
 
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
@@ -630,5 +634,30 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       sendResponse({ authState: isValid ? "Authenticated" : "Unauthenticated" })
     );
     return true;
+  }
+});
+
+// Handle image processing request
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "process_images") {
+    handleCaptionImages(message.images)
+      .then((captions) => {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: "caption_results",
+          captions: captions,
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to handle captions", error);
+      });
+
+    return true;
+  }
+});
+
+// Reset processed images when the URL changes
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+  if (changeInfo.status === "complete" && changeInfo.url) {
+    resetProcessedImages();
   }
 });
