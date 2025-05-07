@@ -12,11 +12,12 @@
     <div class="sidebar">
       <div id="sidebar-resize-handle" class="resize-handle"></div>
       <div class="sidebar-header">
-        <h2 id="cocbot-title" class="cocbot-title">CocBot</h2>
+        <h2 id="cocbot-title" class="cocbot-title" data-i18n="title">CocBot</h2>
         <div class="sidebar-actions">
           <button
             id="view-content-button"
             class="icon-button"
+            data-i18n-title="viewPageContent"
             title="View Page Content"
           >
             <svg
@@ -34,7 +35,12 @@
               <circle cx="12" cy="12" r="3"></circle>
             </svg>
           </button>
-          <button id="notes-button" class="icon-button" title="Notes">
+          <button
+            id="notes-button"
+            class="icon-button"
+            data-i18n-title="notes"
+            title="Notes"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -54,7 +60,12 @@
               ></path>
             </svg>
           </button>
-          <button id="config-button" class="icon-button" title="Configure">
+          <button
+            id="config-button"
+            class="icon-button"
+            data-i18n-title="configure"
+            title="Configure"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -77,7 +88,12 @@
               <line x1="17" y1="16" x2="23" y2="16"></line>
             </svg>
           </button>
-          <button id="settings-button" class="icon-button" title="Settings">
+          <button
+            id="settings-button"
+            class="icon-button"
+            data-i18n-title="settings"
+            title="Settings"
+          >
             <svg
               xmlns="http://www.w3.org/2000/svg"
               width="16"
@@ -109,26 +125,40 @@
               />
             </svg>
           </button>
-          <button id="close-sidebar" class="icon-button" title="Close">
+          <button
+            id="close-sidebar"
+            class="icon-button"
+            data-i18n-title="close"
+            title="Close"
+          >
             ×
           </button>
         </div>
       </div>
 
       <div class="sidebar-content-wrapper">
+        <!-- Language toggle -->
+        <div class="language-toggle-section">
+          <div class="language-toggle-container">
+            <span class="toggle-label" id="en-label">EN</span>
+            <label class="switch">
+              <input type="checkbox" id="language-toggle" />
+              <span class="slider round"></span>
+            </label>
+            <span class="toggle-label" id="vi-label">VI</span>
+          </div>
+        </div>
+
         <!-- Welcome screen (shown by default) -->
         <div id="welcome-screen">
           <div class="welcome-content">
             <div class="welcome-logo">
-              <h1>CocBot</h1>
+              <h1 data-i18n="title">CocBot</h1>
             </div>
-
-            <!-- Test button -->
-            <button id="test-button">Test</button>
 
             <!-- Quick action buttons -->
             <div class="quick-actions">
-              <h3>Quick Actions</h3>
+              <h3 data-i18n="quickActions">Quick Actions</h3>
               <div class="action-buttons-container">
                 <button class="action-button" data-action="summarize">
                   <svg
@@ -146,7 +176,7 @@
                     <line x1="17" y1="12" x2="3" y2="12"></line>
                     <line x1="13" y1="18" x2="3" y2="18"></line>
                   </svg>
-                  Summarize
+                  <span data-i18n="summarize">Summarize</span>
                 </button>
                 <button class="action-button" data-action="keypoints">
                   <svg
@@ -165,7 +195,7 @@
                     ></path>
                     <line x1="4" y1="22" x2="4" y2="15"></line>
                   </svg>
-                  Key Points
+                  <span data-i18n="keyPoints">Key Points</span>
                 </button>
                 <button class="action-button" data-action="explain">
                   <svg
@@ -183,28 +213,18 @@
                     <line x1="12" y1="16" x2="12" y2="12"></line>
                     <line x1="12" y1="8" x2="12.01" y2="8"></line>
                   </svg>
-                  Explain
+                  <span data-i18n="explain">Explain</span>
                 </button>
               </div>
             </div>
 
-            <!-- Generated questions -->
-            <div class="generated-questions" style="display: none">
-              <h3>Questions about this page</h3>
-              <div class="question-buttons-container">
-                <!-- Questions will be added here dynamically -->
-                <div class="question-loading">
-                  <div class="spinner-small"></div>
-                  <span>Generating questions...</span>
-                </div>
-              </div>
-            </div>
-
+            <!-- Ask me anything input box -->
             <div class="welcome-search">
               <form id="welcome-form">
                 <input
                   type="text"
                   id="welcome-input"
+                  data-i18n-placeholder="askMeAnything"
                   placeholder="ask me anything"
                 />
                 <button type="submit" class="welcome-button">
@@ -225,6 +245,28 @@
                 </button>
               </form>
             </div>
+
+            <!-- Spacer to push content to bottom -->
+            <div class="welcome-spacer"></div>
+
+            <!-- Generated questions moved to bottom -->
+            <div class="welcome-footer">
+              <div class="generated-questions" style="display: none">
+                <h3 data-i18n="questionsAboutPage">
+                  Questions about this page
+                </h3>
+                <div class="question-buttons-container">
+                  <div class="question-loading">
+                    <div class="spinner-small"></div>
+                    <span data-i18n="generatingQuestions"
+                      >Generating questions...</span
+                    >
+                  </div>
+                </div>
+              </div>
+
+              <!-- Page context indicator will be added here dynamically -->
+            </div>
           </div>
         </div>
 
@@ -239,6 +281,7 @@
               <div class="input-container">
                 <textarea
                   id="user-input"
+                  data-i18n-placeholder="askAnything"
                   placeholder="Ask me anything..."
                   rows="1"
                 ></textarea>
@@ -266,7 +309,7 @@
         <!-- Notes screen (hidden initially) -->
         <div id="notes-screen" style="display: none">
           <div class="notes-header">
-            <h3>Page Notes</h3>
+            <h3 data-i18n="pageNotes">Page Notes</h3>
             <div class="notes-actions">
               <button id="add-note-button" class="icon-button" title="Add Note">
                 <svg
@@ -287,6 +330,7 @@
               <button
                 id="close-notes-button"
                 class="icon-button"
+                data-i18n-title="close"
                 title="Close Notes"
               >
                 ×
@@ -297,8 +341,12 @@
           <div id="notes-container" class="notes-content">
             <!-- Notes list will appear here -->
             <div class="notes-empty" id="notes-empty-state">
-              <p>No notes for this page yet.</p>
-              <button id="create-first-note" class="button">
+              <p data-i18n="noNotes">No notes for this page yet.</p>
+              <button
+                id="create-first-note"
+                class="button"
+                data-i18n="createFirstNote"
+              >
                 Create your first note
               </button>
             </div>
@@ -310,10 +358,11 @@
           <!-- Note editor (hidden initially) -->
           <div id="note-editor" style="display: none">
             <div class="note-editor-header">
-              <h4>Edit Note</h4>
+              <h4 data-i18n="editNote">Edit Note</h4>
               <button
                 id="close-editor-button"
                 class="icon-button"
+                data-i18n-title="close"
                 title="Close Editor"
               >
                 ×
@@ -321,11 +370,18 @@
             </div>
             <textarea
               id="note-content"
+              data-i18n-placeholder="writeNote"
               placeholder="Write your note here..."
             ></textarea>
             <div class="note-editor-actions">
-              <button id="save-note-button" class="button">Save</button>
-              <button id="cancel-note-button" class="button button-secondary">
+              <button id="save-note-button" class="button" data-i18n="save">
+                Save
+              </button>
+              <button
+                id="cancel-note-button"
+                class="button button-secondary"
+                data-i18n="cancel"
+              >
                 Cancel
               </button>
             </div>
@@ -335,11 +391,12 @@
         <!-- Content viewer screen (hidden initially) -->
         <div id="content-viewer-screen" style="display: none">
           <div class="content-viewer-header">
-            <h3>Page Content Viewer</h3>
+            <h3 data-i18n="pageContentViewer">Page Content Viewer</h3>
             <div class="content-viewer-actions">
               <button
                 id="refresh-content-button"
                 class="icon-button"
+                data-i18n-title="refreshContent"
                 title="Refresh Content"
               >
                 <svg
@@ -361,6 +418,7 @@
               <button
                 id="close-content-button"
                 class="icon-button"
+                data-i18n-title="close"
                 title="Close Content Viewer"
               >
                 ×
@@ -370,7 +428,7 @@
           <div id="content-display" class="content-viewer-content">
             <div class="content-viewer-loading">
               <div class="spinner"></div>
-              <p>Processing page content...</p>
+              <p data-i18n="processingContent">Processing page content...</p>
             </div>
           </div>
         </div>
@@ -379,17 +437,22 @@
         <div class="api-key-container" style="display: none">
           <div class="settings-panel">
             <div class="settings-header">
-              <h3>API Key Settings</h3>
+              <h3 data-i18n="apiKeySettings">API Key Settings</h3>
             </div>
             <div class="settings-content">
-              <p>Enter your OpenAI API key to use the assistant:</p>
+              <p data-i18n="enterApiKeyMessage">
+                Enter your OpenAI API key to use the assistant:
+              </p>
               <div class="api-key-input-container">
                 <input
                   type="password"
                   id="api-key"
+                  data-i18n-placeholder="enterApiKey"
                   placeholder="Enter OpenAI API Key"
                 />
-                <button id="save-api-key" class="button">Save Key</button>
+                <button id="save-api-key" class="button" data-i18n="save">
+                  Save Key
+                </button>
               </div>
             </div>
           </div>
@@ -399,8 +462,13 @@
       <!-- Configuration container (hidden initially) -->
       <div id="config-container" class="config-container" style="display: none">
         <div class="config-header">
-          <h3>Response Settings</h3>
-          <button id="config-close" class="config-close" title="Close">
+          <h3 data-i18n="responseSettings">Response Settings</h3>
+          <button
+            id="config-close"
+            class="config-close"
+            data-i18n-title="close"
+            title="Close"
+          >
             ×
           </button>
         </div>
@@ -541,5 +609,81 @@
     <!-- Load scripts in correct order -->
     <script src="components/utils/ContentViewer.js"></script>
     <script type="module" src="scripts/sidebar.js"></script>
+
+    <style>
+      .language-toggle-section {
+        display: flex;
+        justify-content: flex-end;
+        padding: 8px 16px;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .language-toggle-container {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+
+      .toggle-label {
+        font-size: 0.75rem;
+        color: var(--muted-foreground);
+        font-weight: 500;
+      }
+
+      .switch {
+        position: relative;
+        display: inline-block;
+        width: 36px;
+        height: 20px;
+      }
+
+      .switch input {
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .slider {
+        position: absolute;
+        cursor: pointer;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: var(--border);
+        transition: 0.4s;
+      }
+
+      .slider:before {
+        position: absolute;
+        content: "";
+        height: 14px;
+        width: 14px;
+        left: 3px;
+        bottom: 3px;
+        background-color: white;
+        transition: 0.4s;
+      }
+
+      input:checked + .slider {
+        background-color: var(--primary);
+      }
+
+      input:focus + .slider {
+        box-shadow: 0 0 1px var(--primary);
+      }
+
+      input:checked + .slider:before {
+        transform: translateX(16px);
+      }
+
+      .slider.round {
+        border-radius: 20px;
+      }
+
+      .slider.round:before {
+        border-radius: 50%;
+      }
+    </style>
   </body>
 </html>

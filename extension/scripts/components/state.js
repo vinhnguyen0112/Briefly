@@ -19,6 +19,7 @@ export const state = {
   currentPageUrl: "",
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
+  language: "en", // Default language is English
   isAuthenticated: false,
 };
 
@@ -207,6 +208,25 @@ export async function deleteNote(timestamp) {
       chrome.storage.local.set({ notes: allNotes }, () => {
         resolve();
       });
+    });
+  });
+}
+
+// lang preference management
+export async function getLanguage() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["language"], (result) => {
+      resolve(result.language || "en"); //eng default
+    });
+  });
+}
+
+export async function saveLanguage(language) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ language: language }, () => {
+      console.log("CocBot: Language preference saved", language);
+      state.language = language;
+      resolve(language);
     });
   });
 }

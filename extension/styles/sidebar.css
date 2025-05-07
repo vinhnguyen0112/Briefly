@@ -110,6 +110,7 @@ body.sidebar-resizing * {
 .sidebar-actions {
   display: flex;
   gap: 8px;
+  align-items: center;
 }
 
 .sidebar-actions button {
@@ -528,24 +529,41 @@ body.sidebar-resizing * {
   align-items: center;
   height: calc(100vh - 60px);
   padding: 0 20px;
+  overflow-y: auto;
 }
 
 .welcome-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 40px;
   width: 100%;
   max-width: 300px;
+  padding-bottom: 0;
+  padding-top: 0;
+  gap: 30px;
+}
+
+/* spacer to push footer content to bottom */
+.welcome-spacer {
+  flex-grow: 0.5;
+  min-height: 20px;
+}
+
+/* footer for questions and context at bottom */
+.welcome-footer {
+  width: 100%;
+  margin-top: auto;
+  padding-top: 10px;
 }
 
 .welcome-logo {
   text-align: center;
+  margin-top: 0;
+  margin-bottom: 0;
 }
 
 .welcome-logo h1 {
-  font-size: 24px;
+  font-size: 28px;
   font-weight: 600;
   margin: 0;
   color: var(--primary);
@@ -553,6 +571,8 @@ body.sidebar-resizing * {
 
 .welcome-search {
   width: 100%;
+  margin-bottom: 0;
+  margin-top: 0;
 }
 
 #welcome-form {
@@ -738,15 +758,17 @@ body.sidebar-resizing * {
 
 /* quick actions */
 .quick-actions {
-  margin: 16px 0;
-  padding: 0 8px;
+  margin-top: 0;
+  margin-bottom: 0;
+  width: 100%;
 }
 
 .quick-actions h3 {
-  font-size: 14px;
-  font-weight: 500;
-  margin-bottom: 8px;
-  color: var(--muted-foreground);
+  font-size: 16px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: var(--foreground);
+  text-align: center;
 }
 
 .action-buttons-container {
@@ -782,8 +804,11 @@ body.sidebar-resizing * {
 
 /* suggested questions */
 .generated-questions {
-  margin-top: 16px;
+  margin-top: 0;
   margin-bottom: 16px;
+  width: 100%;
+  max-height: calc(100vh - 400px);
+  overflow-y: auto;
 }
 
 .generated-questions h3 {
@@ -796,19 +821,20 @@ body.sidebar-resizing * {
 .question-buttons-container {
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .question-button {
   display: flex;
   align-items: center;
-  padding: 8px 12px;
+  padding: 8px 10px;
   background-color: var(--muted);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   color: var(--foreground);
   cursor: pointer;
-  font-size: 13px;
+  font-size: 12px;
+  line-height: 1.3;
   text-align: left;
   transition: background-color 0.2s;
 }
@@ -1135,142 +1161,4 @@ body.sidebar-resizing * {
 
 .cocbot-title:hover {
   color: var(--primary-color, #4a86e8);
-}
-
-/* Popup container */
-.popup {
-  position: absolute;
-  top: 50px; /* Adjust based on the position of the account button */
-  right: 16px;
-  background-color: var(--background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  z-index: 10001;
-  padding: 16px;
-  width: 200px;
-}
-
-/* Popup content */
-.popup-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-/* Button styles */
-.popup .button {
-  display: flex;
-  width: 100%;
-  text-align: center;
-}
-
-.popup .button-secondary {
-  background-color: var(--muted);
-  color: var(--foreground);
-}
-
-.popup .button-secondary:hover {
-  background-color: var(--border);
-}
-
-/* Overlay for sign-in alert */
-#sign-in-alert-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent background */
-  z-index: 10001; /* Ensure it appears above other elements */
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-/* Blur effect for the background */
-.sidebar-content-wrapper,
-.sidebar-header,
-.sidebar-footer {
-  transition: filter 0.3s ease;
-}
-
-.sidebar-blurred {
-  filter: blur(4px); /* Apply blur effect */
-  pointer-events: none; /* Disable interactions */
-}
-
-/* Sign-in alert popup styles */
-#sign-in-alert-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  background-color: var(--background);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  z-index: 10002;
-  padding: 20px;
-  width: calc(var(--sidebar-width) * 0.8); /* Scale with sidebar width */
-  max-width: var(--sidebar-max-width); /* Ensure it doesn't exceed max width */
-  min-width: var(
-    --sidebar-min-width
-  ); /* Ensure it doesn't go below min width */
-  text-align: center;
-}
-
-#sign-in-alert-popup .popup-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--foreground);
-  margin-bottom: 12px;
-}
-
-#sign-in-alert-popup .popup-message {
-  font-size: 14px;
-  color: var(--muted-foreground);
-  margin-bottom: 20px;
-}
-
-#sign-in-alert-popup .button {
-  width: 100%;
-  margin-bottom: 10px;
-}
-
-#sign-in-alert-popup .button:last-child {
-  margin-bottom: 0;
-}
-
-/* Authentication button styles */
-.auth-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px 16px;
-  gap: 8px;
-  background-color: var(--muted);
-  color: var(--foreground);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  cursor: pointer;
-  transition: background-color 0.2s ease, color 0.2s ease;
-}
-
-.auth-button:hover {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
-}
-
-.auth-icon {
-  flex-shrink: 0; /* Prevent the icon from shrinking */
-  vertical-align: middle; /* Align the icon with the text */
-}
-
-/* Sign out button style */
-#sign-out-button {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
 }
