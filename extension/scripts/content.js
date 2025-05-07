@@ -187,6 +187,7 @@ function handleSidebarMessage(message) {
   }
 }
 
+let collectedCaptions = [];
 // listen for messages from the extension
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("CocBot: Message received in content script:", message);
@@ -226,6 +227,39 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     sendResponse({ success: true });
+  } else if (message.action === "caption_results") {
+    const captions = message.captions.filter((c) => c && c.trim() !== "");
+    if (captions.length === 0) return;
+
+    // Gom caption vào mảng tổng
+    collectedCaptions = collectedCaptions.concat(captions);
+
+    // Tạo block caption theo format
+    const captionBlock =
+      "=====CAPTION IMAGE=====\n\n" +
+      collectedCaptions
+        .map((caption, index) => `caption image ${index + 1}: ${caption}`)
+        .join("\n\n");
+
+    // Lấy nội dung hiện có (giả sử extractPageContent đã chạy trước đó)
+    const pageContent = extractPageContent();
+    const fullContent = pageContent.content + "\n\n" + captionBlock;
+
+    // Gửi ra sidebar để hiển thị
+    const iframe = document.getElementById("isal-sidebar-iframe");
+    if (iframe) {
+      iframe.contentWindow.postMessage(
+        {
+          action: "page_content",
+          content: {
+            ...pageContent,
+            content: fullContent,
+          },
+        },
+        "*"
+      );
+      console.log("✅ Sent updated page content with captions to sidebar");
+    }
   }
   // Keep the message channel open for the async response in toggle_sidebar
   return true;
@@ -299,44 +333,5 @@ window.addEventListener("popstate", () => {
     }
 
     lastUrl = newUrl;
-  }
-});
-
-let collectedCaptions = [];
-
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "caption_results") {
-    const captions = message.captions.filter((c) => c && c.trim() !== "");
-    if (captions.length === 0) return;
-
-    // Gom caption vào mảng tổng
-    collectedCaptions = collectedCaptions.concat(captions);
-
-    // Tạo block caption theo format
-    const captionBlock =
-      "=====CAPTION IMAGE=====\n\n" +
-      collectedCaptions
-        .map((caption, index) => `caption image ${index + 1}: ${caption}`)
-        .join("\n\n");
-
-    // Lấy nội dung hiện có (giả sử extractPageContent đã chạy trước đó)
-    const pageContent = extractPageContent();
-    const fullContent = pageContent.content + "\n\n" + captionBlock;
-
-    // Gửi ra sidebar để hiển thị
-    const iframe = document.getElementById("isal-sidebar-iframe");
-    if (iframe) {
-      iframe.contentWindow.postMessage(
-        {
-          action: "page_content",
-          content: {
-            ...pageContent,
-            content: fullContent,
-          },
-        },
-        "*"
-      );
-      console.log("✅ Sent updated page content with captions to sidebar");
-    }
   }
 });
