@@ -640,6 +640,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 // Handle image processing request
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "process_images") {
+    resetProcessedImages();
     handleCaptionImages(message.images)
       .then((captions) => {
         chrome.tabs.sendMessage(sender.tab.id, {
@@ -656,8 +657,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 });
 
 // Reset processed images when the URL changes
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-  if (changeInfo.status === "complete" && changeInfo.url) {
-    resetProcessedImages();
-  }
-});
+// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+//   if (changeInfo.status === "complete") {
+//     console.log("🌐 Tab reloaded or loaded, resetting processedImages.");
+//     resetProcessedImages();
+//   }
+// });

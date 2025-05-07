@@ -166,7 +166,7 @@ function extractPageContent() {
 
 // ---------------- IMAGE EXTRACTION + AUTO SEND LOOP ----------------
 
-const processedImages = new Set();
+const sentImages = new Set();
 
 function isSupportedImageFormat(src) {
   if (!src || src.startsWith("data:image")) return false;
@@ -194,8 +194,8 @@ function extractAllImageSources() {
     const src = img.currentSrc || img.src;
     if (!isSupportedImageFormat(src)) return;
     if (isLogoOrIcon(img, src)) return;
-    if (!processedImages.has(src)) {
-      processedImages.add(src);
+    if (!sentImages.has(src)) {
+      sentImages.add(src);
       newImages.push(src);
     }
   });
@@ -267,6 +267,7 @@ function waitForDomReady(callback) {
 
 // 🚀 Start auto image extraction loop, then fallback to MutationObserver
 waitForDomReady(() => {
+  sentImages.clear();
   console.log("✅ [Init] DOM ready, starting image monitoring loop");
   autoSendImagesLoop(3000);
 });

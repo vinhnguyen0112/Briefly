@@ -10,25 +10,48 @@ export async function handleCaptionImages(imageUrls) {
 
   newImages.forEach((img) => processedImages.add(img));
 
-  const captions = await callCaptionApi(newImages);
+  // 🔥 Gọi API lần đầu
+  let captions = await callCaptionApi(newImages);
 
-  const nullCount = captions.filter((c) => c == null || c.trim() === "").length;
-  const nullRatio = nullCount / captions.length;
+  // Phân tách caption có / null
+  const validCaptions = [];
+  const retryList = [];
+
+  captions.forEach((caption, index) => {
+    const src = newImages[index];
+    if (caption != null && caption.trim() !== "") {
+      validCaptions.push({ src, caption });
+    } else {
+      retryList.push(src);
+    }
+  });
 
   console.log(
-    `📊 Captions received: ${captions.length}, nulls: ${nullCount}, ratio: ${(
-      nullRatio * 100
-    ).toFixed(2)}%`
+    `✅ Valid captions: ${validCaptions.length}, ⏳ Need retry: ${retryList.length}`
   );
 
-  // Retry once if ≥30% are null
-  if (nullRatio >= 0.3) {
-    console.log("🔄 High null ratio, retrying once...");
-    const retryCaptions = await callCaptionApi(newImages);
-    return retryCaptions.filter((c) => c != null && c.trim() !== "");
+  // 🌀 Retry từng ảnh trong retryList tối đa 3 lần
+  for (const imgSrc of retryList) {
+    let retryCount = 0;
+    let caption = null;
+
+    while (retryCount < 3 && (caption == null || caption.trim() === "")) {
+      console.log(`🔄 Retrying ${imgSrc} (attempt ${retryCount + 1})`);
+      const [retryCaption] = await callCaptionApi([imgSrc]);
+      caption = retryCaption;
+      retryCount++;
+    }
+
+    if (caption != null && caption.trim() !== "") {
+      validCaptions.push({ src: imgSrc, caption });
+      console.log(`✅ Got caption after ${retryCount} retries:`, caption);
+    } else {
+      console.warn(`❌ Failed to caption ${imgSrc} after 3 retries.`);
+    }
   }
 
-  return captions.filter((c) => c != null && c.trim() !== "");
+  // 👉 Trả về array chỉ chứa caption text (hoặc tuỳ bạn, có thể trả cả src+caption)
+  return validCaptions.map((item) => item.caption);
 }
 
 async function callCaptionApi(images) {
@@ -41,17 +64,27 @@ async function callCaptionApi(images) {
 
     if (!response.ok) {
       console.error("Caption API responded with error:", response.status);
-      return [];
+      return images.map(() => null); // trả về null cho từng ảnh
     }
 
     const data = await response.json();
-    return Array.isArray(data.captions) ? data.captions : [];
+    return Array.isArray(data.captions)
+      ? data.captions
+      : images.map(() => null);
   } catch (error) {
     console.error("Caption Handler: Error", error);
-    return [];
+    return images.map(() => null);
   }
 }
 
 export function resetProcessedImages() {
+  console.log(
+    "🧼 Resetting processedImages set. Before reset:",
+    Array.from(processedImages)
+  );
   processedImages.clear();
+  console.log(
+    "✅ After reset, processedImages set is now:",
+    Array.from(processedImages)
+  );
 }
