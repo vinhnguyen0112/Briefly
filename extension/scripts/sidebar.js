@@ -13,22 +13,34 @@ import {
 } from "./components/content-handler.js";
 import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
-import { validateUserSession } from "./components/auth-handler.js";
+import {
+  setUpAnonQueryCount,
+  validateUserSession,
+} from "./components/auth-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
 
   // Validate the user session
-  validateUserSession().then((isValid) => {
-    // Set authentication state for authentication depedent UI
-    state.isAuthenticated = isValid;
+  validateUserSession()
+    .then((isValid) => {
+      // Set authentication state for authentication depedent UI
+      state.isAuthenticated = isValid;
 
-    // Clear user session from storage if user is unauthenticated
-    if (!isValid) {
+      // Clear user session from storage if user is unauthenticated
+      if (!isValid) {
+        clearUserSession();
+      }
+    })
+    .catch((error) => {
+      console.error("CocBot: Error validating user session", error);
+      console.log("Force setting user session to unauthenticated");
+      state.isAuthenticated = false;
       clearUserSession();
-    }
-  });
+    });
+
+  setUpAnonQueryCount();
 
   // check for api key
   getApiKey().then((key) => {

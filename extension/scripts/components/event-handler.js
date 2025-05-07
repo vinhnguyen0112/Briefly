@@ -382,26 +382,32 @@ function setupQuickActions() {
 
 function setupAuthenticationButtons() {
   // Google authentication button
-  elements.googleLoginButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
-      if (response.success) {
-        // Set authentication state and force close the account popup
-        state.isAuthenticated = true;
-        closeAccountPopupUI();
-        console.log("User authenticated via Google");
-      }
+  elements.googleLoginButtons.forEach((b) => {
+    b.addEventListener("click", () => {
+      chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
+        if (response.success) {
+          // Set authentication state and force close the account popup & sign in alert
+          state.isAuthenticated = true;
+          closeAccountPopupUI();
+          closeSignInAlertPopup();
+          console.log("User authenticated via Google");
+        }
+      });
     });
   });
 
   // Facebook authentication button
-  elements.facebookLoginButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
-      if (response.success) {
-        // Set authentication state and force close the account popup
-        state.isAuthenticated = true;
-        closeAccountPopupUI();
-        console.log("User authenticated via Facebook");
-      }
+  elements.facebookLoginButtons.forEach((b) => {
+    b.addEventListener("click", () => {
+      chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
+        if (response.success) {
+          // Set authentication state and force close the account popup & sign in alert
+          state.isAuthenticated = true;
+          closeAccountPopupUI();
+          closeSignInAlertPopup();
+          console.log("User authenticated via Facebook");
+        }
+      });
     });
   });
 
@@ -434,13 +440,33 @@ function renderToggleAccountPopupUI() {
   if (state.isAuthenticated) {
     // User is authenticated
     elements.signOutButton.style.display = "flex";
-    elements.googleLoginButton.style.display = "none";
-    elements.facebookLoginButton.style.display = "none";
+
+    // Hide all Google and Facebook login buttons in the header
+    elements.googleLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "none";
+      }
+    });
+    elements.facebookLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "none";
+      }
+    });
   } else {
     // User is not authenticated
     elements.signOutButton.style.display = "none";
-    elements.googleLoginButton.style.display = "flex";
-    elements.facebookLoginButton.style.display = "flex";
+
+    // Show all Google and Facebook login buttons in the header
+    elements.googleLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "flex";
+      }
+    });
+    elements.facebookLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "flex";
+      }
+    });
   }
 }
 
@@ -452,45 +478,19 @@ function toggleAccountPopupUI() {
   // Toggle the display state of the popup
   if (popup.style.display === "none" || !popup.style.display) {
     popup.style.display = "block";
-
-    // Fetch user session
-
-    console.log("Authentication state: ", state.isAuthenticated);
-    // Show or hide buttons based on session state
-    if (state.isAuthenticated) {
-      // User is authenticated
-      elements.signOutButton.style.display = "flex";
-      elements.googleLoginButton.style.display = "none";
-      elements.facebookLoginButton.style.display = "none";
-    } else {
-      // User is not authenticated
-      elements.signOutButton.style.display = "none";
-      elements.googleLoginButton.style.display = "flex";
-      elements.facebookLoginButton.style.display = "flex";
-    }
+    renderToggleAccountPopupUI(); // Update button states
   } else {
     popup.style.display = "none";
   }
 }
-
 export function openSignInAlertPopup() {
   // Show the overlay and popup
   elements.signInAlertOverlay.style.display = "flex";
-
-  // Add blur effect to the background
-  elements.sidebarContentWrapper.classList.add("sidebar-blurred");
-  elements.sidebarHeader.classList.add("sidebar-blurred");
-  elements.sidebarFooter.classList.add("sidebar-blurred");
 }
 
 function closeSignInAlertPopup() {
   // Hide the overlay and popup
   elements.signInAlertOverlay.style.display = "none";
-
-  // Remove blur effect from the background
-  elements.sidebarContentWrapper.classList.remove("sidebar-blurred");
-  elements.sidebarHeader.classList.remove("sidebar-blurred");
-  elements.sidebarFooter.classList.remove("sidebar-blurred");
 }
 
 // external function for rendering UI config

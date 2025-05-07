@@ -11,8 +11,9 @@ export const elements = {
   cocbotTitle: document.getElementById("cocbot-title"),
 
   // Authentication elements
-  googleLoginButton: document.getElementById("google-login-button"),
-  facebookLoginButton: document.getElementById("facebook-login-button"),
+  // Use classname for authentication buttons to support multiple instances
+  googleLoginButtons: document.querySelectorAll(".google-login-button"),
+  facebookLoginButtons: document.querySelectorAll(".facebook-login-button"),
   accountButton: document.getElementById("account-button"),
   accountPopup: document.getElementById("account-popup"),
   signOutButton: document.getElementById("sign-out-button"),
