@@ -4,11 +4,9 @@ const { getSession } = require("../helpers/redisHelper");
 const verifyOrigin = (req, res, next) => {
   const origin = req.get("Origin");
 
-  console.log("Request origin: ", origin);
-
   // If the request has on origin and from our extension, allow it to proceed
   if (origin && origin === `chrome-extension://${process.env.EXTENSION_ID}`) {
-    console.log("Valid origin: ", origin);
+    console.log("The request origin is valid.");
     return next();
   }
 

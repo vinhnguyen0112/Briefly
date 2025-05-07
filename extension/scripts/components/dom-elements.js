@@ -22,9 +22,6 @@ export const elements = {
   signInAlertOverlay: document.getElementById("sign-in-alert-overlay"),
   closeSignInAlertButton: document.getElementById("close-sign-in-alert-button"),
 
-  // Test elements
-  testButton: document.getElementById("test-button"),
-
   // Content viewer elements
   contentDisplay: document.getElementById("content-display"),
 
@@ -58,11 +55,11 @@ export const elements = {
   closeContentButton: document.getElementById("close-content-button"),
 
   // Settings button
-  settingsButton: document.getElementById('settings-button'),
-  
+  settingsButton: document.getElementById("settings-button"),
+
   // Language toggle
-  languageToggle: document.getElementById('language-toggle'),
-  
+  languageToggle: document.getElementById("language-toggle"),
+
   // Quick action buttons
   quickActionButtons: document.querySelectorAll(".action-button"),
 

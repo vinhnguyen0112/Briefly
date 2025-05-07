@@ -46,16 +46,12 @@ redisCluster
 
 // Routes
 app.use("/api/auth", authRoutes);
-// app.use("/api/query", queryRoutes);
-// app.use("/api/user", userRoutes);
+app.use("/api/captionize", imageCaptionRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "CocBot API is running" });
 });
-
-// Mount route image-caption
-app.use("/api/image-caption", imageCaptionRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

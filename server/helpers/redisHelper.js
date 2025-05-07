@@ -13,23 +13,27 @@ const redisCluster = redis.createCluster({
   },
 });
 
-// Create an user session
+// Helper function to apply the prefix to keys
+const applyPrefix = (key) => {
+  const prefix = process.env.REDIS_PREFIX + ":" || "";
+  return `${prefix}${key}`;
+};
+
+// Create a user session
 const createSession = async (sessionData) => {
   const sessionId = crypto.randomUUID();
-  const setResult = await redisCluster.set(
-    `sess:${sessionId}`,
-    JSON.stringify(sessionData),
-    {
-      EX: parseInt(process.env.SESSION_TTL),
-    }
-  );
+  const key = applyPrefix(`sess:${sessionId}`);
+  const setResult = await redisCluster.set(key, JSON.stringify(sessionData), {
+    EX: parseInt(process.env.SESSION_TTL),
+  });
   if (setResult !== "OK") throw new Error("Create session failed");
   return sessionId;
 };
 
 // Delete user session
 const deleteSession = async (sessionId) => {
-  const delResult = await redisCluster.del(`sess:${sessionId}`);
+  const key = applyPrefix(`sess:${sessionId}`);
+  const delResult = await redisCluster.del(key);
   return delResult > 0;
 };
 
@@ -39,7 +43,8 @@ const getSession = async (sessionId) => {
     return { isValid: false, message: "Session ID is required" };
   }
 
-  const sessionData = await redisCluster.get(`sess:${sessionId}`);
+  const key = applyPrefix(`sess:${sessionId}`);
+  const sessionData = await redisCluster.get(key);
   if (!sessionData) {
     return { isValid: false, message: "Session has expired" };
   }
@@ -50,12 +55,13 @@ const getSession = async (sessionId) => {
 // Refresh session TTL
 const refreshSession = async (sessionId) => {
   try {
-    const exists = await redisCluster.exists(sessionId);
+    const key = applyPrefix(`sess:${sessionId}`);
+    const exists = await redisCluster.exists(key);
     if (!exists) {
       throw new Error("Session does not exist");
     }
-    await redisCluster.expire(sessionId, parseInt(process.env.SESSION_TTL));
-    console.log(`Session ${sessionId} refeshed`);
+    await redisCluster.expire(key, parseInt(process.env.SESSION_TTL));
+    console.log(`Session ${sessionId} refreshed`);
   } catch (error) {
     console.error("Error refreshing session:", error.message);
     throw error;

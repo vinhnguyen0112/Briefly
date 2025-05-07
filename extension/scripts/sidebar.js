@@ -3,6 +3,8 @@ import {
   getApiKey,
   getConfig,
   getLanguage,
+  clearUserSession,
+  state,
 } from "./components/state.js";
 import { setupEventListeners } from "./components/event-handler.js";
 import {
@@ -11,19 +13,20 @@ import {
 } from "./components/content-handler.js";
 import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
+import { validateUserSession } from "./components/auth-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
 
-  // Validate the user session first before anything
-  validateUserSession().then(async (isValid) => {
+  // Validate the user session
+  validateUserSession().then((isValid) => {
     // Set authentication state for authentication depedent UI
     state.isAuthenticated = isValid;
 
     // Clear user session from storage if user is unauthenticated
     if (!isValid) {
-      await clearUserSession();
+      clearUserSession();
     }
   });
 

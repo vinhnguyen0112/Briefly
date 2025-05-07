@@ -4,7 +4,7 @@ import {
   signOut,
 } from "./components/auth-handler.js";
 import { addConversation, addQuery } from "./components/idb-handler.js";
-import { saveUserSession, state } from "./components/state.js";
+import { saveUserSession } from "./components/state.js";
 
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
