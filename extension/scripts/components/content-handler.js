@@ -228,9 +228,9 @@ export function openContentViewerPopup() {
 export function updateContentStatus() {
   // existing welcome screen indicator
   if (state.pageContent) {
-    // add page context label
-    const welcomeContentElement = document.querySelector('.welcome-content');
-    if (welcomeContentElement) {
+    
+    const welcomeFooter = document.querySelector('.welcome-footer');
+    if (welcomeFooter) {
       // remove any existing indicator first to avoid duplicates
       const existingIndicator = document.querySelector('.page-context-indicator');
       if (existingIndicator) {
@@ -252,7 +252,8 @@ export function updateContentStatus() {
         pageContextIndicator.textContent = `Page context: ${state.pageContent.title.substring(0, 30)}${state.pageContent.title.length > 30 ? '...' : ''}`;
       }
       
-      welcomeContentElement.appendChild(pageContextIndicator);
+      
+      welcomeFooter.appendChild(pageContextIndicator);
       
       // add a small refresh button next to indicator
       const refreshButton = document.createElement('button');

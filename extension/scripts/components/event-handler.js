@@ -1,16 +1,11 @@
-import { elements } from "./dom-elements.js";
-import {
-  state,
-  getApiKey,
-  saveApiKey,
-  getConfig,
-  saveConfig,
-} from "./state.js";
-import {
-  handleResize,
-  stopResize,
-  addMessageToChat,
-  addTypingIndicator,
+
+import { elements } from './dom-elements.js';
+import { state, getApiKey, saveApiKey, getConfig, saveConfig, getLanguage, saveLanguage } from './state.js';
+import { 
+  handleResize, 
+  stopResize, 
+  addMessageToChat, 
+  addTypingIndicator, 
   removeTypingIndicator,
   closeAllPanels,
   switchToChat,
@@ -20,19 +15,16 @@ import {
   requestPageContent,
   openContentViewerPopup,
   renderContentInSidebar,
-  setupContentExtractionReliability,
-} from "./content-handler.js";
-import {
-  callOpenAI,
-  constructPromptWithPageContent,
-  processUserQuery,
-} from "./api-handler.js";
-import {
-  openNotesPanel,
-  openNoteEditor,
-  closeNoteEditor,
-  handleSaveNote,
-} from "./notes-handler.js";
+  setupContentExtractionReliability
+} from './content-handler.js';
+import { callOpenAI, constructPromptWithPageContent, processUserQuery } from './api-handler.js';
+import { 
+  openNotesPanel, 
+  openNoteEditor, 
+  closeNoteEditor, 
+  handleSaveNote 
+} from './notes-handler.js';
+import { switchLanguage } from './i18n.js';
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
@@ -302,6 +294,41 @@ export function setupEventListeners() {
   elements.closeEditorButton.addEventListener("click", () => {
     closeNoteEditor();
   });
+  
+  // language toggle
+  elements.languageToggle?.addEventListener('change', (e) => {
+    const language = e.target.checked ? 'vi' : 'en';
+    
+    const enLabel = document.getElementById('en-label');
+    const viLabel = document.getElementById('vi-label');
+    
+    if (enLabel && viLabel) {
+      enLabel.classList.toggle('active', language === 'en');
+      viLabel.classList.toggle('active', language === 'vi');
+    }
+    
+    const questionsContainer = document.querySelector('.generated-questions');
+    if (questionsContainer && questionsContainer.style.display !== 'none') {
+      const buttonContainer = document.querySelector('.question-buttons-container');
+      if (buttonContainer) {
+        buttonContainer.innerHTML = `
+          <div class="question-loading">
+            <div class="spinner-small"></div>
+            <span data-i18n="generatingQuestions">
+              ${language === 'vi' ? 'Đang tạo câu hỏi...' : 'Generating questions...'}
+            </span>
+          </div>
+        `;
+      }
+    }
+    
+    // Use the new internationalization module to switch language
+    switchLanguage(language).then(message => {
+      state.language = language;
+      // Notify the user about language change
+      addMessageToChat(message, 'assistant');
+    });
+  });
 }
 
 // set up quick action buttons
@@ -369,15 +396,16 @@ function renderConfigUI(containerId, onSave) {
     console.error("CocBot: Config container not found");
     return;
   }
-
+  
   getConfig().then((config) => {
     const maxWordCount = config?.maxWordCount || 150;
     const responseStyle = config?.responseStyle || "conversational";
 
     container.innerHTML = `
       <div class="config-section">
-        <h3 class="config-title">Response Settings</h3>
         <div class="config-form">
+          <h3 class="config-title">Response Settings</h3>
+          
           <div class="form-group">
             <label for="max-word-count" class="form-label">Maximum Response Length: <span id="word-count-value">${maxWordCount}</span> words</label>
             <div class="slider-container">
@@ -392,7 +420,7 @@ function renderConfigUI(containerId, onSave) {
             <div class="help-text">Control how verbose the answers will be</div>
           </div>
           
-          <div class="form-group">
+          <div class="form-group response-style-group">
             <label class="form-label">Response Style:</label>
             <div class="radio-options">
               <label class="radio-card ${
@@ -439,15 +467,18 @@ function renderConfigUI(containerId, onSave) {
       
       <style>
         .config-section {
-          padding: 1.5rem;
+          padding: 1rem;
           background-color: var(--background-color, #ffffff);
           border-radius: 0.5rem;
+          max-height: 85vh;
+          overflow-y: auto;
         }
         .config-title {
           font-size: 1.25rem;
           font-weight: 600;
           margin-bottom: 1.5rem;
           color: var(--text-color, #111827);
+          text-align: center;
         }
         .config-form {
           display: flex;
@@ -470,7 +501,9 @@ function renderConfigUI(containerId, onSave) {
           margin-top: 0.25rem;
         }
         .slider-container {
-          padding: 0.75rem 0 0.5rem;
+          padding: 0.5rem 0;
+          margin: 0.5rem 0;
+          position: relative;
         }
         .slider {
           appearance: none;
@@ -478,8 +511,10 @@ function renderConfigUI(containerId, onSave) {
           height: 0.25rem;
           background: var(--border-color, #e5e7eb);
           border-radius: 1rem;
-          margin-bottom: 0.5rem;
+          margin: 0.5rem 0;
           outline: none;
+          position: relative;
+          z-index: 2;
         }
         .slider::-webkit-slider-thumb {
           appearance: none;
@@ -489,6 +524,8 @@ function renderConfigUI(containerId, onSave) {
           border-radius: 50%;
           cursor: pointer;
           transition: all 0.2s;
+          position: relative;
+          z-index: 3;
         }
         .slider::-webkit-slider-thumb:hover {
           background: var(--primary-hover, #3a76d8);
@@ -497,15 +534,28 @@ function renderConfigUI(containerId, onSave) {
         .slider-markers {
           display: flex;
           justify-content: space-between;
-          width: 100%;
+          width: calc(100% - 16px);
           font-size: 0.75rem;
           color: var(--muted-color, #6b7280);
+          margin: 12px 8px 0 8px;
+          position: relative;
+          padding-top: 4px;
+        }
+        .slider-markers span:nth-child(1) {
+          transform: translateX(0);
+        }
+        .slider-markers span:nth-child(4) {
+          transform: translateX(0);
+        }
+        .response-style-group {
+          margin-top: 1rem;
         }
         .radio-options {
           display: flex;
           flex-direction: column;
           gap: 0.75rem;
           width: 100%;
+          margin-top: 0.5rem;
         }
         .radio-card {
           position: relative;
@@ -546,7 +596,7 @@ function renderConfigUI(containerId, onSave) {
         .form-actions {
           display: flex;
           justify-content: flex-end;
-          margin-top: 1rem;
+          margin-top: 1.5rem;
         }
         .btn-primary {
           padding: 0.5rem 1rem;
