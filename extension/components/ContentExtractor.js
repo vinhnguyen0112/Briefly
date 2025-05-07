@@ -164,8 +164,6 @@ function extractPageContent() {
 
 // ---------------- IMAGE EXTRACTION + AUTO SEND LOOP ----------------
 
-// ---------------- IMAGE EXTRACTION + AUTO SEND LOOP ----------------
-
 const sentImages = new Set();
 
 function isSupportedImageFormat(src) {
@@ -191,9 +189,22 @@ function extractAllImageSources() {
   const newImages = [];
 
   images.forEach((img) => {
-    const src = img.currentSrc || img.src;
+    let src =
+      img.currentSrc ||
+      img.src ||
+      img.getAttribute("data-src") ||
+      img.getAttribute("srcset");
+    if (src && src.includes(",")) {
+      src = src.split(",")[0].trim().split(" ")[0];
+    }
     if (!isSupportedImageFormat(src)) return;
     if (isLogoOrIcon(img, src)) return;
+    if (/ads\.|tracker\.|pixel\./i.test(src)) return;
+    // const normalizedSrc = src.split("?")[0];
+    // if (!sentImages.has(normalizedSrc)) {
+    //   sentImages.add(normalizedSrc);
+    //   newImages.push(src);
+    // }
     if (!sentImages.has(src)) {
       sentImages.add(src);
       newImages.push(src);
@@ -248,7 +259,7 @@ function startMutationObserver() {
     childList: true,
     subtree: true,
     attributes: true,
-    attributeFilter: ["src"],
+    attributeFilter: ["src", "data-src", "srcset"],
   });
 
   console.log("🔍 [Observer] MutationObserver is now watching for new images");
@@ -272,9 +283,7 @@ waitForDomReady(() => {
   autoSendImagesLoop(3000);
 });
 
-// const imageUrls = extractImageSources();
-// console.log("!!!!!!!!ocBot: Extracted image URLs:", imageUrls);
-// chrome.runtime.sendMessage({ action: "process_images", images: imageUrls });
+// ===================================== // ================================
 
 // Can we see this element?
 function isVisible(element) {
