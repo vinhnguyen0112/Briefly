@@ -30,5 +30,5 @@ router.post("/google/callback", verifyOrigin, authenticateWithGoogle);
 router.post("/facebook/callback", verifyOrigin, authenticateWithFacebook);
 
 // Sign out
-router.post("/signout", verifyOrigin, signOut);
+router.post("/signout", verifyOrigin, validateSession, signOut);
 module.exports = router;

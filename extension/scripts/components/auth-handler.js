@@ -66,8 +66,8 @@ export const isSessionValid = async (sessionId) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionId}`,
       },
-      body: JSON.stringify({ sessionId }),
     });
 
     if (!response.ok) {
@@ -96,13 +96,13 @@ export const signOut = async () => {
     const sessionId = await getUserSession();
     if (!sessionId) throw new Error("Session ID not found.");
 
-    // Sign user out on server side first
+    // Sign user out on the server side
     const response = await fetch(`${SERVER_URL}/api/auth/signout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        Authorization: `Bearer ${sessionId}`,
       },
-      body: JSON.stringify({ sessionId }),
     });
 
     if (!response.ok) {
@@ -171,8 +171,8 @@ const sendAccessTokenToServer = async (accessToken) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${accessToken}`,
     },
-    body: JSON.stringify({ accessToken }),
   });
 
   if (!response.ok) {
@@ -267,8 +267,8 @@ const sendIdTokenToServer = async (idToken) => {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      Authorization: `Bearer ${idToken}`,
     },
-    body: JSON.stringify({ idToken }),
   });
 
   if (!response.ok) {

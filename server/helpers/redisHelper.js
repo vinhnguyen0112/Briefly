@@ -3,9 +3,21 @@ const redis = require("redis");
 // Create redis cluster connection
 const redisCluster = redis.createCluster({
   rootNodes: [
-    { url: `redis://${process.env.REDIS_HOST_1}:${process.env.REDIS_PORT}` },
-    { url: `redis://${process.env.REDIS_HOST_2}:${process.env.REDIS_PORT}` },
-    { url: `redis://${process.env.REDIS_HOST_3}:${process.env.REDIS_PORT}` },
+    {
+      url: `redis://${process.env.REDIS_HOST_1}:${
+        process.env.REDIS_PORT || 6379
+      }`,
+    },
+    {
+      url: `redis://${process.env.REDIS_HOST_2}:${
+        process.env.REDIS_PORT || 6379
+      }`,
+    },
+    {
+      url: `redis://${process.env.REDIS_HOST_3}:${
+        process.env.REDIS_PORT || 6379
+      }`,
+    },
   ],
   defaults: {
     username: process.env.REDIS_USERNAME,
@@ -23,6 +35,7 @@ const applyPrefix = (key) => {
 const createSession = async (sessionData) => {
   const sessionId = crypto.randomUUID();
   const key = applyPrefix(`sess:${sessionId}`);
+  console.log("REDIS KEY: ", key);
   const setResult = await redisCluster.set(key, JSON.stringify(sessionData), {
     EX: parseInt(process.env.SESSION_TTL),
   });

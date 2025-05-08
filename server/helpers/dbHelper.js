@@ -1,27 +1,30 @@
-// These are all template code
+// Template code
 
-const mariadb = require("mariadb");
+const mysql = require("mysql2/promise");
 
 // Create a connection pool
-const pool = mariadb.createPool({
-  host: "your-database-host", // Replace with your database host
-  user: "your-username", // Replace with your database username
-  password: "your-password", // Replace with your database password
-  database: "your-database-name", // Replace with your database name
-  connectionLimit: 5, // Adjust based on your needs
+const pool = mysql.createPool({
+  host: process.env.MYSQL_HOST,
+  port: process.env.MYSQL_PORT,
+  user: process.env.MYSQL_USERNAME,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DB || "test",
+  waitForConnections: true,
+  connectionLimit: 5,
+  queueLimit: 0,
 });
 
 /**
  * Get a connection from the pool
- * @returns {Promise} A promise that resolves to a MariaDB connection
+ * @returns {Promise} A promise that resolves to a MySQL connection
  */
 async function getConnection() {
   try {
     const connection = await pool.getConnection();
-    console.log("MariaDB connection established");
+    console.log("MySQL connection established");
     return connection;
   } catch (error) {
-    console.error("Error connecting to MariaDB:", error.message);
+    console.error("Error connecting to MySQL:", error.message);
     throw error;
   }
 }
@@ -36,8 +39,8 @@ async function executeQuery(query, params = []) {
   let connection;
   try {
     connection = await getConnection();
-    const result = await connection.query(query, params);
-    return result;
+    const [rows] = await connection.execute(query, params);
+    return rows;
   } catch (error) {
     console.error("Error executing query:", error.message);
     throw error;
@@ -52,9 +55,9 @@ async function executeQuery(query, params = []) {
 async function closePool() {
   try {
     await pool.end();
-    console.log("MariaDB connection pool closed");
+    console.log("MySQL connection pool closed");
   } catch (error) {
-    console.error("Error closing MariaDB connection pool:", error.message);
+    console.error("Error closing MySQL connection pool:", error.message);
   }
 }
 

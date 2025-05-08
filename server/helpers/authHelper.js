@@ -19,4 +19,15 @@ const verifyGoogleIdToken = async (token) => {
   }
 };
 
-module.exports = { verifyGoogleIdToken };
+// Helper function to extract token from Authorization header
+const extractTokenFromHeader = (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith("Bearer ")) {
+    throw new Error("Missing or invalid Authorization header");
+  }
+  const token = authHeader.split(" ")[1];
+  console.log("Extracted token: ", token);
+  return token;
+};
+
+module.exports = { verifyGoogleIdToken, extractTokenFromHeader };

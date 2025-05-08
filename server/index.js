@@ -7,6 +7,7 @@ const morgan = require("morgan");
 
 const authRoutes = require("./routes/authRoutes");
 const { redisCluster } = require("./helpers/redisHelper");
+const db = require("./helpers/dbHelper");
 const imageCaptionRoutes = require("./routes/imageCaptionRoutes");
 
 // Initialize Express app
