@@ -149,6 +149,10 @@ function handleSidebarMessage(message) {
     case "get_page_content":
       console.log("CocBot: Extracting page content");
       try {
+        collectedCaptions = [];
+        console.log(
+          "✅ Reset collectedCaptions before extracting new page content"
+        );
         const pageContent = extractPageContent(); // Uses the global function
         console.log("CocBot: Content extracted successfully", {
           title: pageContent.title,
@@ -234,16 +238,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     // Gom caption vào mảng tổng
     collectedCaptions = collectedCaptions.concat(captions);
 
-    // Tạo block caption theo format
-    const captionBlock =
-      "=====CAPTION IMAGE=====\n\n" +
-      collectedCaptions
-        .map((caption, index) => `caption image ${index + 1}: ${caption}`)
-        .join("\n\n");
-
     // Lấy nội dung hiện có (giả sử extractPageContent đã chạy trước đó)
     const pageContent = extractPageContent();
-    const fullContent = pageContent.content + "\n\n" + captionBlock;
 
     // Gửi ra sidebar để hiển thị
     const iframe = document.getElementById("isal-sidebar-iframe");
@@ -253,7 +249,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           action: "page_content",
           content: {
             ...pageContent,
-            content: fullContent,
+            captions: collectedCaptions,
           },
         },
         "*"

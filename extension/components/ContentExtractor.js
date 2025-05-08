@@ -141,6 +141,7 @@ function extractPageContent() {
       ...pageMetadata,
       content: mainContent,
       structuredData: structuredData,
+      captions: collectedCaptions,
       extractionSuccess: true,
     };
 

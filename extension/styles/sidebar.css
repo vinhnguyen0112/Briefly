@@ -10,7 +10,7 @@
   --primary-foreground: hsl(0 0% 98%);
   --ring: hsl(240 5% 64.9%);
   --radius: 0.5rem;
-  
+
   /* sidebar size params */
   --sidebar-width: 320px;
   --sidebar-min-width: 280px;
@@ -274,7 +274,8 @@ body.sidebar-resizing * {
   opacity: 0.9;
 }
 
-.button, .icon-button {
+.button,
+.icon-button {
   background-color: var(--primary);
   color: var(--primary-foreground);
   border: none;
@@ -288,7 +289,8 @@ body.sidebar-resizing * {
   justify-content: center;
 }
 
-.button:hover, .icon-button:hover {
+.button:hover,
+.icon-button:hover {
   opacity: 0.9;
 }
 
@@ -313,8 +315,15 @@ body.sidebar-resizing * {
 }
 
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .message-content {
@@ -389,11 +398,15 @@ body.sidebar-resizing * {
 }
 
 @keyframes typing-dot {
-  0%, 80%, 100% { 
-    transform: scale(0.7); 
+
+  0%,
+  80%,
+  100% {
+    transform: scale(0.7);
   }
-  40% { 
-    transform: scale(1); 
+
+  40% {
+    transform: scale(1);
   }
 }
 
@@ -416,7 +429,7 @@ body.sidebar-resizing * {
   font-size: 13px;
 }
 
-.assistant-message .message-content pre, 
+.assistant-message .message-content pre,
 .assistant-message .message-content code {
   background-color: rgba(0, 0, 0, 0.15);
 }
@@ -645,8 +658,13 @@ body.sidebar-resizing * {
 }
 
 @keyframes spin {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* error message */
@@ -1098,4 +1116,39 @@ body.sidebar-resizing * {
 
 .cocbot-title:hover {
   color: var(--primary-color, #4a86e8);
-} 
+}
+
+
+
+.content-viewer-captions {
+  background-color: #f9fafb;
+  border: none;
+  border-radius: 0;
+  padding: 1.25rem;
+  margin: 0;
+}
+
+.content-viewer-captions h4 {
+  margin: 0 0 0.75rem;
+  font-size: 0.95rem;
+  color: #374151;
+  font-weight: 600;
+}
+
+.content-viewer-captions ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.content-viewer-captions li {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  color: #4b5563;
+  margin-bottom: 0.3rem;
+}
+
+.content-viewer-captions li strong {
+  color: #111827;
+  font-weight: 600;
+}
