@@ -6,9 +6,10 @@ const cors = require("cors");
 const morgan = require("morgan");
 
 const authRoutes = require("./routes/authRoutes");
+const captionRoutes = require("./routes/captionRoutes");
+const anonRoutes = require("./routes/anonRoutes");
 const { redisCluster } = require("./helpers/redisHelper");
 const db = require("./helpers/dbHelper");
-const imageCaptionRoutes = require("./routes/imageCaptionRoutes");
 
 // Initialize Express app
 const app = express();
@@ -47,7 +48,8 @@ redisCluster
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/captionize", imageCaptionRoutes);
+app.use("/api/captionize", captionRoutes);
+app.use("/api/anon", anonRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

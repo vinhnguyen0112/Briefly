@@ -17,6 +17,7 @@ import {
   setUpAnonQueryCount,
   validateUserSession,
 } from "./components/auth-handler.js";
+import { getAnonSessionId } from "./components/anon-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -39,6 +40,8 @@ document.addEventListener("DOMContentLoaded", () => {
       state.isAuthenticated = false;
       clearUserSession();
     });
+
+  getAnonSessionId();
 
   setUpAnonQueryCount();
 

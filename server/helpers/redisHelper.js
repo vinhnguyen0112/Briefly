@@ -1,4 +1,6 @@
 const redis = require("redis");
+const { get } = require("../routes/authRoutes");
+const client = redis.createClient();
 
 // Create redis cluster connection
 const redisCluster = redis.createCluster({
@@ -81,10 +83,32 @@ const refreshSession = async (sessionId) => {
   }
 };
 
+const getAnonSession = async (sessionId) => {
+  return new Promise((resolve, reject) => {
+    const key = applyPrefix(`anon:${sessionId}`);
+    client.get(key, (err, data) => {
+      if (err) return reject(err);
+      resolve(data ? JSON.parse(data) : null);
+    });
+  });
+};
+
+const setAnonSession = async (sessionId, sessionData) => {
+  return new Promise((resolve, reject) => {
+    const key = applyPrefix(`anon:${sessionId}`);
+    client.set(key, JSON.stringify(sessionData), (err) => {
+      if (err) return reject(err);
+      resolve();
+    });
+  });
+};
+
 module.exports = {
   redisCluster,
   createSession,
   getSession,
   refreshSession,
   deleteSession,
+  getAnonSession,
+  setAnonSession,
 };
