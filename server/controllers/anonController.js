@@ -9,7 +9,7 @@ function generateSessionId(fingerprint, ip) {
     .digest("hex");
 }
 
-exports.handleAnonSession = async (req, res, next) => {
+const handleAnonSession = async (req, res, next) => {
   try {
     const { visitorId } = req.body;
     if (!visitorId) {
@@ -48,3 +48,5 @@ exports.handleAnonSession = async (req, res, next) => {
     next(err);
   }
 };
+
+module.exports = { handleAnonSession };

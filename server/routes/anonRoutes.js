@@ -1,7 +1,15 @@
 const express = require("express");
-const router = express.Router();
 const { handleAnonSession } = require("../controllers/anonController");
+const router = express.Router();
 
-router.post("/", handleAnonSession);
+router.post(
+  "/",
+  (req, res, next) => {
+    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
+    console.log(ip);
+    next();
+  },
+  handleAnonSession
+);
 
 module.exports = router;

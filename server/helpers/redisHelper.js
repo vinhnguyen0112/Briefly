@@ -86,7 +86,7 @@ const refreshSession = async (sessionId) => {
 const getAnonSession = async (sessionId) => {
   return new Promise((resolve, reject) => {
     const key = applyPrefix(`anon:${sessionId}`);
-    client.get(key, (err, data) => {
+    redisCluster.get(key, (err, data) => {
       if (err) return reject(err);
       resolve(data ? JSON.parse(data) : null);
     });
@@ -96,7 +96,7 @@ const getAnonSession = async (sessionId) => {
 const setAnonSession = async (sessionId, sessionData) => {
   return new Promise((resolve, reject) => {
     const key = applyPrefix(`anon:${sessionId}`);
-    client.set(key, JSON.stringify(sessionData), (err) => {
+    redisCluster.set(key, JSON.stringify(sessionData), (err) => {
       if (err) return reject(err);
       resolve();
     });
