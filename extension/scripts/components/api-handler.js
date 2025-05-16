@@ -171,10 +171,10 @@ ${styleInstructions}`,
 
     if (pageContent.captions && pageContent.captions.length > 0) {
       contextMessage.content +=
-        "\n\nNOTE: The following image captions are additional information extracted from the page to help you understand visuals. They are metadata, not a real part of the website.\n";
-      contextMessage.content += "IMAGE CAPTIONS:\n";
+        "\n\nNote: Some image captions were extracted to help explain the visuals on this page. These are supplementary and not part of the page's actual content structure.\n";
+
       pageContent.captions.forEach((caption, index) => {
-        contextMessage.content += `Image ${index + 1}: ${caption}\n`;
+        contextMessage.content += `• Image ${index + 1}: ${caption}\n`;
       });
     }
   } else {
