@@ -166,6 +166,8 @@ function extractPageContent() {
 // ---------------- IMAGE EXTRACTION + AUTO SEND LOOP ----------------
 
 const sentImages = new Set();
+let totalImagesSent = 0;
+const MAX_IMAGES_PER_PAGE = 20;
 
 function isSupportedImageFormat(src) {
   if (!src || src.startsWith("data:image")) return false;
@@ -189,7 +191,9 @@ function extractAllImageSources() {
   const images = document.querySelectorAll("img");
   const newImages = [];
 
-  images.forEach((img) => {
+  for (const img of images) {
+    if (totalImagesSent >= MAX_IMAGES_PER_PAGE) break;
+
     let src =
       img.currentSrc ||
       img.src ||
@@ -198,19 +202,22 @@ function extractAllImageSources() {
     if (src && src.includes(",")) {
       src = src.split(",")[0].trim().split(" ")[0];
     }
-    if (!isSupportedImageFormat(src)) return;
-    if (isLogoOrIcon(img, src)) return;
-    if (/ads\.|tracker\.|pixel\./i.test(src)) return;
-    // const normalizedSrc = src.split("?")[0];
-    // if (!sentImages.has(normalizedSrc)) {
-    //   sentImages.add(normalizedSrc);
-    //   newImages.push(src);
-    // }
-    if (!sentImages.has(src)) {
-      sentImages.add(src);
-      newImages.push(src);
-    }
-  });
+
+    if (!isSupportedImageFormat(src)) continue;
+    if (isLogoOrIcon(img, src)) continue;
+    if (/ads\.|tracker\.|pixel\./i.test(src)) continue;
+    if (sentImages.has(src)) continue;
+
+    sentImages.add(src);
+    newImages.push(src);
+    totalImagesSent++;
+  }
+
+  if (totalImagesSent >= MAX_IMAGES_PER_PAGE) {
+    console.log(
+      `⚠️ Reached image captioning limit for this page: ${MAX_IMAGES_PER_PAGE} images`
+    );
+  }
 
   return newImages;
 }
@@ -280,6 +287,7 @@ function waitForDomReady(callback) {
 // 🚀 Start auto image extraction loop, then fallback to MutationObserver
 waitForDomReady(() => {
   sentImages.clear();
+  totalImagesSent = 0;
   console.log("✅ [Init] DOM ready, starting image monitoring loop");
   autoSendImagesLoop(3000);
 });

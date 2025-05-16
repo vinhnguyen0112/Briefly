@@ -655,11 +655,3 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 });
-
-// Reset processed images when the URL changes
-// chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
-//   if (changeInfo.status === "complete") {
-//     console.log("🌐 Tab reloaded or loaded, resetting processedImages.");
-//     resetProcessedImages();
-//   }
-// });
