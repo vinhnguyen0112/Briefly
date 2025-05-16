@@ -134,6 +134,8 @@ function toggleSidebar(forceState) {
   }
 }
 
+let collectedCaptions = [];
+let lastExtractedContent = null;
 function handleSidebarMessage(message) {
   console.log("CocBot: Received message from sidebar:", message.action);
 
@@ -150,10 +152,11 @@ function handleSidebarMessage(message) {
       console.log("CocBot: Extracting page content");
       try {
         collectedCaptions = [];
+        lastExtractedContent = null;
+        const pageContent = extractAndCachePageContent();
         console.log(
-          "✅ Reset collectedCaptions before extracting new page content"
+          "✅ Reset collectedCaptions and lastExtractedContent before extracting new page content"
         );
-        const pageContent = extractPageContent(); // Uses the global function
         console.log("CocBot: Content extracted successfully", {
           title: pageContent.title,
           url: pageContent.url,
@@ -191,7 +194,6 @@ function handleSidebarMessage(message) {
   }
 }
 
-let collectedCaptions = [];
 // listen for messages from the extension
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("CocBot: Message received in content script:", message);
@@ -235,26 +237,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     const captions = message.captions.filter((c) => c && c.trim() !== "");
     if (captions.length === 0) return;
 
-    // Gom caption vào mảng tổng
     collectedCaptions = collectedCaptions.concat(captions);
 
-    // Lấy nội dung hiện có (giả sử extractPageContent đã chạy trước đó)
-    const pageContent = extractPageContent();
-
-    // Gửi ra sidebar để hiển thị
-    const iframe = document.getElementById("isal-sidebar-iframe");
-    if (iframe) {
-      iframe.contentWindow.postMessage(
-        {
-          action: "page_content",
-          content: {
-            ...pageContent,
-            captions: collectedCaptions,
-          },
-        },
-        "*"
-      );
-      console.log("✅ Sent updated page content with captions to sidebar");
+    if (lastExtractedContent) {
+      lastExtractedContent.captions = collectedCaptions;
+      sendToSidebar(lastExtractedContent);
+    } else {
+      const pageContent = extractAndCachePageContent();
+      sendToSidebar(pageContent);
     }
   }
   // Keep the message channel open for the async response in toggle_sidebar
@@ -331,3 +321,25 @@ window.addEventListener("popstate", () => {
     lastUrl = newUrl;
   }
 });
+
+function extractAndCachePageContent() {
+  const raw = extractPageContent();
+  lastExtractedContent = { ...raw, captions: collectedCaptions };
+  return lastExtractedContent;
+}
+
+function sendToSidebar(content) {
+  const iframe = document.getElementById("isal-sidebar-iframe");
+  if (iframe) {
+    iframe.contentWindow.postMessage(
+      {
+        action: "page_content",
+        content,
+      },
+      "*"
+    );
+    console.log("✅ Sent updated page content to sidebar");
+  } else {
+    console.error("CocBot: Sidebar iframe not found");
+  }
+}
