@@ -3,6 +3,7 @@ import {
   authenticateWithGoogle,
   signOut,
 } from "./components/auth-handler.js";
+import { toggleAccountPopupUI } from "./components/event-handler.js";
 import { addConversation, addQuery } from "./components/idb-handler.js";
 import { saveUserSession } from "./components/state.js";
 
@@ -16,6 +17,14 @@ chrome.runtime.onInstalled.addListener(() => {
   // initial state
   chrome.storage.local.set({
     sidebarActive: false,
+  });
+
+  // StorageArea observer (TESTING)
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName === "local") {
+      console.log("Briefly: Storage changed in 'LOCAL' ", changes);
+      toggleAccountPopupUI();
+    }
   });
 });
 

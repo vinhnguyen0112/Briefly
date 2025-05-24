@@ -9,7 +9,6 @@ const authRoutes = require("./routes/authRoutes");
 const captionRoutes = require("./routes/captionRoutes");
 const anonRoutes = require("./routes/anonRoutes");
 const { redisCluster } = require("./helpers/redisHelper");
-const db = require("./helpers/dbHelper");
 
 // Initialize Express app
 const app = express();
@@ -19,6 +18,9 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: "10mb" })); // Larger limit for content processing
 app.use(morgan("dev")); // HTTP request logging
+
+// Trust proxy (testing purpose for now)
+app.set("trust proxy", true);
 
 // Connect to redis cluster
 redisCluster

@@ -59,44 +59,45 @@ export function saveSidebarWidth(width) {
   });
 }
 
-// Anon query management
-export async function getAnonQueryCount() {
+// Anon session management
+export function getAnonSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.get("anon_query_count", (result) => {
-      resolve(result.anon_query_count || 0);
+    chrome.storage.local.get(["anon_session"], (result) => {
+      resolve(result.anon_session || null);
     });
   });
 }
 
-export async function setAnonQueryCount(count) {
+export function saveAnonSession(data) {
+  console.log("Saving anon session: ", data);
   return new Promise((resolve) => {
-    chrome.storage.local.set({ anon_query_count: count }, () => {
-      resolve(true);
-    });
+    chrome.storage.local.set({ anon_session: data }, () => resolve(data.id));
   });
 }
 
-// Consider storing anon_query_count as state upon extension load
-// as an alternative for better performance
+// Increase anon query count for the current anon session
 export async function incrementAnonQueryCount() {
-  const currentCount = await getAnonQueryCount();
-  await setAnonQueryCount(currentCount + 1);
+  const anonSession = await getAnonSession();
+  await saveAnonSession({
+    ...anonSession,
+    query_count: (anonSession.query_count || 0) + 1,
+  });
 }
 
 // User session management
 export async function getUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.get("session_id", (result) => {
-      console.log(`Cocbot: User session gotten`, result.session_id);
-      resolve(result.session_id);
+    chrome.storage.local.get("auth_session", (result) => {
+      console.log(`Cocbot: User session gotten`, result.auth_session);
+      resolve(result.auth_session);
     });
   });
 }
 
-export async function saveUserSession(sessionId) {
+export async function saveUserSession(data) {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ session_id: sessionId }, () => {
-      console.log("CocBot: User session saved", sessionId);
+    chrome.storage.local.set({ auth_session: data }, () => {
+      console.log("CocBot: User session saved", data);
       resolve(true);
     });
   });
@@ -104,7 +105,7 @@ export async function saveUserSession(sessionId) {
 
 export async function clearUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.remove("session_id", () => {
+    chrome.storage.local.remove("auth_session", () => {
       console.log("CocBot: User session removed");
       resolve(true);
     });

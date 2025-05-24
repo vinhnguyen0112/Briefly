@@ -4,11 +4,14 @@ const router = express.Router();
 
 router.post(
   "/",
-  (req, res, next) => {
-    const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress;
-    console.log(ip);
-    next();
-  },
+  // (req, res, next) => {
+  //   const ip = req.ip;
+  //   if (ip && ip.includes(",")) {
+  //     ip = ip.split(",")[0].trim();
+  //   }
+  //   console.log("Client IP: ", ip);
+  //   next();
+  // },
   handleAnonSession
 );
 

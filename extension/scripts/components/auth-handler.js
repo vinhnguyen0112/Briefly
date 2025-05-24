@@ -1,58 +1,20 @@
-import {
-  clearUserSession,
-  getAnonQueryCount,
-  getUserSession,
-  setAnonQueryCount,
-  state,
-} from "./state.js";
+import { clearUserSession, getUserSession, state } from "./state.js";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const FACEBOOK_AUTH_URL = "https://www.facebook.com/v22.0/dialog/oauth";
 const SERVER_URL = "http://localhost:3000";
 
-export const setUpAnonQueryCount = async () => {
-  try {
-    const count = await getAnonQueryCount();
-    if (!count) await setAnonQueryCount(0);
-  } catch (err) {
-    console.error(err);
-  }
-};
-
-// Check if user session is still valid upon extension launch
-// If not then clear the user session, this will not force an sign in,
-// but rather update the UI to reflect that user is not signed in
-export function validateUserSession() {
-  return new Promise((resolve, reject) => {
-    getUserSession()
-      .then((sessionId) => {
-        if (sessionId) {
-          isSessionValid(sessionId)
-            .then((isValid) => {
-              resolve(isValid);
-            })
-            .catch(reject);
-        } else {
-          resolve(); // Resolve if no session exists
-        }
-      })
-      .catch(reject);
-  });
-}
-
-// Check if user is authenticated on server
-// This function is used to verify current session on extension startup
+// Check if user session still valid on server side
 export const isUserAuthenticated = async () => {
   try {
     // Check for ongoing session
-    const sessionId = await getUserSession();
-    console.log("Session ID: ", sessionId);
-    if (!sessionId) {
+    const session = await getUserSession();
+    if (!session) {
       return false;
     }
 
     // Check for session validity
-    const isValid = await isSessionValid(sessionId);
+    const isValid = await isSessionValid(session.id);
     return isValid;
   } catch (err) {
     console.error(err);

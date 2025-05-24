@@ -436,7 +436,7 @@ function closeAccountPopupUI() {
 
 // Force re-render the account popup UI
 // Use as an alternative to closeAccountPopupUI() if not UX friendly enough
-function renderToggleAccountPopupUI() {
+export function renderToggleAccountPopupUI() {
   if (state.isAuthenticated) {
     // User is authenticated
     elements.signOutButton.style.display = "flex";
@@ -472,7 +472,7 @@ function renderToggleAccountPopupUI() {
 
 // Toggle on or off the account popup UI based on current state
 // And display appropriate buttons based on authentication state
-function toggleAccountPopupUI() {
+export function toggleAccountPopupUI() {
   const popup = elements.accountPopup;
 
   // Toggle the display state of the popup

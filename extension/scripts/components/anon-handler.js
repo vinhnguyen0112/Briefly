@@ -1,3 +1,4 @@
+import { saveAnonSession } from "./state.js";
 // Loads FingerprintJS and gets the visitorId
 async function getFingerprintVisitorId() {
   // Dynamically import the ESM build
@@ -21,35 +22,14 @@ async function requestAnonSession(visitorId) {
   return response.json();
 }
 
-// Saves anon session data to chrome.storage
-function saveAnonSessionToStorage(data) {
-  return new Promise((resolve) => {
-    chrome.storage.local.set(
-      {
-        anon_session_id: data.anonSessionId,
-        anon_query_count: data.anon_query_count,
-      },
-      () => resolve(data.anonSessionId)
-    );
-  });
+// Request an anon session from the server
+// This function will not check for existing anon session
+export async function setupAnonSession() {
+  try {
+    const visitorId = await getFingerprintVisitorId();
+    const data = await requestAnonSession(visitorId);
+    return await saveAnonSession(data);
+  } catch (error) {
+    throw error;
+  }
 }
-
-// Main function to get anon session id
-export const getAnonSessionId = async () => {
-  return new Promise((resolve, reject) => {
-    chrome.storage.local.get(["anon_session_id"], async (result) => {
-      if (result.anon_session_id) {
-        resolve(result.anon_session_id);
-      } else {
-        try {
-          const visitorId = await getFingerprintVisitorId();
-          const data = await requestAnonSession(visitorId);
-          const sessionId = await saveAnonSessionToStorage(data);
-          resolve(sessionId);
-        } catch (error) {
-          reject(error);
-        }
-      }
-    });
-  });
-};

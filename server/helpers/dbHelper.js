@@ -61,8 +61,10 @@ async function closePool() {
   }
 }
 
-module.exports = {
+const dbHelper = {
   getConnection,
   executeQuery,
   closePool,
 };
+
+module.exports = dbHelper;

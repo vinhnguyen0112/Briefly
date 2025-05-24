@@ -5,6 +5,7 @@ import {
   getLanguage,
   clearUserSession,
   state,
+  getAnonSession,
 } from "./components/state.js";
 import { setupEventListeners } from "./components/event-handler.js";
 import {
@@ -13,37 +14,36 @@ import {
 } from "./components/content-handler.js";
 import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
-import {
-  setUpAnonQueryCount,
-  validateUserSession,
-} from "./components/auth-handler.js";
-import { getAnonSessionId } from "./components/anon-handler.js";
+import { isUserAuthenticated } from "./components/auth-handler.js";
+import { setupAnonSession } from "./components/anon-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
 
   // Validate the user session
-  validateUserSession()
-    .then((isValid) => {
-      // Set authentication state for authentication depedent UI
-      state.isAuthenticated = isValid;
 
-      // Clear user session from storage if user is unauthenticated
-      if (!isValid) {
+  isUserAuthenticated()
+    .then((isAuthenticated) => {
+      state.isAuthenticated = isAuthenticated;
+      if (!isAuthenticated) {
         clearUserSession();
       }
     })
-    .catch((error) => {
-      console.error("CocBot: Error validating user session", error);
-      console.log("Force setting user session to unauthenticated");
+    .catch((err) => {
+      console.error("CocBot: Error validating user session", err);
+      console.log("Forcing user to sign out");
       state.isAuthenticated = false;
       clearUserSession();
     });
 
-  getAnonSessionId();
-
-  setUpAnonQueryCount();
+  // Set up anonymous session if not exists
+  getAnonSession().then((anonSession) => {
+    if (!anonSession) {
+      setupAnonSession();
+    } else {
+    }
+  });
 
   // check for api key
   getApiKey().then((key) => {

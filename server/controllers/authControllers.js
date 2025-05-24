@@ -2,7 +2,7 @@ const {
   verifyGoogleIdToken,
   extractTokenFromHeader,
 } = require("../helpers/authHelper");
-const { createSession, deleteSession } = require("../helpers/redisHelper");
+const { redisHelper } = require("../helpers/redisHelper");
 
 const FACEBOOK_TOKEN_DEBUG_URL = "https://graph.facebook.com/debug_token";
 
@@ -15,7 +15,7 @@ const authenticateWithGoogle = async (req, res, next) => {
     const userId = await verifyGoogleIdToken(idToken);
 
     // Create session on server-side
-    const sessionId = await createSession({ userId });
+    const sessionId = await redisHelper.createSession({ userId });
     return res.json({
       success: true,
       sessionId,
@@ -52,7 +52,9 @@ const authenticateWithFacebook = async (req, res, next) => {
     console.log(data.data);
 
     // Create session on server-side
-    const sessionId = await createSession({ userId: data.data.user_id });
+    const sessionId = await redisHelper.createSession({
+      userId: data.data.user_id,
+    });
     return res.json({
       success: true,
       sessionId,
@@ -68,7 +70,7 @@ const signOut = async (req, res, next) => {
   try {
     const sessionId = extractTokenFromHeader(req); // Extract token from header
 
-    const success = await deleteSession(sessionId);
+    const success = await redisHelper.deleteSession(sessionId);
     return res.json({
       success,
       message: success ? "Session deleted" : "Invalid session Id",

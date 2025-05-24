@@ -1,5 +1,5 @@
 const crypto = require("crypto");
-const { getAnonSession, setAnonSession } = require("../helpers/redisHelper");
+const { redisHelper } = require("../helpers/redisHelper");
 
 // Helper to hash fingerprint and IP into a session ID
 function generateSessionId(fingerprint, ip) {
@@ -12,36 +12,45 @@ function generateSessionId(fingerprint, ip) {
 const handleAnonSession = async (req, res, next) => {
   try {
     const { visitorId } = req.body;
+    console.log("Received visitorId: ", visitorId);
     if (!visitorId) {
       return res
         .status(400)
         .json({ success: false, message: "Missing visitorId" });
     }
 
-    // Get IP address (trusts proxy if behind one)
-    const ip =
-      req.headers["x-forwarded-for"]?.split(",")[0] ||
-      req.connection.remoteAddress ||
-      req.socket.remoteAddress;
+    // Handle client IP (No proxy handling yet)
+    let clientIP = req.ip;
+    if (clientIP && clientIP.includes(",")) {
+      clientIP = clientIP.split(",")[0].trim();
+    }
 
-    const sessionId = generateSessionId(visitorId, ip);
+    console.log("Client IP address: ", clientIP);
+
+    const sessionId = generateSessionId(visitorId, clientIP);
+
+    console.log("Created anonymous session ID: ", sessionId);
 
     // Check if session exists in Redis
-    let session = await getAnonSession(sessionId);
+    let session = await redisHelper.getAnonSession(sessionId);
 
     if (session) {
-      // Session exists, return it
+      // Session exists, refresh & return it
+      console.log("Anonymous session found");
+      console.log(session);
+      await redisHelper.refreshAnonSession();
       return res.json({
-        anonSessionId: sessionId,
+        anon_session_id: sessionId,
         anon_query_count: session.anon_query_count || 0,
       });
     } else {
       // Create new session
-      const newSession = { anon_query_count: 0 };
-      await setAnonSession(sessionId, newSession);
+      console.log("Anonymous session not found, creating new one");
+      const sessionData = { anon_query_count: 0, client_ip: clientIP };
+      await redisHelper.setAnonSession(sessionId, sessionData);
       return res.json({
-        anonSessionId: sessionId,
-        anon_query_count: 0,
+        anon_session_id: sessionId,
+        ...sessionData,
       });
     }
   } catch (err) {
