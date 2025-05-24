@@ -6,6 +6,7 @@ import {
   requestPageContent,
   updateContentStatus,
 } from "./content-handler.js";
+import { renderToggleAccountPopupUI2 } from "./event-handler.js";
 
 // close all panels
 export function closeAllPanels() {
@@ -283,6 +284,10 @@ export function handleContentMessage(message) {
         `;
       }
       break;
+
+    case "auth_state_changed":
+      console.log("Auth state changed event received, updating UI!");
+      renderToggleAccountPopupUI2(message.auth_state);
   }
 }
 

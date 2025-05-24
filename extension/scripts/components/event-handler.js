@@ -470,6 +470,40 @@ export function renderToggleAccountPopupUI() {
   }
 }
 
+export function renderToggleAccountPopupUI2(isAuthenticated) {
+  if (isAuthenticated) {
+    // User is authenticated
+    elements.signOutButton.style.display = "flex";
+
+    // Hide all Google and Facebook login buttons in the header
+    elements.googleLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "none";
+      }
+    });
+    elements.facebookLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "none";
+      }
+    });
+  } else {
+    // User is not authenticated
+    elements.signOutButton.style.display = "none";
+
+    // Show all Google and Facebook login buttons in the header
+    elements.googleLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "flex";
+      }
+    });
+    elements.facebookLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "flex";
+      }
+    });
+  }
+}
+
 // Toggle on or off the account popup UI based on current state
 // And display appropriate buttons based on authentication state
 export function toggleAccountPopupUI() {

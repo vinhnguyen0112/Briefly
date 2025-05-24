@@ -3,7 +3,6 @@ import {
   authenticateWithGoogle,
   signOut,
 } from "./components/auth-handler.js";
-import { toggleAccountPopupUI } from "./components/event-handler.js";
 import { addConversation, addQuery } from "./components/idb-handler.js";
 import { saveUserSession } from "./components/state.js";
 
@@ -21,9 +20,20 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // StorageArea observer (TESTING)
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    if (areaName === "local") {
-      console.log("Briefly: Storage changed in 'LOCAL' ", changes);
-      toggleAccountPopupUI();
+    // If auth state change, send message to all tabs
+    if (areaName === "local" && changes.auth_state) {
+      console.log("Briefly: auth_state changed in 'LOCAL'", changes.auth_state);
+
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          if (tab.id) {
+            chrome.tabs.sendMessage(tab.id, {
+              action: "auth_state_changed",
+              auth_state: changes.auth_state.newValue,
+            });
+          }
+        });
+      });
     }
   });
 });

@@ -22,7 +22,6 @@ document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
 
   // Validate the user session
-
   isUserAuthenticated()
     .then((isAuthenticated) => {
       state.isAuthenticated = isAuthenticated;
@@ -41,7 +40,6 @@ document.addEventListener("DOMContentLoaded", () => {
   getAnonSession().then((anonSession) => {
     if (!anonSession) {
       setupAnonSession();
-    } else {
     }
   });
 
