@@ -1,4 +1,9 @@
-import { clearUserSession, getUserSession, state } from "./state.js";
+import {
+  clearUserSession,
+  getAnonSession,
+  getUserSession,
+  state,
+} from "./state.js";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const FACEBOOK_AUTH_URL = "https://www.facebook.com/v22.0/dialog/oauth";
@@ -47,9 +52,10 @@ export const isSessionValid = async (sessionId) => {
 
 // Check if user need to sign in to proceed their action
 export const isSignInNeeded = async () => {
-  const anonQueryCount = await getAnonQueryCount();
+  const { query_count } = await getAnonSession();
+  const userSession = await getUserSession();
   // User is unauthenticated & anon query count exceed 3
-  return anonQueryCount >= 3 && !state.isAuthenticated;
+  return query_count >= 3 && !userSession;
 };
 
 // Sign the user out

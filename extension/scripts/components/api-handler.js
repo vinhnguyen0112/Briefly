@@ -1,4 +1,9 @@
-import { state, getApiKey, incrementAnonQueryCount } from "./state.js";
+import {
+  state,
+  getApiKey,
+  incrementAnonQueryCount,
+  getUserSession,
+} from "./state.js";
 import {
   addMessageToChat,
   addTypingIndicator,
@@ -61,7 +66,8 @@ export async function processUserQuery(query) {
       }
 
       // Increase anon query count if user is not authenticated
-      if (!state.isAuthenticated) {
+      const userSession = await getUserSession();
+      if (!userSession) {
         await incrementAnonQueryCount();
       }
     } else {

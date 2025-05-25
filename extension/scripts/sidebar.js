@@ -24,7 +24,6 @@ document.addEventListener("DOMContentLoaded", () => {
   // Validate the user session
   isUserAuthenticated()
     .then((isAuthenticated) => {
-      state.isAuthenticated = isAuthenticated;
       if (!isAuthenticated) {
         clearUserSession();
       }
@@ -32,7 +31,6 @@ document.addEventListener("DOMContentLoaded", () => {
     .catch((err) => {
       console.error("CocBot: Error validating user session", err);
       console.log("Forcing user to sign out");
-      state.isAuthenticated = false;
       clearUserSession();
     });
 

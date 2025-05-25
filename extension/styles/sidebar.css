@@ -1297,7 +1297,7 @@ body.sidebar-resizing * {
 
 /* Sign out button style */
 #sign-out-button {
-  display: flex;
+  display: none; /* Hidden initally */
   align-items: center;
   justify-content: center;
   gap: 8px;

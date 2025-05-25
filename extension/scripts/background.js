@@ -20,16 +20,20 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // StorageArea observer (TESTING)
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    // If auth state change, send message to all tabs
-    if (areaName === "local" && changes.auth_state) {
-      console.log("Briefly: auth_state changed in 'LOCAL'", changes.auth_state);
+    // If auth session changes (established, removed, invalidated), notify all tabs
+    if (areaName === "local" && changes.auth_session) {
+      const hasSession = !!changes.auth_session.newValue;
+      console.log(
+        "Briefly: auth_session changed in 'LOCAL', hasSession:",
+        hasSession
+      );
 
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
           if (tab.id) {
             chrome.tabs.sendMessage(tab.id, {
-              action: "auth_state_changed",
-              auth_state: changes.auth_state.newValue,
+              action: "auth_session_changed",
+              isAuth: hasSession,
             });
           }
         });
@@ -597,7 +601,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .then((sessionId) => {
         console.log("Session ID: ", sessionId);
         // Store sessionId into extension's local storage
-        saveUserSession(sessionId)
+        saveUserSession({ id: sessionId })
           .then(() => {
             sendResponse({ success: true });
           })
@@ -617,7 +621,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     authenticateWithFacebook()
       .then((sessionId) => {
         console.log("Sessions ID: ", sessionId);
-        saveUserSession(sessionId)
+        saveUserSession({ id: sessionId })
           .then(() => {
             sendResponse({ success: true });
           })

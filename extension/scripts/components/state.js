@@ -20,7 +20,6 @@ export const state = {
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
   language: "en", // Default language is English
-  isAuthenticated: false,
 };
 
 // Load sidebar width from storage

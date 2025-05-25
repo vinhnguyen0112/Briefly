@@ -46,7 +46,11 @@ const handleAnonSession = async (req, res, next) => {
     } else {
       // Create new session
       console.log("Anonymous session not found, creating new one");
-      const sessionData = { anon_query_count: 0, client_ip: clientIP };
+      const sessionData = {
+        anon_query_count: 0,
+        client_ip: clientIP,
+        visistor_id: visitorId,
+      };
       await redisHelper.setAnonSession(sessionId, sessionData);
       return res.json({
         anon_session_id: sessionId,

@@ -7,6 +7,7 @@ import {
   saveConfig,
   getLanguage,
   saveLanguage,
+  getUserSession,
 } from "./state.js";
 import {
   handleResize,
@@ -387,7 +388,6 @@ function setupAuthenticationButtons() {
       chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
         if (response.success) {
           // Set authentication state and force close the account popup & sign in alert
-          state.isAuthenticated = true;
           closeAccountPopupUI();
           closeSignInAlertPopup();
           console.log("User authenticated via Google");
@@ -402,7 +402,6 @@ function setupAuthenticationButtons() {
       chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
         if (response.success) {
           // Set authentication state and force close the account popup & sign in alert
-          state.isAuthenticated = true;
           closeAccountPopupUI();
           closeSignInAlertPopup();
           console.log("User authenticated via Facebook");
@@ -416,7 +415,6 @@ function setupAuthenticationButtons() {
     chrome.runtime.sendMessage({ action: "sign_out" }, (response) => {
       if (response.success) {
         // Set authentication state and force close the account popup
-        state.isAuthenticated = false;
         closeAccountPopupUI();
         console.log("User signed out");
       }
@@ -436,41 +434,7 @@ function closeAccountPopupUI() {
 
 // Force re-render the account popup UI
 // Use as an alternative to closeAccountPopupUI() if not UX friendly enough
-export function renderToggleAccountPopupUI() {
-  if (state.isAuthenticated) {
-    // User is authenticated
-    elements.signOutButton.style.display = "flex";
-
-    // Hide all Google and Facebook login buttons in the header
-    elements.googleLoginButtons.forEach((button) => {
-      if (button.classList.contains("header-button")) {
-        button.style.display = "none";
-      }
-    });
-    elements.facebookLoginButtons.forEach((button) => {
-      if (button.classList.contains("header-button")) {
-        button.style.display = "none";
-      }
-    });
-  } else {
-    // User is not authenticated
-    elements.signOutButton.style.display = "none";
-
-    // Show all Google and Facebook login buttons in the header
-    elements.googleLoginButtons.forEach((button) => {
-      if (button.classList.contains("header-button")) {
-        button.style.display = "flex";
-      }
-    });
-    elements.facebookLoginButtons.forEach((button) => {
-      if (button.classList.contains("header-button")) {
-        button.style.display = "flex";
-      }
-    });
-  }
-}
-
-export function renderToggleAccountPopupUI2(isAuthenticated) {
+export function renderToggleAccountPopupUI(isAuthenticated) {
   if (isAuthenticated) {
     // User is authenticated
     elements.signOutButton.style.display = "flex";
@@ -504,15 +468,13 @@ export function renderToggleAccountPopupUI2(isAuthenticated) {
   }
 }
 
-// Toggle on or off the account popup UI based on current state
-// And display appropriate buttons based on authentication state
-export function toggleAccountPopupUI() {
+// Toggle on/off the account popup UI
+async function toggleAccountPopupUI() {
   const popup = elements.accountPopup;
 
   // Toggle the display state of the popup
   if (popup.style.display === "none" || !popup.style.display) {
     popup.style.display = "block";
-    renderToggleAccountPopupUI(); // Update button states
   } else {
     popup.style.display = "none";
   }

@@ -1,34 +1,39 @@
 const redis = require("redis");
 
 // Create redis cluster connection
-// const redisCluster = redis.createCluster({
-//   rootNodes: [
-//     {
-//       url: `redis://${process.env.REDIS_HOST_1}:${
-//         process.env.REDIS_PORT || 6379
-//       }`,
-//     },
-//     {
-//       url: `redis://${process.env.REDIS_HOST_2}:${
-//         process.env.REDIS_PORT || 6379
-//       }`,
-//     },
-//     {
-//       url: `redis://${process.env.REDIS_HOST_3}:${
-//         process.env.REDIS_PORT || 6379
-//       }`,
-//     },
-//   ],
-//   defaults: {
-//     username: process.env.REDIS_USERNAME,
-//     password: process.env.REDIS_PASSWORD,
-//   },
-// });
+let redisCluster;
 
-// Local Redis (for development at home)
-const redisCluster = redis.createClient({
-  url: "redis://localhost:6379",
-});
+if (process.env.LOCAL_DEV === "true") {
+  // Local Redis (for development)
+  redisCluster = redis.createClient({
+    url: "redis://localhost:6379",
+  });
+} else {
+  // Redis Cluster (production/staging)
+  redisCluster = redis.createCluster({
+    rootNodes: [
+      {
+        url: `redis://${process.env.REDIS_HOST_1}:${
+          process.env.REDIS_PORT || 6379
+        }`,
+      },
+      {
+        url: `redis://${process.env.REDIS_HOST_2}:${
+          process.env.REDIS_PORT || 6379
+        }`,
+      },
+      {
+        url: `redis://${process.env.REDIS_HOST_3}:${
+          process.env.REDIS_PORT || 6379
+        }`,
+      },
+    ],
+    defaults: {
+      username: process.env.REDIS_USERNAME,
+      password: process.env.REDIS_PASSWORD,
+    },
+  });
+}
 
 // Helper function to apply the prefix to keys
 const applyPrefix = (key) => {

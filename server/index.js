@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const captionRoutes = require("./routes/captionRoutes");
 const anonRoutes = require("./routes/anonRoutes");
 const { redisCluster } = require("./helpers/redisHelper");
+const dbHelper = require("./helpers/dbHelper");
 
 // Initialize Express app
 const app = express();
@@ -30,6 +31,10 @@ redisCluster
     console.error("Failed to connect to Redis:", err);
     process.exit(1);
   });
+
+dbHelper.getConnection().then(() => {
+  console.log("MariaDB connected successfully!");
+});
 
 // // Auth0 config
 // const config = {

@@ -226,19 +226,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     sendResponse({ success: true });
-  } else if (message.action === "auth_state_changed") {
+  } else if (message.action === "auth_session_changed") {
     // If sidebar is active, notify it to refresh content
     const iframe = document.getElementById("isal-sidebar-iframe");
     const container = document.getElementById("isal-sidebar-container");
 
     // Only update if the sidebar is currently open
     if (iframe && container && container.classList.contains("active")) {
-      console.log("CocBot: Notifying sidebar to react to auth state change");
+      console.log("CocBot: Notifying sidebar to react to auth session change");
 
       iframe.contentWindow.postMessage(
         {
-          action: "auth_state_changed",
-          auth_state: message.auth_state,
+          action: "auth_session_changed",
+          isAuth: message.isAuth,
         },
         "*"
       );
