@@ -40,7 +40,7 @@ const handleAnonSession = async (req, res, next) => {
       console.log(session);
       await redisHelper.refreshAnonSession();
       return res.json({
-        anon_session_id: sessionId,
+        id: sessionId,
         anon_query_count: session.anon_query_count || 0,
       });
     } else {
@@ -53,7 +53,7 @@ const handleAnonSession = async (req, res, next) => {
       };
       await redisHelper.setAnonSession(sessionId, sessionData);
       return res.json({
-        anon_session_id: sessionId,
+        id: sessionId,
         ...sessionData,
       });
     }

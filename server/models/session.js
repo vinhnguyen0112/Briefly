@@ -1,27 +1,25 @@
 const dbHelper = require("../helpers/dbHelper");
 
 class Session {
-  async create(sessionData) {
-    const { session_id, user_id, expires_at } = sessionData;
-    const query =
-      "INSERT INTO session (session_id, user_id, expires_at) VALUES (?, ?, ?)";
-    await dbHelper.executeQuery(query, [session_id, user_id, expires_at]);
+  async create(sessionId, userId) {
+    const query = "INSERT INTO sessions (id, user_id) VALUES (?, ?)";
+    await dbHelper.executeQuery(query, [sessionId, userId]);
   }
 
-  async getById(session_id) {
-    const query = "SELECT * FROM session WHERE session_id = ?";
-    const rows = await dbHelper.executeQuery(query, [session_id]);
+  async getById(id) {
+    const query = "SELECT * FROM sessions WHERE id = ?";
+    const rows = await dbHelper.executeQuery(query, [id]);
     return rows[0];
   }
 
-  async update(session_id, updates) {
-    const query = "UPDATE session SET expires_at = ? WHERE session_id = ?";
-    await dbHelper.executeQuery(query, [updates.expires_at, session_id]);
+  async update(id, updates) {
+    const query = "UPDATE sessions SET expires_at = ? WHERE id = ?";
+    await dbHelper.executeQuery(query, [updates.expires_at, id]);
   }
 
-  async delete(session_id) {
-    const query = "DELETE FROM session WHERE session_id = ?";
-    await dbHelper.executeQuery(query, [session_id]);
+  async delete(id) {
+    const query = "DELETE FROM sessions WHERE id = ?";
+    await dbHelper.executeQuery(query, [id]);
   }
 }
 

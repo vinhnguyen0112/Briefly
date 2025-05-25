@@ -7,7 +7,7 @@ const pool = mysql.createPool(
   process.env.LOCAL_DEV === "true"
     ? {
         host: "localhost",
-        port: 3306,
+        port: 3307,
         user: "root",
         password: "NguyenTheVinh@01122004",
         database: "test",
@@ -34,7 +34,6 @@ const pool = mysql.createPool(
 async function getConnection() {
   try {
     const connection = await pool.getConnection();
-    console.log("MySQL connection established");
     return connection;
   } catch (error) {
     console.error("Error connecting to MySQL:", error.message);

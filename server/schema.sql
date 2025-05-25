@@ -1,3 +1,4 @@
+-- Active: 1747972168066@@127.0.0.1@3306@test
 -- Users table to store user information
 CREATE TABLE users (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),

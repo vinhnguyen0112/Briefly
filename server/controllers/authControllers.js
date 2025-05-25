@@ -3,6 +3,9 @@ const {
   extractTokenFromHeader,
 } = require("../helpers/authHelper");
 const { redisHelper } = require("../helpers/redisHelper");
+const User = require("../models/user");
+const Session = require("../models/session");
+const { v4: uuidv4 } = require("uuid");
 
 const FACEBOOK_TOKEN_DEBUG_URL = "https://graph.facebook.com/debug_token";
 
@@ -11,14 +14,33 @@ const authenticateWithGoogle = async (req, res, next) => {
   try {
     const idToken = extractTokenFromHeader(req); // Extract token from header
 
-    // Verify ID token
+    // Verify ID token and extract user info
     const userId = await verifyGoogleIdToken(idToken);
 
-    // Create session on server-side
-    const sessionId = await redisHelper.createSession({ userId });
+    // Persist user in MySQL
+    const userData = {
+      id: userId,
+      name: "Nguyen The Vinh",
+    };
+    let user = await User.getById(userId);
+    if (!user) {
+      await User.create(userData);
+    } else {
+      await User.update(userId, userData);
+    }
+
+    // Create session in MySQL
+    const sessionId = uuidv4();
+    await Session.create(sessionId, userId);
+
+    // Cache session in Redis
+    await redisHelper.createSession(sessionId, userId);
+
     return res.json({
       success: true,
-      sessionId,
+      data: {
+        id: sessionId,
+      },
     });
   } catch (error) {
     console.error("Error during Google authentication:", error);
@@ -43,25 +65,42 @@ const authenticateWithFacebook = async (req, res, next) => {
     if (!response.ok) {
       throw new Error("Failed to verify access token");
     }
-
     const data = await response.json();
     if (!data || data.data.error) {
       throw new Error("Invalid access token");
     }
 
-    console.log(data.data);
+    console.log("Response from Facebook token debug:", data);
 
-    // Create session on server-side
-    const sessionId = await redisHelper.createSession({
-      userId: data.data.user_id,
-    });
+    // Persist user in MySQL
+    const userId = data.data.user_id || uuidv4();
+    const userData = {
+      id: userId,
+      name: "",
+    };
+    let user = await User.getById(userId);
+    if (!user) {
+      await User.create(userData);
+    } else {
+      await User.update(userId, userData);
+    }
+
+    // Create session in MySQL
+    const sessionId = uuidv4();
+    await Session.create(sessionId, userId);
+
+    // Cache session in Redis
+    await redisHelper.createSession(sessionId, userId);
+
     return res.json({
       success: true,
-      sessionId,
+      data: {
+        id: sessionId,
+      },
     });
-  } catch (err) {
-    console.error("Error during Facebook authentication:", err);
-    return next(err);
+  } catch (error) {
+    console.error("Error during Facebook authentication:", error);
+    return next(error);
   }
 };
 
@@ -70,10 +109,15 @@ const signOut = async (req, res, next) => {
   try {
     const sessionId = extractTokenFromHeader(req); // Extract token from header
 
-    const success = await redisHelper.deleteSession(sessionId);
+    // Remove from MySQL
+    await Session.delete(sessionId);
+
+    // Remove from Redis
+    await redisHelper.deleteSession(sessionId);
+
     return res.json({
-      success,
-      message: success ? "Session deleted" : "Invalid session Id",
+      success: true,
+      message: "Session deleted",
     });
   } catch (err) {
     console.error("Error during sign out:", err);

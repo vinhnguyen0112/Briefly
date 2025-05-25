@@ -41,16 +41,22 @@ const applyPrefix = (key) => {
   return `${prefix}${key}`;
 };
 
-// Create a user session
-const createSession = async (sessionData) => {
-  const sessionId = crypto.randomUUID();
+// Create a user session with default values
+const createSession = async (sessionId, userId) => {
   const key = applyPrefix(`sess:${sessionId}`);
-  console.log("REDIS KEY: ", key);
+
+  const sessionData = {
+    user_id: userId,
+    query_count: 0,
+    token_count: 0,
+    maximum_response_length: 150,
+    response_style: 1,
+  };
+
   const setResult = await redisCluster.set(key, JSON.stringify(sessionData), {
     EX: parseInt(process.env.SESSION_TTL),
   });
   if (setResult !== "OK") throw new Error("Create session failed");
-  return sessionId;
 };
 
 // Delete user session

@@ -156,7 +156,7 @@ const sendAccessTokenToServer = async (accessToken) => {
     );
   }
 
-  return data.sessionId;
+  return data.data;
 };
 
 // Google authentication communication
@@ -252,5 +252,5 @@ const sendIdTokenToServer = async (idToken) => {
     );
   }
 
-  return data.sessionId;
+  return data.data;
 };

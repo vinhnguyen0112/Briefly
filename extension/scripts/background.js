@@ -598,10 +598,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("CocBot: Received request to authenticate with Google");
 
     authenticateWithGoogle()
-      .then((sessionId) => {
-        console.log("Session ID: ", sessionId);
-        // Store sessionId into extension's local storage
-        saveUserSession({ id: sessionId })
+      .then((sessionData) => {
+        console.log(
+          "Received session data from Google authentication:",
+          sessionData
+        );
+        saveUserSession(sessionData)
           .then(() => {
             sendResponse({ success: true });
           })
@@ -619,9 +621,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "facebook_login") {
     console.log("CocBot: Received request to authenticate with Facebook");
     authenticateWithFacebook()
-      .then((sessionId) => {
-        console.log("Sessions ID: ", sessionId);
-        saveUserSession({ id: sessionId })
+      .then((session) => {
+        saveUserSession(session)
           .then(() => {
             sendResponse({ success: true });
           })
