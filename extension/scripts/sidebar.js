@@ -7,7 +7,10 @@ import {
   state,
   getAnonSession,
 } from "./components/state.js";
-import { setupEventListeners } from "./components/event-handler.js";
+import {
+  renderToggleAccountPopupUI,
+  setupEventListeners,
+} from "./components/event-handler.js";
 import {
   requestPageContent,
   setupContentExtractionReliability,
@@ -27,6 +30,9 @@ document.addEventListener("DOMContentLoaded", () => {
       if (!isAuthenticated) {
         clearUserSession();
       }
+      // Force re-render of account popup UI on load
+      // Because StorageArea observer doesn't auto run on reloads
+      renderToggleAccountPopupUI(isAuthenticated);
     })
     .catch((err) => {
       console.error("CocBot: Error validating user session", err);

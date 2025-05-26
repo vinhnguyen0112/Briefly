@@ -20,13 +20,12 @@ chrome.runtime.onInstalled.addListener(() => {
 
   // StorageArea observer (TESTING)
   chrome.storage.onChanged.addListener((changes, areaName) => {
+    console.log("Changes in: ", areaName);
+    console.log("Changes: ", changes);
     // If auth session changes (established, removed, invalidated), notify all tabs
     if (areaName === "local" && changes.auth_session) {
       const hasSession = !!changes.auth_session.newValue;
-      console.log(
-        "Briefly: auth_session changed in 'LOCAL', hasSession:",
-        hasSession
-      );
+      console.log("Briefly: auth_session changed in 'LOCAL'", hasSession);
 
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
