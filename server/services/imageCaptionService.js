@@ -1,5 +1,3 @@
-// File: Capstone2025_ISAL/server/services/imageCaptionService.js
-
 const OpenAI = require("openai");
 let pLimit = require("p-limit");
 pLimit = pLimit.default || pLimit;

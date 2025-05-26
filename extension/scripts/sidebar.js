@@ -23,7 +23,6 @@ import { setupAnonSession } from "./components/anon-handler.js";
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
-
   // Validate the user session
   isUserAuthenticated()
     .then((isAuthenticated) => {

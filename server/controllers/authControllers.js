@@ -1,9 +1,5 @@
-const {
-  extractTokenFromHeader,
-  verifyGoogleToken,
-  verifyFacebookToken,
-} = require("../helpers/authHelper");
 const { redisHelper } = require("../helpers/redisHelper");
+const authHelper = require("../helpers/authHelper");
 const User = require("../models/user");
 const Session = require("../models/session");
 const { v4: uuidv4 } = require("uuid");
@@ -11,12 +7,12 @@ const { v4: uuidv4 } = require("uuid");
 // Authenticate ID token to create user session
 const authenticateWithGoogle = async (req, res, next) => {
   try {
-    const idToken = extractTokenFromHeader(req); // Extract token from header
+    const idToken = authHelper.extractAuthToken(req); // Extract ID token
 
     // Verify ID token and extract user info
-    const { userId, name } = await verifyGoogleToken(idToken);
+    const { userId, name } = await authHelper.verifyGoogleToken(idToken);
 
-    // Persist user in MySQL
+    // Persist user in db
     const userData = {
       id: userId,
       name: name,
@@ -28,7 +24,7 @@ const authenticateWithGoogle = async (req, res, next) => {
       await User.update(userId, { name });
     }
 
-    // Create session in MySQL
+    // Create session in db
     const sessionId = uuidv4();
     await Session.create(sessionId, userId);
 
@@ -50,11 +46,11 @@ const authenticateWithGoogle = async (req, res, next) => {
 // Authenticate access token to create user session
 const authenticateWithFacebook = async (req, res, next) => {
   try {
-    const accessToken = extractTokenFromHeader(req); // Extract token from header
+    const accessToken = authHelper.extractAuthToken(req); // Extract access token
 
-    const { userId, name } = await verifyFacebookToken(accessToken);
+    const { userId, name } = await authHelper.verifyFacebookToken(accessToken);
 
-    // Persist user in MySQL
+    // Persist user in db
     const userData = {
       id: userId,
       name,
@@ -66,7 +62,7 @@ const authenticateWithFacebook = async (req, res, next) => {
       await User.update(userId, { name });
     }
 
-    // Create session in MySQL
+    // Create session in db
     const sessionId = uuidv4();
     await Session.create(sessionId, userId);
 
@@ -88,9 +84,9 @@ const authenticateWithFacebook = async (req, res, next) => {
 // Sign user out by deleting their session
 const signOut = async (req, res, next) => {
   try {
-    const sessionId = extractTokenFromHeader(req); // Extract token from header
+    const sessionId = authHelper.extractAuthToken(req); // Extract sessionID
 
-    // Remove from MySQL
+    // Remove from db
     await Session.delete(sessionId);
 
     // Remove from Redis

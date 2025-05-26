@@ -68,17 +68,8 @@ const deleteSession = async (sessionId) => {
 
 // Get user session
 const getSession = async (sessionId) => {
-  if (!sessionId) {
-    return { isValid: false, message: "Session ID is required" };
-  }
-
   const key = applyPrefix(`sess:${sessionId}`);
-  const sessionData = await redisCluster.get(key);
-  if (!sessionData) {
-    return { isValid: false, message: "Session has expired" };
-  }
-
-  return { isValid: true, sessionData };
+  return await redisCluster.get(key);
 };
 
 // Refresh session TTL
@@ -104,7 +95,7 @@ const getAnonSession = async (sessionId) => {
   return sessionData ? JSON.parse(sessionData) : null;
 };
 
-const setAnonSession = async (sessionId, sessionData) => {
+const createAnonSession = async (sessionId, sessionData) => {
   const key = applyPrefix(`anon:${sessionId}`);
 
   const setResult = await redisCluster.set(key, JSON.stringify(sessionData), {
@@ -136,7 +127,7 @@ const redisHelper = {
   refreshSession,
   deleteSession,
   getAnonSession,
-  setAnonSession,
+  createAnonSession,
   refreshAnonSession,
 };
 

@@ -51,7 +51,7 @@ const handleAnonSession = async (req, res, next) => {
         client_ip: clientIP,
         visistor_id: visitorId,
       };
-      await redisHelper.setAnonSession(sessionId, sessionData);
+      await redisHelper.createAnonSession(sessionId, sessionData);
       return res.json({
         id: sessionId,
         ...sessionData,

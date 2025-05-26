@@ -13,6 +13,8 @@ const SERVER_URL = "http://localhost:3000";
 export const isUserAuthenticated = async () => {
   try {
     // Check for ongoing session
+    console.log("Running isAuthenticated");
+
     const session = await getUserSession();
     if (!session) {
       return false;

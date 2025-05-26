@@ -43,7 +43,7 @@ const verifyFacebookToken = async (token) => {
 };
 
 // Helper function to extract token from Authorization header
-const extractTokenFromHeader = (req) => {
+const extractAuthToken = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     throw new Error("Missing or invalid Authorization header");
@@ -53,8 +53,10 @@ const extractTokenFromHeader = (req) => {
   return token;
 };
 
-module.exports = {
+const authHelper = {
   verifyGoogleToken,
   verifyFacebookToken,
-  extractTokenFromHeader,
+  extractAuthToken,
 };
+
+module.exports = authHelper;

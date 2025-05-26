@@ -1,6 +1,6 @@
 const { extractTokenFromHeader } = require("../helpers/authHelper");
 const { redisHelper } = require("../helpers/redisHelper");
-
+const Session = require("../models/session");
 // Verify the origin of the request to ensure it's from our Chrome extension
 const verifyOrigin = (req, res, next) => {
   const origin = req.get("Origin");
@@ -18,15 +18,30 @@ const verifyOrigin = (req, res, next) => {
 const validateSession = async (req, res, next) => {
   try {
     const sessionId = extractTokenFromHeader(req);
-    const result = await redisHelper.getSession(sessionId);
+    const cachedSession = await redisHelper.getSession(sessionId);
 
-    if (result.isValid) {
-      // Pass session data onward
-      req.sessionData = result.sessionData;
+    if (cachedSession) {
+      // Pass session onward
+      req.session = cachedSession;
       return next();
     } else {
-      // Return right away if session is invalid
-      return res.status(401).json({ success: false, message: result.message });
+      // Check if session exists in database
+      const persistedSession = await Session.getById(sessionId);
+      if (persistedSession) {
+        // Update cache
+        console.log("Persisted session found: ", persistedSession);
+        console.log("Updating Redis cache");
+        await redisHelper.createSession(
+          persistedSession.id,
+          persistedSession.user_id
+        );
+        return next();
+      } else {
+        return res.status(401).json({
+          success: false,
+          message: "Session doesn't exists or has expired.",
+        });
+      }
     }
   } catch (err) {
     return next(err);
