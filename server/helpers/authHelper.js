@@ -53,10 +53,19 @@ const extractAuthToken = (req) => {
   return token;
 };
 
+// Helper function to extract anon_session_id from header
+const extractAnonSessionId = (req) => {
+  const anonSessionId = req.headers["promoted-from"];
+
+  console.log("Extracted promoted session ID: ", anonSessionId);
+  return anonSessionId;
+};
+
 const authHelper = {
   verifyGoogleToken,
   verifyFacebookToken,
   extractAuthToken,
+  extractAnonSessionId,
 };
 
 module.exports = authHelper;

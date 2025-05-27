@@ -36,24 +36,25 @@ const handleAnonSession = async (req, res, next) => {
 
     if (session) {
       // Session exists, refresh & return it
-      console.log("Anonymous session found");
-      console.log(session);
       await redisHelper.refreshAnonSession();
       return res.json({
-        id: sessionId,
+        id: `anon:${sessionId}`, // Prefix with 'anon:'
         anon_query_count: session.anon_query_count || 0,
       });
     } else {
       // Create new session
-      console.log("Anonymous session not found, creating new one");
+      console.log("Anonymous session not found, creating new session");
       const sessionData = {
         anon_query_count: 0,
         client_ip: clientIP,
         visistor_id: visitorId,
       };
-      await redisHelper.createAnonSession(sessionId, sessionData);
+      const prefixedSessionId = await redisHelper.createAnonSession(
+        sessionId,
+        sessionData
+      );
       return res.json({
-        id: sessionId,
+        id: prefixedSessionId,
         ...sessionData,
       });
     }

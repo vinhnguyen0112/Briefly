@@ -64,11 +64,9 @@ export const isSignInNeeded = async () => {
 export const signOut = async () => {
   try {
     const session = await getUserSession();
-    console.log("Session in sign out: ", session);
     if (!session)
       throw new Error("There's no on going session. Cannot sign user out");
 
-    // Sign user out on the server side
     const response = await fetch(`${SERVER_URL}/api/auth/signout`, {
       method: "POST",
       headers: {

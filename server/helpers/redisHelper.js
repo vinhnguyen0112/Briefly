@@ -42,40 +42,44 @@ const applyPrefix = (key) => {
 };
 
 // Create a user session with default values
-const createSession = async (sessionId, userId) => {
-  const key = applyPrefix(`sess:${sessionId}`);
+const createSession = async (sessionId, sessionData) => {
+  const key = applyPrefix(`auth:${sessionId}`);
+
+  if (!sessionData.user_id) throw new Error("Missing user ID for auth session");
 
   const sessionData = {
-    user_id: userId,
-    query_count: 0,
-    token_count: 0,
-    maximum_response_length: 150,
-    response_style: 1,
+    user_id: sessionData.user_id,
+    query_count: sessionData.query_count ?? 0,
+    token_count: sessionData.token_count ?? 0,
+    maximum_response_length: sessionData.maximum_response_length || 150,
+    response_style: sessionData.response_style || 1,
   };
 
   const setResult = await redisCluster.set(key, JSON.stringify(sessionData), {
     EX: parseInt(process.env.SESSION_TTL),
   });
   if (setResult !== "OK") throw new Error("Create session failed");
+
+  return key;
 };
 
 // Delete user session
 const deleteSession = async (sessionId) => {
-  const key = applyPrefix(`sess:${sessionId}`);
+  const key = applyPrefix(`auth:${sessionId}`);
   const delResult = await redisCluster.del(key);
   return delResult > 0;
 };
 
 // Get user session
 const getSession = async (sessionId) => {
-  const key = applyPrefix(`sess:${sessionId}`);
+  const key = applyPrefix(`auth:${sessionId}`);
   return await redisCluster.get(key);
 };
 
 // Refresh session TTL
 const refreshSession = async (sessionId) => {
   try {
-    const key = applyPrefix(`sess:${sessionId}`);
+    const key = applyPrefix(`auth:${sessionId}`);
     const exists = await redisCluster.exists(key);
     if (!exists) {
       throw new Error("Session does not exist");
@@ -102,23 +106,29 @@ const createAnonSession = async (sessionId, sessionData) => {
     EX: parseInt(process.env.SESSION_TTL),
   });
   if (setResult !== "OK") throw new Error("Create session failed");
-  return sessionId;
+  return key;
 };
 
 // Refresh session TTL
 const refreshAnonSession = async (sessionId) => {
-  try {
-    const key = applyPrefix(`anon:${sessionId}`);
-    const exists = await redisCluster.exists(key);
-    if (!exists) {
-      throw new Error("Session does not exist");
-    }
-    await redisCluster.expire(key, parseInt(process.env.SESSION_TTL));
-    console.log(`Session ${sessionId} refreshed`);
-  } catch (error) {
-    console.error("Error refreshing session:", error.message);
-    throw error;
+  const key = applyPrefix(`anon:${sessionId}`);
+  const exists = await redisCluster.exists(key);
+  if (!exists) {
+    throw new Error("Session does not exist");
   }
+  await redisCluster.expire(key, parseInt(process.env.SESSION_TTL));
+  console.log(`Session ${sessionId} refreshed`);
+};
+
+const deleteAnonSession = async (sessionId) => {
+  const key = applyPrefix(`anon:${sessionId}`);
+  const delResult = await redisCluster.del(key);
+  return delResult > 0;
+};
+
+const getAnySession = async (prefixedKey) => {
+  const sessionData = await redisCluster.get(prefixedKey);
+  return sessionData ? JSON.parse(sessionData) : null;
 };
 
 const redisHelper = {
@@ -129,6 +139,8 @@ const redisHelper = {
   getAnonSession,
   createAnonSession,
   refreshAnonSession,
+  deleteAnonSession,
+  getAnySession,
 };
 
 module.exports = {

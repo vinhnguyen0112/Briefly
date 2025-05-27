@@ -4,38 +4,78 @@ const User = require("../models/user");
 const Session = require("../models/session");
 const { v4: uuidv4 } = require("uuid");
 
-// Authenticate ID token to create user session
+// Persist new user in db if not found
+const handleUserPersistence = async (userId, name) => {
+  let user = await User.getById(userId);
+  if (!user) {
+    console.log(`User ${userId} not found. Creating new user.`);
+    await User.create({ id: userId, name });
+  }
+};
+
+const handleSessionPromotionOrCreation = async (
+  userId,
+  promotedAnonSessionId = null
+) => {
+  let currentSessionId;
+
+  if (promotedAnonSessionId) {
+    console.log("Starting promotion flow");
+    // Find session in db
+    const session = await Session.getById(promotedAnonSessionId);
+
+    // If found
+    if (session) {
+      // Reference session to user
+      await Session.update(promotedAnonSessionId, { user_id: userId });
+      // Remove anon session & replace with auth session in Redis
+      await redisHelper.deleteAnonSession(promotedAnonSessionId);
+      await redisHelper.createSession(promotedAnonSessionId, {
+        user_id: userId,
+      });
+      currentSessionId = "auth:" + promotedAnonSessionId;
+    }
+    // If not found, create new session
+    else {
+      const newSessionId = uuidv4();
+      await Session.create(newSessionId, {
+        user_id: userId,
+      });
+      currentSessionId = await redisHelper.createSession(newSessionId, {
+        user_id: userId,
+      });
+    }
+  }
+  // If not promotion flow, simply create new session
+  else {
+    const newSessionId = uuidv4();
+    await Session.create(newSessionId, {
+      user_id: userId,
+    });
+    currentSessionId = await redisHelper.createSession(newSessionId, {
+      user_id: userId,
+    });
+  }
+
+  return currentSessionId;
+};
+
+// Authenticate with Google
 const authenticateWithGoogle = async (req, res, next) => {
   try {
-    const idToken = authHelper.extractAuthToken(req); // Extract ID token
-
-    // Verify ID token and extract user info
+    const idToken = authHelper.extractAuthToken(req);
     const { userId, name } = await authHelper.verifyGoogleToken(idToken);
+    const promotedAnonSessionId = authHelper.extractAnonSessionId(req);
 
-    // Persist user in db
-    const userData = {
-      id: userId,
-      name: name,
-    };
-    let user = await User.getById(userId);
-    if (!user) {
-      await User.create(userData);
-    } else {
-      await User.update(userId, { name });
-    }
-
-    // Create session in db
-    const sessionId = uuidv4();
-    await Session.create(sessionId, userId);
-
-    // Cache session in Redis
-    await redisHelper.createSession(sessionId, userId);
+    await handleUserPersistence(userId, name);
+    const currentSessionId = await handleSessionPromotionOrCreation(
+      userId,
+      promotedAnonSessionId
+    );
 
     return res.json({
       success: true,
-      data: {
-        id: sessionId,
-      },
+      data: { id: currentSessionId },
     });
   } catch (error) {
     console.error("Error during Google authentication:", error);
@@ -43,37 +83,22 @@ const authenticateWithGoogle = async (req, res, next) => {
   }
 };
 
-// Authenticate access token to create user session
+// Authenticate with Facebook
 const authenticateWithFacebook = async (req, res, next) => {
   try {
-    const accessToken = authHelper.extractAuthToken(req); // Extract access token
-
+    const accessToken = authHelper.extractAuthToken(req);
     const { userId, name } = await authHelper.verifyFacebookToken(accessToken);
+    const promotedAnonSessionId = authHelper.extractAnonSessionId(req);
 
-    // Persist user in db
-    const userData = {
-      id: userId,
-      name,
-    };
-    let user = await User.getById(userId);
-    if (!user) {
-      await User.create(userData);
-    } else {
-      await User.update(userId, { name });
-    }
-
-    // Create session in db
-    const sessionId = uuidv4();
-    await Session.create(sessionId, userId);
-
-    // Cache session in Redis
-    await redisHelper.createSession(sessionId, userId);
+    await handleUserPersistence(userId, name);
+    const currentSessionId = await handleSessionPromotionOrCreation(
+      userId,
+      promotedAnonSessionId
+    );
 
     return res.json({
       success: true,
-      data: {
-        id: sessionId,
-      },
+      data: { id: currentSessionId },
     });
   } catch (error) {
     console.error("Error during Facebook authentication:", error);

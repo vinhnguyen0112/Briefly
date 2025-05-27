@@ -18,23 +18,31 @@ chrome.runtime.onInstalled.addListener(() => {
     sidebarActive: false,
   });
 
-  // StorageArea observer (TESTING)
+  // Observe change in storage
   chrome.storage.onChanged.addListener((changes, areaName) => {
-    console.log("Changes in: ", areaName);
-    console.log("Changes: ", changes);
-    // If auth session changes (established, removed, invalidated), notify all tabs
+    // Notify all tabs if auth session changed
     if (areaName === "local" && changes.auth_session) {
-      const hasSession = !!changes.auth_session.newValue;
-      console.log("Briefly: auth_session changed in 'LOCAL'", hasSession);
+      // The newValue directly reflects if a session exists (truthy/falsy)
+      const hasSession = changes.auth_session.newValue;
+      console.log("Briefly: Auth state changed: ", hasSession);
 
       chrome.tabs.query({}, (tabs) => {
         tabs.forEach((tab) => {
-          if (tab.id) {
-            chrome.tabs.sendMessage(tab.id, {
+          chrome.tabs.sendMessage(
+            tab.id,
+            {
               action: "auth_session_changed",
               isAuth: hasSession,
-            });
-          }
+            },
+            () => {
+              if (chrome.runtime.lastError) {
+                console.error(
+                  `Error sending message to tab ${tab.id}:`,
+                  chrome.runtime.lastError.message
+                );
+              }
+            }
+          );
         });
       });
     }

@@ -1,9 +1,15 @@
 const dbHelper = require("../helpers/dbHelper");
 
 class Session {
-  async create(sessionId, userId) {
-    const query = "INSERT INTO sessions (id, user_id) VALUES (?, ?)";
-    await dbHelper.executeQuery(query, [sessionId, userId]);
+  async create(sessionData) {
+    const columns = Object.keys(sessionData).join(", ");
+    const placeholders = Object.keys(sessionData)
+      .map(() => "?")
+      .join(", ");
+    const values = Object.values(sessionData);
+
+    const query = `INSERT INTO sessions (${columns}) VALUES (${placeholders})`;
+    await dbHelper.executeQuery(query, values);
   }
 
   async getById(id) {
@@ -13,8 +19,18 @@ class Session {
   }
 
   async update(id, updates) {
-    const query = "UPDATE sessions SET expires_at = ? WHERE id = ?";
-    await dbHelper.executeQuery(query, [updates.expires_at, id]);
+    const fields = [];
+    const values = [];
+    for (const [key, value] of Object.entries(updates)) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+    if (fields.length === 0) return;
+    // Refresh session TTL on update
+    fields.push("expires_at = CURRENT_TIMESTAMP + INTERVAL 7 DAY");
+    const query = `UPDATE sessions SET ${fields.join(", ")} WHERE id = ?`;
+    values.push(id);
+    await dbHelper.executeQuery(query, values);
   }
 
   async delete(id) {

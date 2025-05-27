@@ -1,10 +1,8 @@
 import { saveAnonSession } from "./state.js";
 // Loads FingerprintJS and gets the visitorId
 async function getFingerprintVisitorId() {
-  // Dynamically import the ESM build
   const { default: FingerprintJS } = await import("../../libs/fingerprint.js");
 
-  // Load the agent and fetch the visitor ID
   const fp = await FingerprintJS.load();
   const { visitorId } = await fp.get();
 
