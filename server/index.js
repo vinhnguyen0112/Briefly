@@ -6,10 +6,8 @@ const cors = require("cors");
 const morgan = require("morgan");
 
 const authRoutes = require("./routes/authRoutes");
-const captionRoutes = require("./routes/captionRoutes");
-const anonRoutes = require("./routes/anonRoutes");
-const { redisCluster } = require("./helpers/redisHelper");
-const dbHelper = require("./helpers/dbHelper");
+const { redisClient } = require("./helpers/redisHelper");
+const captionRoutes = require("./routes/imageCaptionRoutes");
 
 // Initialize Express app
 const app = express();

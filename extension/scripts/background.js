@@ -1,10 +1,7 @@
 import {
-  authenticateWithFacebook,
-  authenticateWithGoogle,
-  signOut,
-} from "./components/auth-handler.js";
-import { addConversation, addQuery } from "./components/idb-handler.js";
-import { saveUserSession } from "./components/state.js";
+  handleCaptionImages,
+  resetProcessedImages,
+} from "./components/caption-handler.js";
 
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
@@ -637,24 +634,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             throw err;
           });
       })
-      .catch((err) => console.error(err));
-
-    return true;
-  }
-  if (message.action === "sign_out") {
-    console.log("CocBot: Received request to sign out");
-    signOut()
-      .then((success) => {
-        if (success) {
-          console.log("Sign out sucessfully");
-          sendResponse({ success: true });
-        } else {
-          sendResponse({ success: false });
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        sendResponse({ success: false, message: err.message });
+      .catch((error) => {
+        console.error("Failed to handle captions", error);
       });
 
     return true;

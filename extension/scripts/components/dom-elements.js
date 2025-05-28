@@ -58,7 +58,11 @@ export const elements = {
   // Settings button
   settingsButton: document.getElementById("settings-button"),
 
+  settingsButton: document.getElementById("settings-button"),
+
   // Language toggle
+  languageToggle: document.getElementById("language-toggle"),
+
   languageToggle: document.getElementById("language-toggle"),
 
   // Quick action buttons

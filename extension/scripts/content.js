@@ -134,6 +134,8 @@ function toggleSidebar(forceState) {
   }
 }
 
+let collectedCaptions = [];
+let lastExtractedContent = null;
 function handleSidebarMessage(message) {
   console.log("CocBot: Received message from sidebar:", message.action);
 
@@ -226,6 +228,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     sendResponse({ success: true });
+  } else if (message.action === "caption_results") {
+    const captions = message.captions.filter((c) => c && c.trim() !== "");
+    if (captions.length === 0) return;
+
+    collectedCaptions = collectedCaptions.concat(captions);
+
+    if (lastExtractedContent) {
+      lastExtractedContent.captions = collectedCaptions;
+      sendToSidebar(lastExtractedContent);
+    } else {
+      const pageContent = extractAndCachePageContent();
+      sendToSidebar(pageContent);
+    }
   } else if (message.action === "auth_session_changed") {
     const iframe = document.getElementById("isal-sidebar-iframe");
     const container = document.getElementById("isal-sidebar-container");
@@ -319,3 +334,25 @@ window.addEventListener("popstate", () => {
     lastUrl = newUrl;
   }
 });
+
+function extractAndCachePageContent() {
+  const raw = extractPageContent();
+  lastExtractedContent = { ...raw, captions: collectedCaptions };
+  return lastExtractedContent;
+}
+
+function sendToSidebar(content) {
+  const iframe = document.getElementById("isal-sidebar-iframe");
+  if (iframe) {
+    iframe.contentWindow.postMessage(
+      {
+        action: "page_content",
+        content,
+      },
+      "*"
+    );
+    console.log("✅ Sent updated page content to sidebar");
+  } else {
+    console.error("CocBot: Sidebar iframe not found");
+  }
+}

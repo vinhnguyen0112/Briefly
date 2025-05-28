@@ -198,6 +198,15 @@ ${styleInstructions}`,
       contextMessage.content +=
         "The page content extraction failed. I have limited context about this page.";
     }
+
+    if (pageContent.captions && pageContent.captions.length > 0) {
+      contextMessage.content +=
+        "\n\nNote: Some image captions were extracted to help explain the visuals on this page. These are supplementary and not part of the page's actual content structure.\n";
+
+      pageContent.captions.forEach((caption, index) => {
+        contextMessage.content += `• Image ${index + 1}: ${caption}\n`;
+      });
+    }
   } else {
     contextMessage.content +=
       "No page content was provided. I don't have specific context about what you're viewing.";

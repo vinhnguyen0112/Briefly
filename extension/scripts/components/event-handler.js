@@ -7,7 +7,6 @@ import {
   saveConfig,
   getLanguage,
   saveLanguage,
-  getUserSession,
 } from "./state.js";
 import {
   handleResize,
@@ -43,9 +42,6 @@ export function setupEventListeners() {
   elements.closeSidebarButton.addEventListener("click", () => {
     window.parent.postMessage({ action: "close_sidebar" }, "*");
   });
-
-  // Set up authentication buttons
-  setupAuthenticationButtons();
 
   // CocBot title click to return to welcome screen
   elements.cocbotTitle.addEventListener("click", () => {
