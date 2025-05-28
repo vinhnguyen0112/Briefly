@@ -19,6 +19,7 @@ export const state = {
   currentPageUrl: "",
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
+  language: 'en' // Default language is English
 };
 
 // Load sidebar width from storage
@@ -184,3 +185,22 @@ export async function deleteNote(timestamp) {
     });
   });
 }
+
+// lang preference management
+export async function getLanguage() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(['language'], (result) => {
+      resolve(result.language || 'en'); //eng default
+    });
+  });
+}
+
+export async function saveLanguage(language) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ 'language': language }, () => {
+      console.log('CocBot: Language preference saved', language);
+      state.language = language;
+      resolve(language);
+    });
+  });
+} 

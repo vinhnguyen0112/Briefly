@@ -77,7 +77,7 @@ export async function callOpenAI(apiKey, messages) {
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: 'gpt-4o-mini',
         messages: messages,
         temperature: 0.7,
         max_tokens: maxTokens,
@@ -115,8 +115,9 @@ export async function constructPromptWithPageContent(
 ) {
   // Set default values if config is missing
   const maxWordCount = config?.maxWordCount || 150;
-  const responseStyle = config?.responseStyle || "conversational";
-
+  const responseStyle = config?.responseStyle || 'conversational';
+  const language = state.language || 'en';
+  
   // Customize instructions based on response style
   let styleInstructions = "";
   switch (responseStyle) {
@@ -138,14 +139,23 @@ Maintain accuracy and depth while keeping your response around ${maxWordCount} w
     default:
       styleInstructions = `Keep your response around ${maxWordCount} words.`;
   }
-
+  
+  // language instructions
+  let languageInstructions = '';
+  if (language === 'vi') {
+    languageInstructions = `Respond entirely in Vietnamese. Use natural, fluent Vietnamese expressions and terminology.`;
+  } else {
+    languageInstructions = `Respond in English.`;
+  }
+  
   const systemPrompt = {
     role: "system",
     content: `You are a helpful assistant that helps users understand web page content.
 You have access to the content of the page the user is currently viewing, which is provided below.
 Answer the user's questions based on this content. If the answer is not in the content, say so.
-${config?.personality || "Be helpful and informative, focusing on the content."}
-${styleInstructions}`,
+${languageInstructions}
+${config?.personality || 'Be helpful and informative, focusing on the content.'}
+${styleInstructions}`
   };
 
   let contextMessage = {
@@ -206,34 +216,58 @@ export async function generateQuestionsFromContent(pageContent) {
     if (!apiKey) {
       return { success: false, error: "No API key" };
     }
-
-    const systemPrompt = {
-      role: "system",
-      content: `You are an AI that generates 3 interesting questions about web page content. 
+    
+    
+    const language = state.language || 'en';
+    
+    let systemPromptContent;
+    if (language === 'vi') {
+      systemPromptContent = `Bạn là một AI tạo ra các câu hỏi thú vị về nội dung trang web.
+Hãy tạo 3 câu hỏi bằng tiếng Việt mà sẽ hữu ích cho người đọc trang này.
+Phản hồi của bạn CHỈ nên là một mảng gồm 3 câu hỏi tiếng Việt, định dạng dưới dạng mảng JSON các chuỗi.
+Ví dụ: ["Câu hỏi 1 bằng tiếng Việt?", "Câu hỏi 2 bằng tiếng Việt?", "Câu hỏi 3 bằng tiếng Việt?"]
+Không bao gồm bất kỳ thứ gì khác.`;
+    } else {
+      systemPromptContent = `You are an AI that generates 3 interesting questions about web page content. 
 Generate questions that would be useful to a reader of this page.
 Your response should be ONLY an array of 3 questions, formatted as a JSON array of strings.
-Do not include anything else, not even a JSON wrapper object.`,
+Do not include anything else, not even a JSON wrapper object.`;
+    }
+    
+    const systemPrompt = {
+      role: 'system',
+      content: systemPromptContent
     };
-
-    const contentPrompt = {
-      role: "user",
-      content: `Here is the web page content:
+    
+    let contentPromptText = `Here is the web page content:
 Title: ${pageContent.title}
-${pageContent.content.substring(0, 3000)}`,
-    };
+${pageContent.content.substring(0, 3000)}`;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
+    if (language === 'vi') {
+      contentPromptText += `\n\nHãy tạo 3 câu hỏi bằng TIẾNG VIỆT về nội dung này.`;
+    } else {
+      contentPromptText += `\n\nGenerate 3 questions in ENGLISH about this content.`;
+    }
+    
+    const contentPrompt = {
+      role: 'user',
+      content: contentPromptText
+    };
+    
+    const temperature = language === 'vi' ? 0.3 : 0.7;
+    
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: "gpt-3.5-turbo",
+        model: 'gpt-4o-mini',
         messages: [systemPrompt, contentPrompt],
-        temperature: 0.7,
-        max_tokens: 500,
-      }),
+        temperature: temperature,
+        max_tokens: 500
+      })
     });
 
     const data = await response.json();

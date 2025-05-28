@@ -574,67 +574,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     }
   }
-
-  if (message.action === "google_login") {
-    console.log("CocBot: Received request to authenticate with Google");
-
-    authenticateWithGoogle()
-      .then((sessionId) => {
-        console.log("Session ID: ", sessionId);
-        // Store sessionId into extension's local storage
-        saveUserSession(sessionId)
-          .then(() => sendResponse({ success: true }))
-          .catch((err) => {
-            throw err;
-          });
-      })
-      .catch((err) => {
-        console.error(err);
-        sendResponse({ success: false, error: err.message });
-      });
-
-    return true; // Keep the message channel open for async response
-  }
-  if (message.action === "facebook_login") {
-    console.log("CocBot: Received request to authenticate with Facebook");
-    authenticateWithFacebook()
-      .then((sessionId) => {
-        console.log("Sessions ID: ", sessionId);
-        saveUserSession(sessionId)
-          .then(() => sendResponse({ success: true }))
-          .catch((err) => {
-            throw err;
-          });
-      })
-      .catch((err) => console.error(err));
-
-    return true;
-  }
-  if (message.action === "sign_out") {
-    console.log("CocBot: Received request to sign out");
-    signOut()
-      .then((success) => {
-        if (success) {
-          console.log("Sign out sucessfully");
-          sendResponse({ success: true });
-        } else {
-          sendResponse({ success: false });
-        }
-      })
-      .catch((err) => {
-        console.error(err);
-        sendResponse({ success: false, message: err.message });
-      });
-
-    return true;
-  }
-  if (message.action === "check_auth_state") {
-    console.log("CocBot: Received request to check auth state");
-    isUserAuthenticated().then((isValid) =>
-      sendResponse({ authState: isValid ? "Authenticated" : "Unauthenticated" })
-    );
-    return true;
-  }
 });
 
 // Handle image processing request

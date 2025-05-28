@@ -1,11 +1,6 @@
-const { OpenAI } = require("openai");
-
-let pLimit; // Declare pLimit variable
-
-(async () => {
-  // Dynamically import p-limit
-  pLimit = (await import("p-limit")).default;
-})();
+const OpenAI = require("openai");
+let pLimit = require("p-limit");
+pLimit = pLimit.default || pLimit;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 console.log("Using OpenAI API Key:", process.env.OPENAI_API_KEY);
