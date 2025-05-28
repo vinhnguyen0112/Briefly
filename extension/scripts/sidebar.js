@@ -3,14 +3,22 @@ import {
   getApiKey,
   getConfig,
   getLanguage,
+  clearUserSession,
+  getAnonSession,
+  state,
 } from "./components/state.js";
-import { setupEventListeners } from "./components/event-handler.js";
+import {
+  renderToggleAccountPopupUI,
+  setupEventListeners,
+} from "./components/event-handler.js";
 import {
   requestPageContent,
   setupContentExtractionReliability,
 } from "./components/content-handler.js";
 import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
+import { isUserAuthenticated } from "./components/auth-handler.js";
+import { setupAnonSession } from "./components/anon-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {

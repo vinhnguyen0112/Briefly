@@ -6,8 +6,10 @@ const cors = require("cors");
 const morgan = require("morgan");
 
 const authRoutes = require("./routes/authRoutes");
-const { redisClient } = require("./helpers/redisHelper");
-const captionRoutes = require("./routes/imageCaptionRoutes");
+const captionRoutes = require("./routes/captionRoutes");
+const anonRoutes = require("./routes/anonRoutes");
+const { redisCluster } = require("./helpers/redisHelper");
+const dbHelper = require("./helpers/dbHelper");
 
 // Initialize Express app
 const app = express();
@@ -33,23 +35,6 @@ redisCluster
 dbHelper.getConnection().then(() => {
   console.log("MariaDB connected successfully!");
 });
-
-// // Auth0 config
-// const config = {
-//   authRequired: false,
-//   auth0Logout: true,
-//   secret: process.env.AUTH0_SECRET,
-//   baseURL: process.env.BASE_URL || `http://localhost:${PORT}`,
-//   clientID: process.env.AUTH0_CLIENT_ID,
-//   issuerBaseURL: process.env.AUTH0_ISSUER_BASE_URL,
-//   routes: {
-//     login: false, // Custom login route
-//     callback: "/api/auth/callback",
-//   },
-// };
-
-// // Auth middleware
-// app.use(auth(config));
 
 // Routes
 app.use("/api/auth", authRoutes);

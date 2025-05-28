@@ -1,7 +1,13 @@
 import {
+  authenticateWithFacebook,
+  authenticateWithGoogle,
+  signOut,
+} from "./components/auth-handler.js";
+import {
   handleCaptionImages,
   resetProcessedImages,
 } from "./components/caption-handler.js";
+import { saveUserSession } from "./components/state.js";
 
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
@@ -603,10 +609,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     authenticateWithGoogle()
       .then((sessionData) => {
-        console.log(
-          "Received session data from Google authentication:",
-          sessionData
-        );
         saveUserSession(sessionData)
           .then(() => {
             sendResponse({ success: true });
@@ -640,32 +642,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
-  if (message.action === "add_conversation") {
-    console.log("CocBot: Adding new conversation");
-    addConversation(message.conversation)
-      .then((conversationId) => {
-        sendResponse({ success: true, conversationId });
+  if (message.action === "sign_out") {
+    console.log("CocBot: Received request to sign out");
+    signOut()
+      .then((success) => {
+        if (success) {
+          console.log("Sign out sucessfully");
+          sendResponse({ success: true });
+        } else {
+          sendResponse({ success: false });
+        }
       })
-      .catch((error) => {
-        console.error("Error adding conversation:", error);
-        sendResponse({ success: false, error: error.message });
+      .catch((err) => {
+        console.error(err);
+        sendResponse({ success: false, message: err.message });
       });
 
-    return true; // Keep the message channel open for async response
+    return true;
   }
-
-  if (message.action === "add_query") {
-    console.log("CocBot: Adding new query");
-
-    addQuery(message.query)
-      .then((queryId) => {
-        sendResponse({ success: true, queryId });
+  if (message.action === "process_images") {
+    resetProcessedImages();
+    handleCaptionImages(message.images)
+      .then((captions) => {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: "caption_results",
+          captions: captions,
+        });
       })
       .catch((error) => {
-        console.error("Error adding query:", error);
-        sendResponse({ success: false, error: error.message });
+        console.error("Failed to handle captions", error);
       });
 
-    return true; // Keep the message channel open for async response
+    return true;
   }
 });
