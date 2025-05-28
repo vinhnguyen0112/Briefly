@@ -1,11 +1,18 @@
-
-import { elements } from './dom-elements.js';
-import { state, getApiKey, saveApiKey, getConfig, saveConfig, getLanguage, saveLanguage } from './state.js';
-import { 
-  handleResize, 
-  stopResize, 
-  addMessageToChat, 
-  addTypingIndicator, 
+import { elements } from "./dom-elements.js";
+import {
+  state,
+  getApiKey,
+  saveApiKey,
+  getConfig,
+  saveConfig,
+  getLanguage,
+  saveLanguage,
+} from "./state.js";
+import {
+  handleResize,
+  stopResize,
+  addMessageToChat,
+  addTypingIndicator,
   removeTypingIndicator,
   closeAllPanels,
   switchToChat,
@@ -15,25 +22,26 @@ import {
   requestPageContent,
   openContentViewerPopup,
   renderContentInSidebar,
-  setupContentExtractionReliability
-} from './content-handler.js';
-import { callOpenAI, constructPromptWithPageContent, processUserQuery } from './api-handler.js';
-import { 
-  openNotesPanel, 
-  openNoteEditor, 
-  closeNoteEditor, 
-  handleSaveNote 
-} from './notes-handler.js';
-import { switchLanguage } from './i18n.js';
+  setupContentExtractionReliability,
+} from "./content-handler.js";
+import {
+  callOpenAI,
+  constructPromptWithPageContent,
+  processUserQuery,
+} from "./api-handler.js";
+import {
+  openNotesPanel,
+  openNoteEditor,
+  closeNoteEditor,
+  handleSaveNote,
+} from "./notes-handler.js";
+import { switchLanguage } from "./i18n.js";
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
   elements.closeSidebarButton.addEventListener("click", () => {
     window.parent.postMessage({ action: "close_sidebar" }, "*");
   });
-
-  // Set up authentication buttons
-  setupAuthenticationButtons();
 
   // CocBot title click to return to welcome screen
   elements.cocbotTitle.addEventListener("click", () => {
@@ -294,39 +302,45 @@ export function setupEventListeners() {
   elements.closeEditorButton.addEventListener("click", () => {
     closeNoteEditor();
   });
-  
+
   // language toggle
-  elements.languageToggle?.addEventListener('change', (e) => {
-    const language = e.target.checked ? 'vi' : 'en';
-    
-    const enLabel = document.getElementById('en-label');
-    const viLabel = document.getElementById('vi-label');
-    
+  elements.languageToggle?.addEventListener("change", (e) => {
+    const language = e.target.checked ? "vi" : "en";
+
+    const enLabel = document.getElementById("en-label");
+    const viLabel = document.getElementById("vi-label");
+
     if (enLabel && viLabel) {
-      enLabel.classList.toggle('active', language === 'en');
-      viLabel.classList.toggle('active', language === 'vi');
+      enLabel.classList.toggle("active", language === "en");
+      viLabel.classList.toggle("active", language === "vi");
     }
-    
-    const questionsContainer = document.querySelector('.generated-questions');
-    if (questionsContainer && questionsContainer.style.display !== 'none') {
-      const buttonContainer = document.querySelector('.question-buttons-container');
+
+    const questionsContainer = document.querySelector(".generated-questions");
+    if (questionsContainer && questionsContainer.style.display !== "none") {
+      const buttonContainer = document.querySelector(
+        ".question-buttons-container"
+      );
       if (buttonContainer) {
         buttonContainer.innerHTML = `
           <div class="question-loading">
             <div class="spinner-small"></div>
             <span data-i18n="generatingQuestions">
-              ${language === 'vi' ? 'Đang tạo câu hỏi...' : 'Generating questions...'}
+              ${
+                language === "vi"
+                  ? "Đang tạo câu hỏi..."
+                  : "Generating questions..."
+              }
             </span>
           </div>
         `;
       }
     }
-    
+
     // Use the new internationalization module to switch language
-    switchLanguage(language).then(message => {
+    switchLanguage(language).then((message) => {
       state.language = language;
       // Notify the user about language change
-      addMessageToChat(message, 'assistant');
+      addMessageToChat(message, "assistant");
     });
   });
 }
@@ -358,36 +372,6 @@ function setupQuickActions() {
   });
 }
 
-function setupAuthenticationButtons() {
-  // Google authentication button
-  elements.googleLoginButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
-      console.log("User authenticated via Google");
-    });
-  });
-
-  // Facebook authentication button
-  elements.facebookLoginButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
-      console.log("User authenticated via Facebook");
-    });
-  });
-
-  // Sign out button
-  elements.signOutButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "sign_out" }, (response) => {
-      console.log("User signed out");
-    });
-  });
-
-  // Check auth state button
-  elements.checkAuthStateButton.addEventListener("click", () => {
-    chrome.runtime.sendMessage({ action: "check_auth_state" }, (response) => {
-      console.log("User auth state: ", response.authState);
-    });
-  });
-}
-
 // external function for rendering UI config
 function renderConfigUI(containerId, onSave) {
   const container = document.getElementById(containerId);
@@ -396,7 +380,7 @@ function renderConfigUI(containerId, onSave) {
     console.error("CocBot: Config container not found");
     return;
   }
-  
+
   getConfig().then((config) => {
     const maxWordCount = config?.maxWordCount || 150;
     const responseStyle = config?.responseStyle || "conversational";
