@@ -5,20 +5,20 @@ function initContentViewer(containerId, onClose = null) {
   // Get or create the container element
   let container = document.getElementById(containerId);
   if (!container) {
-    container = document.createElement('div');
+    container = document.createElement("div");
     container.id = containerId;
     document.body.appendChild(container);
   }
-  
+
   // toolbar and content container
   let viewerCreated = false;
   let currentData = null;
-  
+
   // create the UI
   function createViewerUI() {
     if (viewerCreated) return;
-    
-    container.classList.add('content-viewer-ui-container');
+
+    container.classList.add("content-viewer-ui-container");
     container.innerHTML = `
       <div class="content-viewer-ui-toolbar">
         <h3>Page Content Viewer</h3>
@@ -37,39 +37,43 @@ function initContentViewer(containerId, onClose = null) {
         </div>
       </div>
     `;
-    
+
     // Add event listeners
-    document.getElementById(`${containerId}-close`).addEventListener('click', () => {
-      hideViewer();
-      if (typeof onClose === 'function') onClose();
-    });
-    
-    document.getElementById(`${containerId}-refresh`).addEventListener('click', () => {
-      refreshContent();
-    });
-    
+    document
+      .getElementById(`${containerId}-close`)
+      .addEventListener("click", () => {
+        hideViewer();
+        if (typeof onClose === "function") onClose();
+      });
+
+    document
+      .getElementById(`${containerId}-refresh`)
+      .addEventListener("click", () => {
+        refreshContent();
+      });
+
     viewerCreated = true;
   }
-  
+
   // show the viewer
   function showViewer(pageContent) {
     createViewerUI();
     currentData = pageContent;
-    
-    container.style.display = 'flex';
-    
+
+    container.style.display = "flex";
+
     renderContent(pageContent);
   }
-  
+
   // hide the viewer
   function hideViewer() {
-    container.style.display = 'none';
+    container.style.display = "none";
   }
-  
+
   // render the content
   function renderContent(pageContent) {
     const contentContainer = document.getElementById(`${containerId}-content`);
-    
+
     if (!pageContent) {
       contentContainer.innerHTML = `
         <div class="content-viewer-ui-error">
@@ -78,22 +82,26 @@ function initContentViewer(containerId, onClose = null) {
       `;
       return;
     }
-    
+
     contentContainer.innerHTML = `
       <div class="content-viewer-ui-loading">
         <p>Processing content...</p>
       </div>
     `;
-    
+
     try {
-      const structured = window.ContentViewer.formatExtractedContent(pageContent);
+      const structured =
+        window.ContentViewer.formatExtractedContent(pageContent);
       const html = window.ContentViewer.generateContentViewerHTML(structured);
-      
-      contentContainer.innerHTML = html;
-      
+
+      const textContainer = contentContainer.querySelector("#text-container");
+      if (textContainer) {
+        textContainer.innerHTML = html;
+      }
+
       window.ContentViewer.attachContentViewerEvents(contentContainer);
     } catch (error) {
-      console.error('CocBot: Error rendering content viewer', error);
+      console.error("CocBot: Error rendering content viewer", error);
       contentContainer.innerHTML = `
         <div class="content-viewer-ui-error">
           <p>Error processing content: ${error.message}</p>
@@ -101,7 +109,7 @@ function initContentViewer(containerId, onClose = null) {
       `;
     }
   }
-  
+
   /**
    * Request page content refresh
    */
@@ -113,38 +121,38 @@ function initContentViewer(containerId, onClose = null) {
         <p>Refreshing page content...</p>
       </div>
     `;
-    
+
     // Request new content from content script via sidebar
-    window.parent.postMessage({ action: 'get_page_content' }, '*');
+    window.parent.postMessage({ action: "get_page_content" }, "*");
   }
 
   // update the viewer
   function updateContent(pageContent) {
     currentData = pageContent;
-    if (container.style.display !== 'none') {
+    if (container.style.display !== "none") {
       renderContent(pageContent);
     }
   }
-  
+
   // return public methods
   return {
     show: showViewer,
     hide: hideViewer,
     update: updateContent,
     refresh: refreshContent,
-    isVisible: () => container.style.display !== 'none',
-    getCurrentData: () => currentData
+    isVisible: () => container.style.display !== "none",
+    getCurrentData: () => currentData,
   };
 }
 
 // style shit
 function injectContentViewerStyles() {
-  const styleId = 'content-viewer-ui-styles';
-  
+  const styleId = "content-viewer-ui-styles";
+
   // Only inject once
   if (document.getElementById(styleId)) return;
-  
-  const style = document.createElement('style');
+
+  const style = document.createElement("style");
   style.id = styleId;
   style.textContent = `
     .content-viewer-ui-container {
@@ -224,12 +232,12 @@ function injectContentViewerStyles() {
       border-radius: 4px;
     }
   `;
-  
+
   document.head.appendChild(style);
 }
 
 // Export the module
 window.ContentViewerUI = {
   init: initContentViewer,
-  injectStyles: injectContentViewerStyles
-}; 
+  injectStyles: injectContentViewerStyles,
+};

@@ -6,13 +6,19 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 console.log("Using OpenAI API Key:", process.env.OPENAI_API_KEY);
 
 const CONCURRENCY = 5;
-const limit = pLimit(CONCURRENCY);
 
-exports.generateCaptions = async (sources) => {
+const generateCaptions = async (sources) => {
+  // Ensure pLimit is loaded before proceeding
+  if (!pLimit) {
+    throw new Error("pLimit module is not loaded yet.");
+  }
+
+  const limit = pLimit(CONCURRENCY);
+
   const tasks = sources.map((src, idx) =>
     limit(async () => {
       try {
-        // 1) Build prompt + single image URL
+        // Build img captioning prompt with single img
         const userContent = [
           {
             type: "text",
@@ -21,7 +27,6 @@ exports.generateCaptions = async (sources) => {
           { type: "image_url", image_url: { url: src, detail: "auto" } },
         ];
 
-        // 2) Call OpenAI chat completion
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [
@@ -36,19 +41,17 @@ exports.generateCaptions = async (sources) => {
 
         console.log(`→ [${idx}] Response OK`);
 
-        // 3) Extract and clean the raw caption
+        // Response cleaning
         let raw = response.choices[0].message.content.trim();
 
-        // If API returned multiple lines, just take the first
         raw = raw.split(/\r?\n/)[0];
 
-        // Remove any surrounding single or double quotes
         const clean = raw
           .replace(/^['"]+/, "")
           .replace(/['"]+$/, "")
           .trim();
 
-        // 4) Return caption + usage
+        // Returning captions + token usages
         return {
           caption: clean,
           usage: response.usage || {
@@ -83,3 +86,5 @@ exports.generateCaptions = async (sources) => {
 
   return { captions, usage };
 };
+
+module.exports = { generateCaptions };

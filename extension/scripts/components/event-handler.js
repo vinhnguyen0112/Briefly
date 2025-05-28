@@ -1,19 +1,9 @@
 import { elements } from "./dom-elements.js";
-import {
-  state,
-  getApiKey,
-  saveApiKey,
-  getConfig,
-  saveConfig,
-  getLanguage,
-  saveLanguage,
-} from "./state.js";
+import { state, saveApiKey, getConfig, saveConfig } from "./state.js";
 import {
   handleResize,
   stopResize,
   addMessageToChat,
-  addTypingIndicator,
-  removeTypingIndicator,
   closeAllPanels,
   switchToChat,
   handleContentMessage,
@@ -21,14 +11,8 @@ import {
 import {
   requestPageContent,
   openContentViewerPopup,
-  renderContentInSidebar,
-  setupContentExtractionReliability,
 } from "./content-handler.js";
-import {
-  callOpenAI,
-  constructPromptWithPageContent,
-  processUserQuery,
-} from "./api-handler.js";
+import { processUserQuery } from "./api-handler.js";
 import {
   openNotesPanel,
   openNoteEditor,

@@ -1,3 +1,8 @@
+import {
+  handleCaptionImages,
+  resetProcessedImages,
+} from "./components/caption-handler.js";
+
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
   console.log("CocBot extension installed");
@@ -561,5 +566,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       return true;
     }
+  }
+});
+
+// Handle image processing request
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "process_images") {
+    resetProcessedImages();
+    handleCaptionImages(message.images)
+      .then((captions) => {
+        chrome.tabs.sendMessage(sender.tab.id, {
+          action: "caption_results",
+          captions: captions,
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to handle captions", error);
+      });
+
+    return true;
   }
 });

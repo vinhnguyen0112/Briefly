@@ -1,8 +1,9 @@
 const imageCaptionService = require("../services/imageCaptionService");
 
-exports.imageCaption = async (req, res, next) => {
+const imageCaption = async (req, res, next) => {
   try {
-    const { sources } = req.body; // client gửi mảng URLs dưới key `sources`
+    // Array of img sources
+    const { sources } = req.body;
     if (!Array.isArray(sources) || sources.length === 0) {
       return res
         .status(400)
@@ -19,3 +20,5 @@ exports.imageCaption = async (req, res, next) => {
     next(err);
   }
 };
+
+module.exports = { imageCaption };
