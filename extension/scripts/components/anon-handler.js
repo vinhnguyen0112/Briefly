@@ -17,7 +17,8 @@ async function requestAnonSession(visitorId) {
     body: JSON.stringify({ visitorId }),
   });
   if (!response.ok) throw new Error("Network response was not ok");
-  return response.json();
+  const data = await response.json();
+  return data.data;
 }
 
 // Request an anon session from the server

@@ -17,7 +17,7 @@ const handleSessionPromotionOrCreation = async (
   userId,
   promotedAnonSessionId = null
 ) => {
-  let currentSessionId;
+  let currentSessionId; // Returning this
 
   if (promotedAnonSessionId) {
     console.log("Starting promotion flow");
@@ -33,7 +33,7 @@ const handleSessionPromotionOrCreation = async (
       await redisHelper.createSession(promotedAnonSessionId, {
         user_id: userId,
       });
-      currentSessionId = "auth:" + promotedAnonSessionId;
+      currentSessionId = promotedAnonSessionId;
     }
     // If not found, create new session
     else {

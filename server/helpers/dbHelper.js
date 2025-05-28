@@ -51,6 +51,10 @@ async function executeQuery(query, params = []) {
   let connection;
   try {
     connection = await getConnection();
+
+    console.log("Executing query: ");
+    console.log(query);
+
     const [rows] = await connection.execute(query, params);
     return rows;
   } catch (error) {

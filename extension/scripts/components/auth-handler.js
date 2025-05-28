@@ -137,12 +137,21 @@ const extractAccessToken = (redirectedTo) => {
 
 // Send token to server for verification & session
 const sendAccessTokenToServer = async (accessToken) => {
+  const anonSession = await getAnonSession();
+
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${idToken}`,
+  };
+
+  // If there's an anonymous session, append to header for promotion flow.
+  if (anonSession) {
+    headers["Promoted-From"] = anonSession.id;
+  }
+
   const response = await fetch(`${SERVER_URL}/api/auth/facebook/callback`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`,
-    },
+    headers,
   });
 
   if (!response.ok) {
@@ -233,12 +242,21 @@ const extractIdToken = (redirectedTo) => {
 
 // Send ID token to server for verification & session
 const sendIdTokenToServer = async (idToken) => {
+  const anonSession = await getAnonSession();
+
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${idToken}`,
+  };
+
+  // If there's an anonymous session, append to header for promotion flow.
+  if (anonSession) {
+    headers["Promoted-From"] = anonSession.id;
+  }
+
   const response = await fetch(`${SERVER_URL}/api/auth/google/callback`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${idToken}`,
-    },
+    headers,
   });
 
   if (!response.ok) {

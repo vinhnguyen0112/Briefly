@@ -2,17 +2,16 @@ const authHelper = require("../helpers/authHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const Session = require("../models/session"); // Assuming this is your database model for sessions
 
-// Verify the origin of the request to ensure it's from our Chrome extension
+// Verify the origin of the request
 const verifyOrigin = (req, res, next) => {
   const origin = req.get("Origin");
 
-  // It's generally better to check for exact match after ensuring origin exists
+  // Request from our Chrome extension
   if (origin && origin === `chrome-extension://${process.env.EXTENSION_ID}`) {
-    console.log("The request origin is valid.");
+    console.log("Request origin is valid, proceeding.");
     return next();
   }
 
-  // Use a more specific error or status code if possible, e.g., 403 Forbidden
   return res.status(403).json({
     success: false,
     message: "Unauthorized request from invalid origin.",

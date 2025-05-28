@@ -47,20 +47,22 @@ const createSession = async (sessionId, sessionData) => {
 
   if (!sessionData.user_id) throw new Error("Missing user ID for auth session");
 
-  const sessionData = {
-    user_id: sessionData.user_id,
-    query_count: sessionData.query_count ?? 0,
-    token_count: sessionData.token_count ?? 0,
-    maximum_response_length: sessionData.maximum_response_length || 150,
-    response_style: sessionData.response_style || 1,
-  };
-
-  const setResult = await redisCluster.set(key, JSON.stringify(sessionData), {
-    EX: parseInt(process.env.SESSION_TTL),
-  });
+  const setResult = await redisCluster.set(
+    key,
+    JSON.stringify({
+      user_id: sessionData.user_id,
+      query_count: sessionData.query_count ?? 0,
+      token_count: sessionData.token_count ?? 0,
+      maximum_response_length: sessionData.maximum_response_length || 150,
+      response_style: sessionData.response_style || 1,
+    }),
+    {
+      EX: parseInt(process.env.SESSION_TTL),
+    }
+  );
   if (setResult !== "OK") throw new Error("Create session failed");
 
-  return key;
+  return sessionId;
 };
 
 // Delete user session
@@ -106,7 +108,7 @@ const createAnonSession = async (sessionId, sessionData) => {
     EX: parseInt(process.env.SESSION_TTL),
   });
   if (setResult !== "OK") throw new Error("Create session failed");
-  return key;
+  return sessionId;
 };
 
 // Refresh session TTL
