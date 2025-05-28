@@ -6,58 +6,26 @@ const { v4: uuidv4 } = require("uuid");
 
 // Persist new user in db if not found
 const handleUserPersistence = async (userId, name) => {
-  let user = await User.getById(userId);
+  const user = await User.getById(userId);
   if (!user) {
     console.log(`User ${userId} not found. Creating new user.`);
     await User.create({ id: userId, name });
   }
 };
 
-const handleSessionPromotionOrCreation = async (
-  userId,
-  promotedAnonSessionId = null
-) => {
-  let currentSessionId; // Returning this
+const handleSessionCreation = async (userId) => {
+  const authSessionId = uuidv4();
+  await Session.create({
+    id: authSessionId,
+    user_id: userId,
+  });
 
-  if (promotedAnonSessionId) {
-    console.log("Starting promotion flow");
-    // Find session in db
-    const session = await Session.getById(promotedAnonSessionId);
+  // TODO: QA history re-assign for promotion flow
 
-    // If found
-    if (session) {
-      // Reference session to user
-      await Session.update(promotedAnonSessionId, { user_id: userId });
-      // Remove anon session & replace with auth session in Redis
-      await redisHelper.deleteAnonSession(promotedAnonSessionId);
-      await redisHelper.createSession(promotedAnonSessionId, {
-        user_id: userId,
-      });
-      currentSessionId = promotedAnonSessionId;
-    }
-    // If not found, create new session
-    else {
-      const newSessionId = uuidv4();
-      await Session.create(newSessionId, {
-        user_id: userId,
-      });
-      currentSessionId = await redisHelper.createSession(newSessionId, {
-        user_id: userId,
-      });
-    }
-  }
-  // If not promotion flow, simply create new session
-  else {
-    const newSessionId = uuidv4();
-    await Session.create(newSessionId, {
-      user_id: userId,
-    });
-    currentSessionId = await redisHelper.createSession(newSessionId, {
-      user_id: userId,
-    });
-  }
+  await redisHelper.createSession(authSessionId, { user_id: userId });
 
-  return currentSessionId;
+  console.log("Created new auth session:", authSessionId);
+  return authSessionId;
 };
 
 // Authenticate with Google
@@ -65,18 +33,14 @@ const authenticateWithGoogle = async (req, res, next) => {
   try {
     const idToken = authHelper.extractAuthToken(req);
     const { userId, name } = await authHelper.verifyGoogleToken(idToken);
+
+    // TODO: Unused for now,
     const promotedAnonSessionId = authHelper.extractAnonSessionId(req);
 
     await handleUserPersistence(userId, name);
-    const currentSessionId = await handleSessionPromotionOrCreation(
-      userId,
-      promotedAnonSessionId
-    );
+    const sessionId = await handleSessionCreation(userId);
 
-    return res.json({
-      success: true,
-      data: { id: currentSessionId },
-    });
+    return res.json({ success: true, data: { id: sessionId } });
   } catch (error) {
     console.error("Error during Google authentication:", error);
     return next(error);
@@ -91,40 +55,34 @@ const authenticateWithFacebook = async (req, res, next) => {
     const promotedAnonSessionId = authHelper.extractAnonSessionId(req);
 
     await handleUserPersistence(userId, name);
-    const currentSessionId = await handleSessionPromotionOrCreation(
+    const sessionId = await handleSessionCreation(
       userId,
       promotedAnonSessionId
     );
 
-    return res.json({
-      success: true,
-      data: { id: currentSessionId },
-    });
+    return res.json({ success: true, data: { id: sessionId } });
   } catch (error) {
     console.error("Error during Facebook authentication:", error);
     return next(error);
   }
 };
 
-// Sign user out by deleting their session
+// Sign user out by deleting *only* their auth session
 const signOut = async (req, res, next) => {
   try {
-    const sessionId = authHelper.extractAuthToken(req); // Extract sessionID
-
-    // Remove from db
+    const sessionId = authHelper.extractAuthToken(req);
     await Session.delete(sessionId);
-
-    // Remove from Redis
     await redisHelper.deleteSession(sessionId);
 
-    return res.json({
-      success: true,
-      message: "Session deleted",
-    });
+    return res.json({ success: true, message: "Session deleted" });
   } catch (err) {
     console.error("Error during sign out:", err);
     return next(err);
   }
 };
 
-module.exports = { authenticateWithGoogle, authenticateWithFacebook, signOut };
+module.exports = {
+  authenticateWithGoogle,
+  authenticateWithFacebook,
+  signOut,
+};
