@@ -18,7 +18,7 @@ const generateCaptions = async (sources) => {
   const tasks = sources.map((src, idx) =>
     limit(async () => {
       try {
-        // 1) Build prompt + single image URL
+        // Build img captioning prompt with single img
         const userContent = [
           {
             type: "text",
@@ -27,7 +27,6 @@ const generateCaptions = async (sources) => {
           { type: "image_url", image_url: { url: src, detail: "auto" } },
         ];
 
-        // 2) Call OpenAI chat completion
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
           messages: [
@@ -42,19 +41,17 @@ const generateCaptions = async (sources) => {
 
         console.log(`→ [${idx}] Response OK`);
 
-        // 3) Extract and clean the raw caption
+        // Response cleaning
         let raw = response.choices[0].message.content.trim();
 
-        // If API returned multiple lines, just take the first
         raw = raw.split(/\r?\n/)[0];
 
-        // Remove any surrounding single or double quotes
         const clean = raw
           .replace(/^['"]+/, "")
           .replace(/['"]+$/, "")
           .trim();
 
-        // 4) Return caption + usage
+        // Returning captions + token usages
         return {
           caption: clean,
           usage: response.usage || {

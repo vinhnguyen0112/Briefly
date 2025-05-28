@@ -5,8 +5,6 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 
-const authRoutes = require("./routes/authRoutes");
-const { redisClient } = require("./helpers/redisHelper");
 const imageCaptionRoutes = require("./routes/imageCaptionRoutes");
 
 // Initialize Express app
@@ -25,9 +23,6 @@ app.use("/api/captionize", imageCaptionRoutes);
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "CocBot API is running" });
 });
-
-// Mount route image-caption
-app.use("/api/image-caption", imageCaptionRoutes);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

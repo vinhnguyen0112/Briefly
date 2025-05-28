@@ -1,8 +1,17 @@
-import { loadSidebarWidth, getApiKey, getConfig, getLanguage } from './components/state.js';
-import { setupEventListeners } from './components/event-handler.js';
-import { requestPageContent, setupContentExtractionReliability } from './components/content-handler.js';
-import { processUserQuery } from './components/api-handler.js';
-import { initializeLanguage } from './components/i18n.js';
+import {
+  loadSidebarWidth,
+  getApiKey,
+  getConfig,
+  getLanguage,
+  state,
+} from "./components/state.js";
+import { setupEventListeners } from "./components/event-handler.js";
+import {
+  requestPageContent,
+  setupContentExtractionReliability,
+} from "./components/content-handler.js";
+import { processUserQuery } from "./components/api-handler.js";
+import { initializeLanguage } from "./components/i18n.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -14,31 +23,33 @@ document.addEventListener("DOMContentLoaded", () => {
       document.getElementById("api-key").value = key;
     }
   });
-  
+
   // load language preference first
-  getLanguage().then(language => {
-    console.log('CocBot: Language preference:', language);
-    
-    state.language = language;
-    
-    const languageToggle = document.getElementById('language-toggle');
-    if (languageToggle) {
-      languageToggle.checked = language === 'vi';
-      
-      const enLabel = document.getElementById('en-label');
-      const viLabel = document.getElementById('vi-label');
-      
-      if (enLabel && viLabel) {
-        enLabel.classList.toggle('active', language === 'en');
-        viLabel.classList.toggle('active', language === 'vi');
+  getLanguage()
+    .then((language) => {
+      console.log("CocBot: Language preference:", language);
+
+      state.language = language;
+
+      const languageToggle = document.getElementById("language-toggle");
+      if (languageToggle) {
+        languageToggle.checked = language === "vi";
+
+        const enLabel = document.getElementById("en-label");
+        const viLabel = document.getElementById("vi-label");
+
+        if (enLabel && viLabel) {
+          enLabel.classList.toggle("active", language === "en");
+          viLabel.classList.toggle("active", language === "vi");
+        }
       }
-    }
-    
-    return initializeLanguage();
-  }).then(() => {
-    console.log('CocBot: Internationalization initialized');
-  });
-  
+
+      return initializeLanguage();
+    })
+    .then(() => {
+      console.log("CocBot: Internationalization initialized");
+    });
+
   // load config
   getConfig()
     .then((config) => {

@@ -56,7 +56,7 @@ export async function handleCaptionImages(imageUrls) {
 
 async function callCaptionApi(images) {
   try {
-    const response = await fetch("http://localhost:3000/api/image-caption", {
+    const response = await fetch("http://localhost:3000/api/captionize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sources: images }),

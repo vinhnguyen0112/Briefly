@@ -1,11 +1,4 @@
 import {
-  authenticateWithFacebook,
-  authenticateWithGoogle,
-  isUserAuthenticated,
-  signOut,
-} from "./components/auth-handler.js";
-import { saveUserSession } from "./components/state.js";
-import {
   handleCaptionImages,
   resetProcessedImages,
 } from "./components/caption-handler.js";
