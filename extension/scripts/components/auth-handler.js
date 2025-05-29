@@ -141,12 +141,12 @@ const sendAccessTokenToServer = async (accessToken) => {
 
   const headers = {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${idToken}`,
+    Authorization: `Bearer ${accessToken}`,
   };
 
   // If there's an anonymous session, append to header for promotion flow.
   if (anonSession) {
-    headers["Promoted-From"] = anonSession.id;
+    headers["Promote"] = anonSession.id;
   }
 
   const response = await fetch(`${SERVER_URL}/api/auth/facebook/callback`, {
@@ -251,7 +251,7 @@ const sendIdTokenToServer = async (idToken) => {
 
   // If there's an anonymous session, append to header for promotion flow.
   if (anonSession) {
-    headers["Promoted-From"] = anonSession.id;
+    headers["Promote"] = anonSession.id;
   }
 
   const response = await fetch(`${SERVER_URL}/api/auth/google/callback`, {

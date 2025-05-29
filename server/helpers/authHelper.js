@@ -65,14 +65,19 @@ const extractFromPromotionHeader = (req) => {
 };
 
 const refreshSessionTTL = async (sessionType, sessionId) => {
-  console.log("Refreshing session: ", sessionId);
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  console.log("Refreshing session:", sessionId);
+
+  const ttlSeconds = parseInt(process.env.SESSION_TTL, 10);
+  const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+
   if (sessionType === "auth") {
     await redisHelper.refreshSession(sessionId);
     await Session.update(sessionId, { expires_at: expiresAt });
   } else if (sessionType === "anon") {
     await redisHelper.refreshAnonSession(sessionId);
     await AnonSession.update(sessionId, { expires_at: expiresAt });
+  } else {
+    throw new Error("Unknown session type");
   }
 };
 

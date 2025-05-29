@@ -41,12 +41,30 @@ const applyPrefix = (key) => {
   return `${prefix}${key}`;
 };
 
-// Create a user session with default values
+// TODO: Test this, this will handle matching TTL when updating cache, instead of granting full 7 days TTL
 const createSession = async (sessionId, sessionData) => {
-  const key = applyPrefix(`auth:${sessionId}`);
-
+  if (!sessionId) throw new Error("Missing session ID for session");
   if (!sessionData.user_id) throw new Error("Missing user ID for session");
-  if (!sessionData.id) throw new Error("Missing session ID for session");
+
+  // Compute custom TTL to match expires_at
+  let sessionTTL;
+  if (sessionData.expires_at) {
+    const expiresAtMs = new Date(sessionData.expires_at).getTime();
+    const nowMs = Date.now();
+    sessionTTL = Math.ceil((expiresAtMs - nowMs) / 1000);
+    if (sessionTTL <= 0) {
+      throw new Error(
+        `Session has already expired at: (${sessionData.expires_at})`
+      );
+    }
+  }
+
+  // Fallback to default TTL if no valid expires_at was provided
+  if (!sessionTTL || isNaN(sessionTTL)) {
+    sessionTTL = parseInt(process.env.SESSION_TTL, 10);
+  }
+
+  const key = applyPrefix(`auth:${sessionId}`);
   const setResult = await redisCluster.set(
     key,
     JSON.stringify({
@@ -57,11 +75,12 @@ const createSession = async (sessionId, sessionData) => {
       maximum_response_length: sessionData.maximum_response_length || 150,
       response_style: sessionData.response_style || 1,
     }),
-    {
-      EX: parseInt(process.env.SESSION_TTL),
-    }
+    { EX: sessionTTL }
   );
-  if (setResult !== "OK") throw new Error("Create session failed");
+
+  if (setResult !== "OK") {
+    throw new Error("Failed to create session in Redis");
+  }
 
   return sessionId;
 };
@@ -83,7 +102,7 @@ const getSession = async (sessionId) => {
 
   return data
     ? {
-        data: JSON.parse(data),
+        ...JSON.parse(data),
         ttl,
       }
     : null;
@@ -114,7 +133,7 @@ const getAnonSession = async (sessionId) => {
 
   return data
     ? {
-        data: JSON.parse(data),
+        ...JSON.parse(data),
         ttl,
       }
     : null;
@@ -123,11 +142,13 @@ const getAnonSession = async (sessionId) => {
 const createAnonSession = async (sessionId, sessionData) => {
   const key = applyPrefix(`anon:${sessionId}`);
 
+  if (!sessionId) throw new Error("Missing session ID for session");
+
   const setResult = await redisCluster.set(
     key,
     JSON.stringify({
       id: sessionId,
-      anon_query_count: sessionData.anon_query_count,
+      anon_query_count: sessionData.anon_query_count ?? 0,
     }),
     {
       EX: parseInt(process.env.SESSION_TTL),

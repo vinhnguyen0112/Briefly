@@ -1257,13 +1257,16 @@ input:checked + .slider {
   align-items: center;
   justify-content: center;
   padding: 10px 16px;
-  gap: 8px;
   background-color: var(--muted);
   color: var(--foreground);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   cursor: pointer;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+#sign-out-button {
+  gap: 8px;
 }
 
 .slider.round:before {

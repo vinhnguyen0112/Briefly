@@ -2,7 +2,7 @@ const crypto = require("crypto");
 const { redisHelper } = require("../helpers/redisHelper");
 const AnonSession = require("../models/anonSession");
 
-// Helper to hash fingerprint and IP into a session ID
+// Generate session ID by hashing fingerprint + IP address
 function generateSessionId(fingerprint, ip) {
   return crypto
     .createHash("sha256")
@@ -10,87 +10,52 @@ function generateSessionId(fingerprint, ip) {
     .digest("hex");
 }
 
+// Get client IP from request
+function getClientIP(req) {
+  let ip = req.ip || "";
+  if (ip.includes(",")) ip = ip.split(",")[0].trim();
+  return ip;
+}
+
+async function findOrCreateAnonSession(sessionId) {
+  // Find cached anon session
+  const cached = await redisHelper.getAnonSession(sessionId);
+  if (cached) {
+    return { id: sessionId, anon_query_count: cached.anon_query_count || 0 };
+  }
+
+  // No cached anon session, check DB
+  let session = await AnonSession.getById(sessionId);
+  if (!session) {
+    // No persited anon session, create new
+    session = await AnonSession.create({ id: sessionId, anon_query_count: 0 });
+  }
+
+  // Update cache (always happen whether found or not)
+  await redisHelper.createAnonSession(sessionId, {
+    anon_query_count: session.anon_query_count || 0,
+  });
+
+  return { id: sessionId, anon_query_count: session.anon_query_count || 0 };
+}
+
 const handleAnonSession = async (req, res, next) => {
   try {
     const { visitorId } = req.body;
-    console.log("Received visitorId: ", visitorId);
-
     if (!visitorId) {
-      return res.status(400).json({
-        success: false,
-        message: "Missing visitorId",
-      });
+      return res
+        .status(400)
+        .json({ success: false, message: "Missing visitorId" });
     }
 
-    // Determine client IP (basic parsing)
-    let clientIP = req.ip;
-    if (clientIP && clientIP.includes(",")) {
-      clientIP = clientIP.split(",")[0].trim();
-    }
-
-    console.log("Client IP address: ", clientIP);
-
-    // Generate session ID
+    const clientIP = getClientIP(req);
     const sessionId = generateSessionId(visitorId, clientIP);
-    console.log("Generated anon session ID:", sessionId);
 
-    // Check in Redis cache
-    const redisKey = `anon:${sessionId}`;
-    let cachedSession = await redisHelper.getAnonSession(sessionId);
-    console.log("Cached session hit: ", cachedSession);
-    if (cachedSession) {
-      console.log("Anon session found in cache, returning.");
-      return res.json({
-        success: true,
-        data: {
-          id: sessionId,
-          anon_query_count: cachedSession.anon_query_count || 0,
-        },
-      });
-    }
-
-    // Check in db
-    const session = await AnonSession.getById(sessionId);
-    if (session && !session.user_id) {
-      console.log("Anon session found in DB, caching and returning.");
-
-      // Update Redis cache
-      await redisHelper.createAnonSession(sessionId, {
-        anon_query_count: session.anon_query_count || 0,
-      });
-
-      return res.json({
-        success: true,
-        data: {
-          id: redisKey,
-          anon_query_count: session.anon_query_count || 0,
-        },
-      });
-    }
-
-    // Session not found -> Create new
-    console.log("Anon session not found anywhere, creating new.");
-    const sessionData = {
-      id: sessionId,
-      anon_query_count: 0,
-    };
-    await AnonSession.create(sessionData);
-
-    // Cache in Redis
-    await redisHelper.createAnonSession(sessionId, {
-      anon_query_count: 0,
-    });
-
-    return res.json({
-      success: true,
-      data: {
-        id: sessionId,
-        anon_query_count: 0,
-      },
-    });
+    const data = await findOrCreateAnonSession(sessionId);
+    return res.json({ success: true, data });
   } catch (err) {
     console.error("Error in handleAnonSession:", err);
-    return next(err);
+    next(err);
   }
 };
 
