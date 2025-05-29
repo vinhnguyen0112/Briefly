@@ -31,11 +31,11 @@ const handleSessionCreation = async (userId) => {
 // Authenticate with Google
 const authenticateWithGoogle = async (req, res, next) => {
   try {
-    const idToken = authHelper.extractAuthToken(req);
+    const idToken = authHelper.extractFromAuthHeader(req);
     const { userId, name } = await authHelper.verifyGoogleToken(idToken);
 
     // TODO: Unused for now,
-    const promotedAnonSessionId = authHelper.extractAnonSessionId(req);
+    const promotedAnonSessionId = authHelper.extractFromPromotionHeader(req);
 
     await handleUserPersistence(userId, name);
     const sessionId = await handleSessionCreation(userId);
@@ -50,9 +50,9 @@ const authenticateWithGoogle = async (req, res, next) => {
 // Authenticate with Facebook
 const authenticateWithFacebook = async (req, res, next) => {
   try {
-    const accessToken = authHelper.extractAuthToken(req);
+    const accessToken = authHelper.extractFromAuthHeader(req);
     const { userId, name } = await authHelper.verifyFacebookToken(accessToken);
-    const promotedAnonSessionId = authHelper.extractAnonSessionId(req);
+    const promotedAnonSessionId = authHelper.extractFromPromotionHeader(req);
 
     await handleUserPersistence(userId, name);
     const sessionId = await handleSessionCreation(
@@ -67,14 +67,30 @@ const authenticateWithFacebook = async (req, res, next) => {
   }
 };
 
-// Sign user out by deleting *only* their auth session
+// Sign user out
 const signOut = async (req, res, next) => {
   try {
-    const sessionId = authHelper.extractAuthToken(req);
-    await Session.delete(sessionId);
-    await redisHelper.deleteSession(sessionId);
+    const { sessionType } = req;
+    const { id } = req.session;
 
-    return res.json({ success: true, message: "Session deleted" });
+    // Remove from DB and Redis
+    if (sessionType === "auth") {
+      await Session.delete(id);
+      await redisHelper.deleteSession(id);
+    } else if (sessionType === "anon") {
+      await AnonSession.delete(id);
+      await redisHelper.deleteAnonSession(id);
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Unknown session type.",
+      });
+    }
+
+    return res.json({
+      success: true,
+      message: "Session deleted",
+    });
   } catch (err) {
     console.error("Error during sign out:", err);
     return next(err);

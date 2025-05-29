@@ -62,6 +62,8 @@ export function setupEventListeners() {
     }
   });
 
+  setupAuthenticationButtons();
+
   setupQuickActions();
 
   elements.viewContentButton.addEventListener("click", () => {

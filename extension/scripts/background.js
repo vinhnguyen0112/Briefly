@@ -20,36 +20,6 @@ chrome.runtime.onInstalled.addListener(() => {
   chrome.storage.local.set({
     sidebarActive: false,
   });
-
-  // Observe change in storage
-  chrome.storage.onChanged.addListener((changes, areaName) => {
-    // Notify all tabs if auth session changed
-    if (areaName === "local" && changes.auth_session) {
-      // The newValue directly reflects if a session exists (truthy/falsy)
-      const hasSession = changes.auth_session.newValue;
-      console.log("Briefly: Auth state changed: ", hasSession);
-
-      chrome.tabs.query({}, (tabs) => {
-        tabs.forEach((tab) => {
-          chrome.tabs.sendMessage(
-            tab.id,
-            {
-              action: "auth_session_changed",
-              isAuth: hasSession,
-            },
-            () => {
-              if (chrome.runtime.lastError) {
-                console.error(
-                  `Error sending message to tab ${tab.id}:`,
-                  chrome.runtime.lastError.message
-                );
-              }
-            }
-          );
-        });
-      });
-    }
-  });
 });
 
 // Don't let people spam-click
@@ -674,5 +644,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
 
     return true;
+  }
+});
+
+// Observe change in storage
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  // Notify all tabs if auth session changed
+  if (areaName === "local" && changes.auth_session) {
+    // The newValue directly reflects if a session exists (truthy/falsy)
+    const hasSession = changes.auth_session.newValue;
+    console.log("Briefly: Auth state changed: ", hasSession);
+
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach((tab) => {
+        chrome.tabs.sendMessage(
+          tab.id,
+          {
+            action: "auth_session_changed",
+            isAuth: hasSession,
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error(
+                `Error sending message to tab ${tab.id}:`,
+                chrome.runtime.lastError.message
+              );
+            }
+          }
+        );
+      });
+    });
   }
 });

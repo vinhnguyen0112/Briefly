@@ -45,11 +45,12 @@ const applyPrefix = (key) => {
 const createSession = async (sessionId, sessionData) => {
   const key = applyPrefix(`auth:${sessionId}`);
 
-  if (!sessionData.user_id) throw new Error("Missing user ID for auth session");
-
+  if (!sessionData.user_id) throw new Error("Missing user ID for session");
+  if (!sessionData.id) throw new Error("Missing session ID for session");
   const setResult = await redisCluster.set(
     key,
     JSON.stringify({
+      id: sessionId,
       user_id: sessionData.user_id,
       query_count: sessionData.query_count ?? 0,
       token_count: sessionData.token_count ?? 0,
@@ -72,10 +73,20 @@ const deleteSession = async (sessionId) => {
   return delResult > 0;
 };
 
-// Get user session
+// Get user session from Redis, along with TTL
 const getSession = async (sessionId) => {
   const key = applyPrefix(`auth:${sessionId}`);
-  return await redisCluster.get(key);
+  const [data, ttl] = await Promise.all([
+    redisCluster.get(key),
+    redisCluster.ttl(key),
+  ]);
+
+  return data
+    ? {
+        data: JSON.parse(data),
+        ttl,
+      }
+    : null;
 };
 
 // Refresh session TTL
@@ -96,17 +107,32 @@ const refreshSession = async (sessionId) => {
 
 const getAnonSession = async (sessionId) => {
   const key = applyPrefix(`anon:${sessionId}`);
+  const [data, ttl] = await Promise.all([
+    redisCluster.get(key),
+    redisCluster.ttl(key),
+  ]);
 
-  const sessionData = await redisCluster.get(key);
-  return sessionData ? JSON.parse(sessionData) : null;
+  return data
+    ? {
+        data: JSON.parse(data),
+        ttl,
+      }
+    : null;
 };
 
 const createAnonSession = async (sessionId, sessionData) => {
   const key = applyPrefix(`anon:${sessionId}`);
 
-  const setResult = await redisCluster.set(key, JSON.stringify(sessionData), {
-    EX: parseInt(process.env.SESSION_TTL),
-  });
+  const setResult = await redisCluster.set(
+    key,
+    JSON.stringify({
+      id: sessionId,
+      anon_query_count: sessionData.anon_query_count,
+    }),
+    {
+      EX: parseInt(process.env.SESSION_TTL),
+    }
+  );
   if (setResult !== "OK") throw new Error("Create session failed");
   return sessionId;
 };
@@ -129,8 +155,17 @@ const deleteAnonSession = async (sessionId) => {
 };
 
 const getAnySession = async (prefixedKey) => {
-  const sessionData = await redisCluster.get(prefixedKey);
-  return sessionData ? JSON.parse(sessionData) : null;
+  const [data, ttl] = await Promise.all([
+    redisCluster.get(prefixedKey),
+    redisCluster.ttl(prefixedKey),
+  ]);
+
+  return data
+    ? {
+        data: JSON.parse(data),
+        ttl,
+      }
+    : null;
 };
 
 const redisHelper = {

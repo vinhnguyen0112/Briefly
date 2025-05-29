@@ -1,7 +1,7 @@
 const authHelper = require("../helpers/authHelper");
 const { redisHelper } = require("../helpers/redisHelper");
-const Session = require("../models/session"); // Assuming this is your database model for sessions
-
+const Session = require("../models/session");
+const AnonSession = require("../models/anonSession");
 // Verify the origin of the request
 const verifyOrigin = (req, res, next) => {
   const origin = req.get("Origin");
@@ -21,8 +21,7 @@ const verifyOrigin = (req, res, next) => {
 // Validate the session and determine its type
 const validateSession = async (req, res, next) => {
   try {
-    const sessionId = authHelper.extractAuthToken(req);
-
+    const sessionId = authHelper.extractFromAuthHeader(req);
     if (!sessionId) {
       return res.status(401).json({
         success: false,
@@ -30,72 +29,67 @@ const validateSession = async (req, res, next) => {
       });
     }
 
-    // Determine session type based on prefix
-    let isAuthSession = false;
-    let actualSessionId = sessionId;
-
+    // Determine session type
+    let actualId, isAuth;
     if (sessionId.startsWith("auth:")) {
-      isAuthSession = true;
-      actualSessionId = sessionId.substring("auth:".length);
+      isAuth = true;
+      actualId = sessionId.slice("auth:".length);
       req.sessionType = "auth";
     } else if (sessionId.startsWith("anon:")) {
-      isAuthSession = false;
-      actualSessionId = sessionId.substring("anon:".length);
+      isAuth = false;
+      actualId = sessionId.slice("anon:".length);
       req.sessionType = "anon";
     } else {
-      console.error(
-        "Session ID has an unknown prefix or no prefix:",
-        sessionId
-      );
       return res.status(401).json({
         success: false,
-        message: "Invalid session ID format.",
+        message: "Invalid session ID format",
       });
     }
 
-    // Look up cached sessions in Redis
-    const key = `${req.sessionType}:${actualSessionId}`;
-    const cachedSession = await redisHelper.getSession(key);
-
-    // If found in cache
-    if (cachedSession) {
-      req.session = cachedSession;
+    // Check Redis cache
+    let cached;
+    if (isAuth) {
+      cached = await redisHelper.getSession(actualId);
+    } else {
+      cached = await redisHelper.getAnonSession(actualId);
+    }
+    if (cached) {
+      console.log("Cached session hit: ", cached);
+      req.session = cached;
       return next();
     }
-    // If not found in cache
-    else {
-      // Check in db
-      const persistedSession = await Session.getById(actualSessionId);
-      // If found
-      if (persistedSession) {
-        // Session type mismatch -> Reject
-        if (
-          (isAuthSession && !persistedSession.user_id) ||
-          (!isAuthSession && persistedSession.user_id)
-        ) {
-          return res
-            .status(401)
-            .json({ success: false, message: "Session type mismatch" });
-        }
 
-        // Update cache
-        await redisHelper.createSession(persistedSession.id, {
-          user_id: persistedSession.user_id,
-        });
-        req.session = persistedSession;
-        return next();
-      }
-      // If not found
-      else {
+    // Cache not found, fallback to DB
+    if (isAuth) {
+      const authSession = await Session.getById(actualId);
+      if (!authSession || !authSession.user_id) {
         return res.status(401).json({
           success: false,
-          message: "Session doesn't exist or has expired.",
+          message: "Session not found or type mismatch",
         });
       }
+      // Update cache
+      await redisHelper.createSession(actualId, authSession);
+      req.session = authSession;
+      return next();
+    } else {
+      const anonSession = await AnonSession.getById(actualId);
+      if (!anonSession) {
+        return res.status(401).json({
+          success: false,
+          message: "Session not found or type mismatch",
+        });
+      }
+      // Update cache
+      await redisHelper.createAnonSession(actualId, {
+        anon_query_count: anon.anon_query_count,
+      });
+      req.session = anonSession;
+      return next();
     }
   } catch (err) {
     console.error("Error in validateSession middleware:", err);
-    return next(err); // Pass error to Express error handling middleware
+    return next(err);
   }
 };
 

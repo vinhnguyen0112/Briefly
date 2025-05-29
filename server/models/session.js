@@ -35,6 +35,7 @@ class Session {
 
   async delete(id) {
     const query = "DELETE FROM sessions WHERE id = ?";
+    console.log("Received id in deleting query: ", id);
     await dbHelper.executeQuery(query, [id]);
   }
 }

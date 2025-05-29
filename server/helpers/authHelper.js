@@ -1,4 +1,7 @@
 const { OAuth2Client, auth } = require("google-auth-library");
+const { redisHelper, redisCluster } = require("./redisHelper");
+const Session = require("../models/session");
+const AnonSession = require("../models/anonSession");
 
 const client = new OAuth2Client();
 
@@ -42,8 +45,8 @@ const verifyFacebookToken = async (token) => {
   };
 };
 
-// Helper function to extract token from Authorization header
-const extractAuthToken = (req) => {
+// Helper function to extract from Authorization header
+const extractFromAuthHeader = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     throw new Error("Missing or invalid Authorization header");
@@ -53,19 +56,32 @@ const extractAuthToken = (req) => {
   return token;
 };
 
-// Helper function to extract anon_session_id from header
-const extractAnonSessionId = (req) => {
-  const anonSessionId = req.headers["promoted-from"];
+// Helper function to extract from promotion header
+const extractFromPromotionHeader = (req) => {
+  const anonSessionId = req.headers["promote"];
 
   console.log("Extracted promoted session ID: ", anonSessionId);
   return anonSessionId;
 };
 
+const refreshSessionTTL = async (sessionType, sessionId) => {
+  console.log("Refreshing session: ", sessionId);
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  if (sessionType === "auth") {
+    await redisHelper.refreshSession(sessionId);
+    await Session.update(sessionId, { expires_at: expiresAt });
+  } else if (sessionType === "anon") {
+    await redisHelper.refreshAnonSession(sessionId);
+    await AnonSession.update(sessionId, { expires_at: expiresAt });
+  }
+};
+
 const authHelper = {
   verifyGoogleToken,
   verifyFacebookToken,
-  extractAuthToken,
-  extractAnonSessionId,
+  extractFromAuthHeader,
+  extractFromPromotionHeader,
+  refreshSessionTTL,
 };
 
 module.exports = authHelper;

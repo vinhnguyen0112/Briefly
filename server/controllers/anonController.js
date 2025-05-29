@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 const { redisHelper } = require("../helpers/redisHelper");
-const Session = require("../models/session");
+const AnonSession = require("../models/anonSession");
 
 // Helper to hash fingerprint and IP into a session ID
 function generateSessionId(fingerprint, ip) {
@@ -37,9 +37,9 @@ const handleAnonSession = async (req, res, next) => {
     // Check in Redis cache
     const redisKey = `anon:${sessionId}`;
     let cachedSession = await redisHelper.getAnonSession(sessionId);
+    console.log("Cached session hit: ", cachedSession);
     if (cachedSession) {
       console.log("Anon session found in cache, returning.");
-      await redisHelper.refreshAnonSession(sessionId);
       return res.json({
         success: true,
         data: {
@@ -50,7 +50,7 @@ const handleAnonSession = async (req, res, next) => {
     }
 
     // Check in db
-    const session = await Session.getById(sessionId);
+    const session = await AnonSession.getById(sessionId);
     if (session && !session.user_id) {
       console.log("Anon session found in DB, caching and returning.");
 
@@ -74,7 +74,7 @@ const handleAnonSession = async (req, res, next) => {
       id: sessionId,
       anon_query_count: 0,
     };
-    await Session.create(sessionData);
+    await AnonSession.create(sessionData);
 
     // Cache in Redis
     await redisHelper.createAnonSession(sessionId, {
