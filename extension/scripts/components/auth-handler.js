@@ -21,14 +21,15 @@ export const isUserAuthenticated = async () => {
     }
 
     // Check for session validity
-    const isValid = await isSessionValid(session.id);
+    const prefixedSessionId = `auth:${session.id}`;
+    const isValid = await isSessionValid(prefixedSessionId);
     return isValid;
   } catch (err) {
     console.error(err);
   }
 };
 
-// Validate if the session is still valid on server
+// Validate if the auth session is still valid
 export const isSessionValid = async (sessionId) => {
   try {
     const response = await fetch(`${SERVER_URL}/api/auth/session-validate`, {
@@ -54,10 +55,10 @@ export const isSessionValid = async (sessionId) => {
 
 // Check if user need to sign in to proceed their action
 export const isSignInNeeded = async () => {
-  const { query_count } = await getAnonSession();
+  const { anon_query_count } = await getAnonSession();
   const userSession = await getUserSession();
   // User is unauthenticated & anon query count exceed 3
-  return query_count >= 3 && !userSession;
+  return anon_query_count >= 3 && !userSession;
 };
 
 // Sign the user out
@@ -67,11 +68,12 @@ export const signOut = async () => {
     if (!session)
       throw new Error("There's no on going session. Cannot sign user out");
 
+    const prefixedSessionId = `auth:${session.id}`;
     const response = await fetch(`${SERVER_URL}/api/auth/signout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${session.id}`,
+        Authorization: `Bearer ${prefixedSessionId}`,
       },
     });
 

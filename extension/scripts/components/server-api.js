@@ -1,7 +1,5 @@
 // API handler for communicating with the backend server
 
-import { getUserSession } from "./state";
-
 // Server configuration - update with your actual server URL
 const SERVER_URL = "http://localhost:3000";
 

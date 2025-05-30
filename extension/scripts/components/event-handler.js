@@ -385,7 +385,7 @@ function setupAuthenticationButtons() {
     b.addEventListener("click", () => {
       chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
         if (response.success) {
-          // Set authentication state and force close the account popup & sign in alert
+          // Close the account popup & sign in alert
           closeAccountPopupUI();
           closeSignInAlertPopup();
           console.log("User authenticated via Google");
@@ -399,7 +399,7 @@ function setupAuthenticationButtons() {
     b.addEventListener("click", () => {
       chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
         if (response.success) {
-          // Set authentication state and force close the account popup & sign in alert
+          // Close the account popup & sign in alert
           closeAccountPopupUI();
           closeSignInAlertPopup();
           console.log("User authenticated via Facebook");
@@ -412,7 +412,7 @@ function setupAuthenticationButtons() {
   elements.signOutButton.addEventListener("click", () => {
     chrome.runtime.sendMessage({ action: "sign_out" }, (response) => {
       if (response.success) {
-        // Set authentication state and force close the account popup
+        // Close the account popup
         closeAccountPopupUI();
         console.log("User signed out");
       }
@@ -424,17 +424,14 @@ function setupAuthenticationButtons() {
   );
 }
 
-// Force close the account popup UI
-// Use this when user completed an action on the UI
+// Close the account popup UI
 function closeAccountPopupUI() {
   elements.accountPopup.style.display = "none";
 }
 
-// Force re-render the account popup UI
-// Use as an alternative to closeAccountPopupUI() if not UX friendly enough
+// Render the account popup UI
 export function renderToggleAccountPopupUI(isAuthenticated) {
   if (isAuthenticated) {
-    // User is authenticated
     elements.signOutButton.style.display = "flex";
 
     // Hide all Google and Facebook login buttons in the header
@@ -449,7 +446,6 @@ export function renderToggleAccountPopupUI(isAuthenticated) {
       }
     });
   } else {
-    // User is not authenticated
     elements.signOutButton.style.display = "none";
 
     // Show all Google and Facebook login buttons in the header
@@ -477,17 +473,18 @@ async function toggleAccountPopupUI() {
     popup.style.display = "none";
   }
 }
+
+// Show the signin alert overlay
 export function openSignInAlertPopup() {
-  // Show the overlay and popup
   elements.signInAlertOverlay.style.display = "flex";
 }
 
+// Hide the signin alert overlay
 function closeSignInAlertPopup() {
-  // Hide the overlay and popup
   elements.signInAlertOverlay.style.display = "none";
 }
 
-// external function for rendering UI config
+// External function for rendering UI config
 function renderConfigUI(containerId, onSave) {
   const container = document.getElementById(containerId);
 

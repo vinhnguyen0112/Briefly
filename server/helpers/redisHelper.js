@@ -1,15 +1,15 @@
 const redis = require("redis");
 
-// Create redis cluster connection
 let redisCluster;
 
+// Switch between local host and remote cluster
 if (process.env.LOCAL_DEV === "true") {
-  // Local Redis (for development)
+  // Local Redis
   redisCluster = redis.createClient({
-    url: "redis://localhost:6379",
+    url: process.env.LOCAL_REDIS_URL,
   });
 } else {
-  // Redis Cluster (production/staging)
+  // Redis Cluster
   redisCluster = redis.createCluster({
     rootNodes: [
       {
@@ -41,7 +41,7 @@ const applyPrefix = (key) => {
   return `${prefix}${key}`;
 };
 
-// TODO: Test this, this will handle matching TTL when updating cache, instead of granting full 7 days TTL
+// Create new session
 const createSession = async (sessionId, sessionData) => {
   if (!sessionId) throw new Error("Missing session ID for session");
   if (!sessionData.user_id) throw new Error("Missing user ID for session");

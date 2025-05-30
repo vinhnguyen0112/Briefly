@@ -70,9 +70,8 @@ export function getAnonSession() {
 
 export function saveAnonSession(data) {
   return new Promise((resolve) => {
-    chrome.storage.local.set(
-      { anon_session: { ...data, id: `anon:${data.id}` } }, // Prefix id with 'anon'
-      () => resolve(prefixedData.id)
+    chrome.storage.local.set({ anon_session: { ...data, id: data.id } }, () =>
+      resolve(prefixedData.id)
     );
   });
 }
@@ -82,7 +81,7 @@ export async function incrementAnonQueryCount() {
   const anonSession = await getAnonSession();
   await saveAnonSession({
     ...anonSession,
-    query_count: (anonSession.query_count || 0) + 1,
+    anon_query_count: (anonSession.anon_query_count || 0) + 1,
   });
 }
 
@@ -98,13 +97,10 @@ export async function getUserSession() {
 
 export async function saveUserSession(data) {
   return new Promise((resolve) => {
-    chrome.storage.local.set(
-      { auth_session: { ...data, id: `auth:${data.id}` } }, // Prefix id with 'auth'
-      () => {
-        console.log("CocBot: User session saved", data);
-        resolve(true);
-      }
-    );
+    chrome.storage.local.set({ auth_session: { ...data, id: data.id } }, () => {
+      console.log("CocBot: User session saved", data);
+      resolve(true);
+    });
   });
 }
 

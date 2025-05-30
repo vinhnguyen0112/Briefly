@@ -1,5 +1,5 @@
-const { OAuth2Client, auth } = require("google-auth-library");
-const { redisHelper, redisCluster } = require("./redisHelper");
+const { OAuth2Client } = require("google-auth-library");
+const { redisHelper } = require("./redisHelper");
 const Session = require("../models/session");
 const AnonSession = require("../models/anonSession");
 
@@ -60,10 +60,10 @@ const extractFromAuthHeader = (req) => {
 const extractFromPromotionHeader = (req) => {
   const anonSessionId = req.headers["promote"];
 
-  console.log("Extracted promoted session ID: ", anonSessionId);
   return anonSessionId;
 };
 
+// Refresh session TTL in Redis & 'expires_at' in MariaDB
 const refreshSessionTTL = async (sessionType, sessionId) => {
   console.log("Refreshing session:", sessionId);
 

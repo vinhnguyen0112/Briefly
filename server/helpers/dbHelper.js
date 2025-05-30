@@ -1,16 +1,14 @@
-// Template code
-
 const mysql = require("mysql2/promise");
 
 // Create a connection pool
 const pool = mysql.createPool(
   process.env.LOCAL_DEV === "true"
     ? {
-        host: "localhost",
-        port: 3307,
-        user: "root",
-        password: "NguyenTheVinh@01122004",
-        database: "test",
+        host: process.env.LOCAL_MYSQL_HOST,
+        port: process.env.LOCAL_MYSQL_PORT,
+        user: process.env.LOCAL_MYSQL_USERNAME,
+        password: process.env.LOCAL_MYSQL_PASSWORD,
+        database: process.env.LOCAL_MYSQL_DB,
         waitForConnections: true,
         connectionLimit: 5,
         queueLimit: 0,

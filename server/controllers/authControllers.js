@@ -21,7 +21,6 @@ const handleSessionCreation = async (userId) => {
   });
 
   // TODO: QA history re-assign for promotion flow
-
   await redisHelper.createSession(authSessionId, { user_id: userId });
 
   console.log("Created new auth session:", authSessionId);
