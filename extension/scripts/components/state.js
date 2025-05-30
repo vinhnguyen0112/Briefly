@@ -19,7 +19,7 @@ export const state = {
   currentPageUrl: "",
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
-  language: 'en' // Default language is English
+  language: "en", // Default language is English
 };
 
 // Load sidebar width from storage
@@ -58,27 +58,55 @@ export function saveSidebarWidth(width) {
   });
 }
 
-// User session management
-export async function getUserSession() {
+// Anon session management
+export function getAnonSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.get("sessionId", (result) => {
-      resolve(result.sessionId);
+    chrome.storage.local.get(["anon_session"], (result) => {
+      console.log("Cocbot: Gotten anon session: ", resolve.anon_session);
+      resolve(result.anon_session || null);
     });
   });
 }
 
-export async function saveUserSession(sessionId) {
+export function saveAnonSession(data) {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ sessionId }, () => {
-      console.log("CocBot: User session saved", sessionId);
-      resolve(sessionId);
+    chrome.storage.local.set({ anon_session: { ...data, id: data.id } }, () =>
+      resolve(prefixedData.id)
+    );
+  });
+}
+
+// Increase anon query count for the current anon session
+export async function incrementAnonQueryCount() {
+  const anonSession = await getAnonSession();
+  await saveAnonSession({
+    ...anonSession,
+    anon_query_count: (anonSession.anon_query_count || 0) + 1,
+  });
+}
+
+// User session management
+export async function getUserSession() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["auth_session"], (result) => {
+      console.log(`Cocbot: Gotten auth session `, result.auth_session);
+      resolve(result.auth_session);
+    });
+  });
+}
+
+export async function saveUserSession(data) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ auth_session: { ...data, id: data.id } }, () => {
+      console.log("CocBot: User session saved", data);
+      resolve(true);
     });
   });
 }
 
 export async function clearUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.remove("sessionId", () => {
+    chrome.storage.local.remove("auth_session", () => {
       console.log("CocBot: User session removed");
       resolve(true);
     });
@@ -189,18 +217,18 @@ export async function deleteNote(timestamp) {
 // lang preference management
 export async function getLanguage() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(['language'], (result) => {
-      resolve(result.language || 'en'); //eng default
+    chrome.storage.local.get(["language"], (result) => {
+      resolve(result.language || "en"); //eng default
     });
   });
 }
 
 export async function saveLanguage(language) {
   return new Promise((resolve) => {
-    chrome.storage.local.set({ 'language': language }, () => {
-      console.log('CocBot: Language preference saved', language);
+    chrome.storage.local.set({ language: language }, () => {
+      console.log("CocBot: Language preference saved", language);
       state.language = language;
       resolve(language);
     });
   });
-} 
+}
