@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Page Content Viewer</title>
+  <link rel="stylesheet" href="styles/content-viewer.css">
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f8f9fa;
+      height: 100vh;
+      width: 100vw;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    
+    .content-viewer-page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 15px;
+      background-color: #fff;
+      border-bottom: 1px solid #e9ecef;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+    }
+    
+    .content-viewer-page-header h2 {
+      margin: 0;
+      font-size: 16px;
+      font-weight: 500;
+      color: #2c3e50;
+    }
+    
+    .content-viewer-page-actions {
+      display: flex;
+      gap: 8px;
+    }
+    
+    .content-viewer-page-button {
+      background-color: #f8f9fa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 12px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      transition: all 0.2s ease;
+    }
+    
+    .content-viewer-page-button:hover {
+      background-color: #e9ecef;
+    }
+    
+    .content-viewer-page-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 15px;
+    }
+    
+    .content-viewer-page-loading {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: #666;
+    }
+    
+    .content-viewer-page-loading p {
+      margin-top: 15px;
+      font-size: 14px;
+    }
+    
+    /* Spinner animation */
+    .spinner {
+      border: 3px solid rgba(0, 0, 0, 0.1);
+      border-radius: 50%;
+      border-top: 3px solid #3498db;
+      width: 24px;
+      height: 24px;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    /* Override some styles for popup context */
+    .content-viewer {
+      box-shadow: none;
+      margin: 0;
+      border-radius: 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="content-viewer-page-header">
+    <h2>Page Content Viewer</h2>
+    <div class="content-viewer-page-actions">
+      <button id="refresh-button" class="content-viewer-page-button">
+        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21.5 2v6h-6M2.5 22v-6h6M2 11.5a10 10 0 0 1 18.8-4.3M22 12.5a10 10 0 0 1-18.8 4.2"/>
+        </svg>
+        Refresh
+      </button>
+      <button id="close-button" class="content-viewer-page-button">Close</button>
+    </div>
+  </div>
+  
+  <div id="content-container" class="content-viewer-page-content">
+    <div class="content-viewer-page-loading">
+      <div class="spinner"></div>
+      <p>Processing page content...</p>
+    </div>
+  </div>
+  
+  <script src="components/utils/ContentViewer.js"></script>
+  <script>
+    // Global variables
+    let pageContent = null;
+    
+    // Initialize the popup
+    document.addEventListener('DOMContentLoaded', () => {
+      // Set up event listeners
+      document.getElementById('refresh-button').addEventListener('click', refreshContent);
+      document.getElementById('close-button').addEventListener('click', closePage);
+      
+      // Request content immediately
+      requestContent();
+    });
+    
+    // Request content from the active tab directly
+    function requestContent() {
+      console.log('Requesting content for popup viewer');
+      chrome.runtime.sendMessage({ action: 'extract_page_content' }, (response) => {
+        console.log('Received extraction response:', response ? 'success = ' + response.success : 'no response');
+        if (response && response.success) {
+          pageContent = response.content;
+          renderContent(pageContent);
+        } else {
+          showError(response ? response.error : 'Failed to extract page content');
+        }
+      });
+    }
+    
+    // Refresh content
+    function refreshContent() {
+      const container = document.getElementById('content-container');
+      container.innerHTML = `
+        <div class="content-viewer-page-loading">
+          <div class="spinner"></div>
+          <p>Refreshing page content...</p>
+        </div>
+      `;
+      
+      requestContent();
+    }
+    
+    // Close the popup
+    function closePage() {
+      window.close();
+    }
+    
+    // Render the extracted content
+    function renderContent(content) {
+      const container = document.getElementById('content-container');
+      
+      if (!content) {
+        showError('No content available');
+        return;
+      }
+      
+      try {
+        console.log('Rendering content, length:', content.content ? content.content.length : 'unknown');
+        // Format and display the content
+        const structured = window.ContentViewer.formatExtractedContent(content);
+        const html = window.ContentViewer.generateContentViewerHTML(structured);
+        
+        container.innerHTML = html;
+        
+        // Attach event handlers for toggle buttons
+        window.ContentViewer.attachContentViewerEvents(container);
+      } catch (error) {
+        console.error('Error rendering content:', error);
+        showError('Error processing content: ' + error.message);
+      }
+    }
+    
+    // Show error message
+    function showError(message) {
+      const container = document.getElementById('content-container');
+      container.innerHTML = `
+        <div class="content-viewer-error">
+          <p>${message || 'Unknown error'}</p>
+          <button id="retry-button" class="content-viewer-page-button" style="margin-top: 15px;">Try Again</button>
+        </div>
+      `;
+      
+      // Add retry button functionality
+      document.getElementById('retry-button').addEventListener('click', refreshContent);
+    }
+  </script>
+</body>
+</html> 

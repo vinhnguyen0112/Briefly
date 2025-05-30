@@ -1,0 +1,38 @@
+#isal-sidebar-container {
+  position: fixed;
+  top: 0;
+  right: -350px;
+  height: 100vh;
+  width: 350px;
+  z-index: 2147483647; 
+  transition: right 0.3s ease;
+}
+
+#isal-sidebar-container.active {
+  right: 0; 
+}
+
+#isal-sidebar-iframe {
+  border: none;
+  width: 100%;
+  height: 100%;
+}
+
+#isal-toggle-button {
+  position: fixed;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  background-color: hsl(240 5.9% 10%);
+  color: hsl(0 0% 98%);
+  border: none;
+  border-radius: 4px 0 0 4px;
+  padding: 10px;
+  cursor: pointer;
+  z-index: 2147483646;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+#isal-toggle-button:hover {
+  opacity: 0.9;
+} 
