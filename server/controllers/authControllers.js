@@ -73,19 +73,17 @@ const signOut = async (req, res, next) => {
     const { sessionType } = req;
     const { id } = req.session;
 
-    // Remove from DB and Redis
-    if (sessionType === "auth") {
-      await Session.delete(id);
-      await redisHelper.deleteSession(id);
-    } else if (sessionType === "anon") {
-      await AnonSession.delete(id);
-      await redisHelper.deleteAnonSession(id);
-    } else {
+    // If auth session was not passed in request, reject
+    if (sessionType !== "auth") {
       return res.status(400).json({
         success: false,
-        message: "Unknown session type.",
+        message: "Unknown or invalid session type.",
       });
     }
+
+    // Remove from DB and Redis
+    await Session.delete(id);
+    await redisHelper.deleteSession(id);
 
     return res.json({
       success: true,

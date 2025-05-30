@@ -62,6 +62,7 @@ export function saveSidebarWidth(width) {
 export function getAnonSession() {
   return new Promise((resolve) => {
     chrome.storage.local.get(["anon_session"], (result) => {
+      console.log("Cocbot: Gotten anon session: ", resolve.anon_session);
       resolve(result.anon_session || null);
     });
   });
@@ -88,8 +89,8 @@ export async function incrementAnonQueryCount() {
 // User session management
 export async function getUserSession() {
   return new Promise((resolve) => {
-    chrome.storage.local.get("auth_session", (result) => {
-      console.log(`Cocbot: User session gotten`, result.auth_session);
+    chrome.storage.local.get(["auth_session"], (result) => {
+      console.log(`Cocbot: Gotten auth session `, result.auth_session);
       resolve(result.auth_session);
     });
   });

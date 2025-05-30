@@ -68,6 +68,9 @@ const validateSession = async (req, res, next) => {
           message: "Session not found or type mismatch",
         });
       }
+
+      console.log("Persisted auth session found: ", authSession);
+
       // Update cache
       await redisHelper.createSession(actualId, authSession);
       req.session = authSession;
@@ -80,10 +83,11 @@ const validateSession = async (req, res, next) => {
           message: "Session not found or type mismatch",
         });
       }
+
+      console.log("Persisted anon session found: ", anonSession);
+
       // Update cache
-      await redisHelper.createAnonSession(actualId, {
-        anon_query_count: anon.anon_query_count,
-      });
+      await redisHelper.createAnonSession(actualId, anonSession);
       req.session = anonSession;
       return next();
     }

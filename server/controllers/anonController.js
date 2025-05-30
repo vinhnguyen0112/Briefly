@@ -21,22 +21,27 @@ async function findOrCreateAnonSession(sessionId) {
   // Find cached anon session
   const cached = await redisHelper.getAnonSession(sessionId);
   if (cached) {
+    console.log("Cached anon session found, returning.");
     return { id: sessionId, anon_query_count: cached.anon_query_count || 0 };
   }
 
   // No cached anon session, check DB
+  console.log("No cached anon session found, checking DB.");
   let session = await AnonSession.getById(sessionId);
   if (!session) {
+    console.log("No persisted anon session in DB, creating new.");
     // No persited anon session, create new
-    session = await AnonSession.create({ id: sessionId, anon_query_count: 0 });
+    await AnonSession.create({ id: sessionId, anon_query_count: 0 });
   }
 
-  // Update cache (always happen whether found or not)
-  await redisHelper.createAnonSession(sessionId, {
-    anon_query_count: session.anon_query_count || 0,
-  });
+  const sessionData = {
+    anon_query_count: session ? session.anon_query_count : 0,
+  };
 
-  return { id: sessionId, anon_query_count: session.anon_query_count || 0 };
+  // Update cache (always happen whether found or not)
+  await redisHelper.createAnonSession(sessionId, sessionData);
+
+  return { id: sessionId, ...sessionData };
 }
 
 const handleAnonSession = async (req, res, next) => {

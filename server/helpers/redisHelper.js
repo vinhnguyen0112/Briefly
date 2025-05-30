@@ -57,6 +57,11 @@ const createSession = async (sessionId, sessionData) => {
         `Session has already expired at: (${sessionData.expires_at})`
       );
     }
+
+    console.log(
+      "Computed new custom TTL to match with persisted session: ",
+      sessionTTL
+    );
   }
 
   // Fallback to default TTL if no valid expires_at was provided

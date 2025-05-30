@@ -42,6 +42,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Set up anonymous session if not exists
   getAnonSession().then((anonSession) => {
     if (!anonSession) {
+      console.log("No anon session found, requesting new session from server");
       setupAnonSession();
     }
   });
