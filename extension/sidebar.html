@@ -390,6 +390,26 @@
           </div>
         </div>
 
+        <!-- Chat History Screen (hidden initially) -->
+        <div id="chat-history-screen" style="display: none">
+          <div class="chat-history-header">
+            <h3 data-i18n="chatHistory">Chat History</h3>
+            <button
+              id="close-chat-history-button"
+              class="icon-button"
+              title="Close"
+            >
+              ×
+            </button>
+          </div>
+          <div class="chat-history-content">
+            <div id="chat-history-list"></div>
+            <div class="chat-history-empty" style="display: none">
+              <p data-i18n="noChats">No chat history yet.</p>
+            </div>
+          </div>
+        </div>
+
         <!-- Content viewer screen (hidden initially) -->
         <div id="content-viewer-screen" style="display: none">
           <div class="content-viewer-header">
@@ -645,47 +665,6 @@
           >
             Close
           </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Chat History Screen (hidden initially) -->
-    <div id="chat-history-screen" style="display: none">
-      <div class="chat-history-header">
-        <h3 data-i18n="chatHistory">Chat History</h3>
-        <button
-          id="close-chat-history-button"
-          class="icon-button"
-          title="Close"
-        >
-          ×
-        </button>
-      </div>
-      <div class="chat-history-content">
-        <div id="chat-history-list">
-          <div class="chat-history-item">
-            <div class="chat-history-title">
-              Wikipedia: Artificial Intelligence
-            </div>
-            <div class="chat-history-meta">
-              <span class="chat-history-url"
-                >https://en.wikipedia.org/wiki/Artificial_intelligence</span
-              >
-              <span class="chat-history-date">2024-06-01</span>
-            </div>
-          </div>
-          <div class="chat-history-item">
-            <div class="chat-history-title">MDN: JavaScript Guide</div>
-            <div class="chat-history-meta">
-              <span class="chat-history-url"
-                >https://developer.mozilla.org/en-US/docs/Web/JavaScript/Guide</span
-              >
-              <span class="chat-history-date">2024-05-30</span>
-            </div>
-          </div>
-        </div>
-        <div class="chat-history-empty" style="display: none">
-          <p data-i18n="noChats">No chat history yet.</p>
         </div>
       </div>
     </div>

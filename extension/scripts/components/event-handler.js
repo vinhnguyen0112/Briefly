@@ -38,6 +38,7 @@ import {
   handleSaveNote,
 } from "./notes-handler.js";
 import { switchLanguage } from "./i18n.js";
+import { getAllChats } from "./idb-handler.js";
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
@@ -370,6 +371,12 @@ export function setupEventListeners() {
       }
     });
   });
+
+  elements.chatHistoryButton.addEventListener("click", () => {
+    toggleChatHistoryScreen();
+  });
+
+  // TODO: Close chat history screen on exit button click
 }
 
 // set up quick action buttons
@@ -482,8 +489,62 @@ export function renderToggleAccountPopupUI(isAuthenticated) {
   }
 }
 
+// Toggle the display state of the chat history screen
+function toggleChatHistoryScreen() {
+  const chatHistory = elements.chatHistoryScreen;
+  if (chatHistory.style.display === "none" || !chatHistory.style.display) {
+    chatHistory.style.display = "block";
+    renderChatHistory();
+  } else {
+    chatHistory.style.display = "none";
+  }
+}
+
+// Render chat history list from IndexedDB
+async function renderChatHistory() {
+  const { chatHistoryList, chatHistoryEmpty } = elements;
+
+  if (!chatHistoryList) return;
+
+  // Clear previous content
+  chatHistoryList.innerHTML = "";
+
+  try {
+    const chats = await getAllChats();
+
+    if (!chats || chats.length === 0) {
+      if (chatHistoryEmpty) chatHistoryEmpty.style.display = "block";
+      return;
+    } else {
+      if (chatHistoryEmpty) chatHistoryEmpty.style.display = "none";
+    }
+
+    chats.forEach((chat) => {
+      const item = document.createElement("div");
+      item.className = "chat-history-item";
+      item.innerHTML = `
+        <div class="chat-history-title">${chat.title}</div>
+        <div class="chat-history-meta">
+          <span class="chat-history-url">${chat.page_url}</span>
+          <span class="chat-history-date">${
+            chat.created_at
+              ? new Date(chat.created_at).toLocaleDateString()
+              : ""
+          }</span>
+        </div>
+      `;
+      // Optionally: add click handler to open chat
+      chatHistoryList.appendChild(item);
+    });
+  } catch (err) {
+    chatHistoryList.innerHTML =
+      "<div style='color:red'>Failed to load chat history.</div>";
+    if (chatHistoryEmpty) chatHistoryEmpty.style.display = "none";
+  }
+}
+
 // Toggle on/off the account popup UI
-async function toggleAccountPopupUI() {
+function toggleAccountPopupUI() {
   const popup = elements.accountPopup;
 
   // Toggle the display state of the popup

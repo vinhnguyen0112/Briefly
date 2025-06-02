@@ -56,6 +56,7 @@ const translations = {
       "Language has been switched to English. User interface and responses will be in English from now on.",
 
     chatHistory: "Chat History",
+    noChats: "No chats yet.",
   },
 
   vi: {
@@ -111,6 +112,7 @@ const translations = {
       "Ngôn ngữ đã được chuyển sang tiếng Việt. Giao diện và phản hồi sẽ bằng tiếng Việt từ bây giờ.",
 
     chatHistory: "Lịch Sử Trò Chuyện",
+    noChats: "Chưa có cuộc trò chuyện nào.",
   },
 };
 
