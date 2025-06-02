@@ -7,7 +7,8 @@ import {
   saveConfig,
   getLanguage,
   saveLanguage,
-  refreshCurrentChat,
+  resetCurrentChat,
+  setCurrentChat,
 } from "./state.js";
 import {
   handleResize,
@@ -38,7 +39,7 @@ import {
   handleSaveNote,
 } from "./notes-handler.js";
 import { switchLanguage } from "./i18n.js";
-import { getAllChats } from "./idb-handler.js";
+import { getAllChats, getMessagesForChat } from "./idb-handler.js";
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
@@ -362,7 +363,7 @@ export function setupEventListeners() {
 
   elements.newChatButton.addEventListener("click", () => {
     // Clear current chat state first before clear UI
-    refreshCurrentChat().then((success) => {
+    resetCurrentChat().then((success) => {
       if (success) {
         clearMessagesFromChat();
       } else {
@@ -376,7 +377,9 @@ export function setupEventListeners() {
     toggleChatHistoryScreen();
   });
 
-  // TODO: Close chat history screen on exit button click
+  elements.closeChatHistoryButton.addEventListener("click", () =>
+    closeChatHistoryScreen()
+  );
 }
 
 // set up quick action buttons
@@ -533,7 +536,22 @@ async function renderChatHistory() {
           }</span>
         </div>
       `;
-      // Optionally: add click handler to open chat
+
+      // Open up chat history when clicked
+      item.addEventListener("click", async () => {
+        const history = [];
+
+        clearMessagesFromChat();
+        closeChatHistoryScreen();
+        switchToChat();
+        const messages = await getMessagesForChat(chat.id);
+        messages.forEach((message) => {
+          addMessageToChat(message.content, message.role);
+          history.push({ role: message.role, content: message.content });
+        });
+
+        setCurrentChat({ ...chat, history });
+      });
       chatHistoryList.appendChild(item);
     });
   } catch (err) {
@@ -541,6 +559,10 @@ async function renderChatHistory() {
       "<div style='color:red'>Failed to load chat history.</div>";
     if (chatHistoryEmpty) chatHistoryEmpty.style.display = "none";
   }
+}
+
+function closeChatHistoryScreen() {
+  elements.chatHistoryScreen.style.display = "none";
 }
 
 // Toggle on/off the account popup UI

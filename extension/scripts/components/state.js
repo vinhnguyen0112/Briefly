@@ -237,7 +237,7 @@ export async function saveLanguage(language) {
   });
 }
 
-export async function refreshCurrentChat() {
+export async function resetCurrentChat() {
   state.currentChat = {
     id: null,
     title: "",
@@ -248,4 +248,13 @@ export async function refreshCurrentChat() {
   const cleared = !state.currentChat.id;
 
   return cleared;
+}
+
+export function setCurrentChat(chat) {
+  state.currentChat = {
+    id: chat.id || null,
+    title: chat.title || "",
+    pageUrl: chat.pageUrl || "",
+    history: chat.history || [],
+  };
 }
