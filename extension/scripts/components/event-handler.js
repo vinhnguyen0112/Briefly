@@ -7,6 +7,7 @@ import {
   saveConfig,
   getLanguage,
   saveLanguage,
+  refreshCurrentChat,
 } from "./state.js";
 import {
   handleResize,
@@ -17,6 +18,7 @@ import {
   closeAllPanels,
   switchToChat,
   handleContentMessage,
+  clearMessagesFromChat,
 } from "./ui-handler.js";
 import {
   requestPageContent,
@@ -67,17 +69,23 @@ export function setupEventListeners() {
   setupQuickActions();
 
   elements.viewContentButton.addEventListener("click", () => {
+    // Close content viewer
     if (state.isContentViewerOpen) {
       elements.contentViewerScreen.style.display = "none";
       elements.viewContentButton.classList.remove("active");
       state.isContentViewerOpen = false;
 
+      // If still in welcome mode, show welcome screen
       if (state.welcomeMode) {
         elements.welcomeScreen.style.display = "flex";
-      } else {
+      }
+      // Show chat screen if not in welcome mode
+      else {
         elements.chatScreen.style.display = "flex";
       }
-    } else {
+    }
+    // Close all other panels and open content viewer
+    else {
       closeAllPanels();
 
       openContentViewerPopup();
@@ -350,6 +358,18 @@ export function setupEventListeners() {
     "click",
     closeSignInAlertPopup
   );
+
+  elements.newChatButton.addEventListener("click", () => {
+    // Clear current chat state first before clear UI
+    refreshCurrentChat().then((success) => {
+      if (success) {
+        clearMessagesFromChat();
+      } else {
+        // TODO: Popup an alert or sth here later on
+        console.error("Failed to refresh current chat state");
+      }
+    });
+  });
 }
 
 // set up quick action buttons

@@ -11,7 +11,6 @@ export const elements = {
   cocbotTitle: document.getElementById("cocbot-title"),
 
   // Authentication elements
-  // Use classname for authentication buttons to support multiple instances
   googleLoginButtons: document.querySelectorAll(".google-login-button"),
   facebookLoginButtons: document.querySelectorAll(".facebook-login-button"),
   accountButton: document.getElementById("account-button"),
@@ -63,8 +62,6 @@ export const elements = {
   // Language toggle
   languageToggle: document.getElementById("language-toggle"),
 
-  languageToggle: document.getElementById("language-toggle"),
-
   // Quick action buttons
   quickActionButtons: document.querySelectorAll(".action-button"),
 
@@ -80,4 +77,10 @@ export const elements = {
   saveNoteButton: document.getElementById("save-note-button"),
   cancelNoteButton: document.getElementById("cancel-note-button"),
   closeEditorButton: document.getElementById("close-editor-button"),
+
+  // New chat elements
+  newChatButton: document.getElementById("new-chat-button"),
+
+  // Chat history elements
+  chatHistoryButton: document.getElementById("chat-history-button"),
 };

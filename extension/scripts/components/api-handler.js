@@ -12,6 +12,7 @@ import {
 import { elements } from "./dom-elements.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import { openSignInAlertPopup } from "./event-handler.js";
+import { addChat, addMessage } from "./idb-handler.js";
 
 // Process a user query
 export async function processUserQuery(query) {
@@ -22,7 +23,28 @@ export async function processUserQuery(query) {
     return;
   }
 
+  // Create new chat if doesn't exist
+  if (!state.currentChat.id) {
+    const chatId = crypto.randomUUID();
+    const pageUrl = state.pageContent?.url || window.location.href;
+    const pageTitle = state.pageContent?.title || document.title;
+    await addChat({
+      id: chatId,
+      title: pageTitle,
+      page_url: pageUrl,
+    });
+    state.currentChat.id = chatId;
+    state.currentChat.history = [];
+  }
+
   addMessageToChat(query, "user");
+
+  // Add user message to IndexedDB
+  await addMessage({
+    chat_id: state.currentChat.id,
+    role: "user",
+    content: query,
+  });
 
   const typingIndicator = addTypingIndicator();
 
@@ -47,7 +69,7 @@ export async function processUserQuery(query) {
     const messages = await constructPromptWithPageContent(
       query,
       state.pageContent,
-      state.history,
+      state.currentChat.history,
       state.currentConfig
     );
 
@@ -58,11 +80,23 @@ export async function processUserQuery(query) {
     if (response.success) {
       addMessageToChat(response.message, "assistant");
 
-      state.history.push({ role: "user", content: query });
-      state.history.push({ role: "assistant", content: response.message });
+      // Add AI response to IndexedDB
+      await addMessage({
+        chat_id: state.currentChat.id,
+        role: "assistant",
+        content: response.message,
+      });
 
-      if (state.history.length > 6) {
-        state.history = state.history.slice(state.history.length - 6);
+      state.currentChat.history.push({ role: "user", content: query });
+      state.currentChat.history.push({
+        role: "assistant",
+        content: response.message,
+      });
+
+      if (state.currentChat.history.length > 6) {
+        state.currentChat.history = state.currentChat.history.slice(
+          state.currentChat.history.length - 6
+        );
       }
 
       // Increase anon query count if user is not authenticated

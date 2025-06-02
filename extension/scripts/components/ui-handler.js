@@ -203,6 +203,13 @@ export function addMessageToChat(message, role) {
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 }
 
+// Clear all chat messages from the chat container
+export function clearMessagesFromChat() {
+  if (elements.chatContainer) {
+    elements.chatContainer.innerHTML = "";
+  }
+}
+
 // format markdown-like text
 export function formatMessage(message) {
   return message

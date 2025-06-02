@@ -1,5 +1,3 @@
-// State management module
-
 // Global state object
 export const state = {
   welcomeMode: true,
@@ -20,6 +18,12 @@ export const state = {
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
   language: "en", // Default language is English
+  currentChat: {
+    id: null,
+    title: "",
+    pageUrl: "",
+    history: [],
+  },
 };
 
 // Load sidebar width from storage
@@ -231,4 +235,17 @@ export async function saveLanguage(language) {
       resolve(language);
     });
   });
+}
+
+export async function refreshCurrentChat() {
+  state.currentChat = {
+    id: null,
+    title: "",
+    pageUrl: "",
+    history: [],
+  };
+
+  const cleared = !state.currentChat.id;
+
+  return cleared;
 }
