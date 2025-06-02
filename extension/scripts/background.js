@@ -569,11 +569,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 });
 
-// Handle image processing request
+// Handle image processing requests
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "process_images") {
     resetProcessedImages();
-    handleCaptionImages(message.images)
+    handleCaptionImages(message.images, message.content)
       .then((captions) => {
         chrome.tabs.sendMessage(sender.tab.id, {
           action: "caption_results",
@@ -583,7 +583,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((error) => {
         console.error("Failed to handle captions", error);
       });
-
     return true;
   }
 });

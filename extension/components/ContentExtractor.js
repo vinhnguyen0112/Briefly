@@ -167,7 +167,8 @@ function extractPageContent() {
 
 const sentImages = new Set();
 let totalImagesSent = 0;
-const MAX_IMAGES_PER_PAGE = 20;
+const MAX_IMAGES_PER_PAGE = 10;
+let contentContext = null;
 
 function isSupportedImageFormat(src) {
   if (!src || src.startsWith("data:image")) return false;
@@ -188,11 +189,63 @@ function isLogoOrIcon(img, src) {
 }
 
 function extractAllImageSources() {
-  const images = document.querySelectorAll("img");
-  const newImages = [];
+  const mainSelectors = [
+    "article",
+    "main",
+    ".content",
+    ".article-feed",
+    ".article",
+    ".post",
+    ".post-content",
+    ".entry-content",
+    ".page-content",
+    ".main-content",
+    "#content",
+    "#main",
+    "#article",
+    "#post",
+  ];
 
+  const excludedContainers = [
+    "header",
+    "footer",
+    "aside",
+    ".sidebar",
+    "#sidebar",
+    ".nav",
+    "#nav",
+    ".related-posts",
+    ".widget",
+  ];
+
+  const containers = [];
+
+  for (const selector of mainSelectors) {
+    const foundList = document.querySelectorAll(selector);
+    for (const found of foundList) {
+      if (isVisible(found)) {
+        containers.push(found);
+      }
+    }
+  }
+
+  if (containers.length === 0) {
+    console.log("⚠️ No visible main content containers found, using <body>");
+    containers.push(document.body);
+  }
+
+  const images = new Set();
+  for (const container of containers) {
+    const foundImages = container.querySelectorAll("img");
+    for (const img of foundImages) {
+      images.add(img);
+    }
+  }
+
+  const newImages = [];
   for (const img of images) {
     if (totalImagesSent >= MAX_IMAGES_PER_PAGE) break;
+    if (img.closest(excludedContainers.join(", "))) continue;
 
     let src =
       img.currentSrc ||
@@ -215,10 +268,13 @@ function extractAllImageSources() {
 
   if (totalImagesSent >= MAX_IMAGES_PER_PAGE) {
     console.log(
-      `⚠️ Reached image captioning limit for this page: ${MAX_IMAGES_PER_PAGE} images`
+      `⚠️ Reached image captioning limit: ${MAX_IMAGES_PER_PAGE} images`
     );
   }
 
+  console.log(
+    `📸 Final: Collected ${newImages.length} image(s) from main content`
+  );
   return newImages;
 }
 
@@ -233,6 +289,7 @@ async function autoSendImagesLoop(interval = 3000) {
       chrome.runtime.sendMessage({
         action: "process_images",
         images: newImages,
+        content: contentContext,
       });
       emptyCount = 0;
     } else {
@@ -257,6 +314,7 @@ function startMutationObserver() {
       chrome.runtime.sendMessage({
         action: "process_images",
         images: newImages,
+        content: contentContext,
       });
     } else {
       console.log("👀 [Observer] No new images detected in mutation");
@@ -288,7 +346,13 @@ function waitForDomReady(callback) {
 waitForDomReady(() => {
   sentImages.clear();
   totalImagesSent = 0;
-  console.log("✅ [Init] DOM ready, starting image monitoring loop");
+  console.log("✅ [Init] CaptionZing ready");
+  const extracted = extractPageContent();
+  contentContext = extracted.content || "(no content)";
+  console.log(
+    "🧠 [Init] Context for captioning:",
+    contentContext.slice(0, 100)
+  );
   autoSendImagesLoop(3000);
 });
 
