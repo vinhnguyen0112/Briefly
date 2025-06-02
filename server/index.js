@@ -8,6 +8,7 @@ const morgan = require("morgan");
 const authRoutes = require("./routes/authRoutes");
 const captionRoutes = require("./routes/captionRoutes");
 const anonRoutes = require("./routes/anonRoutes");
+const chatRoutes = require("./routes/chatRoutes");
 const { redisCluster } = require("./helpers/redisHelper");
 const dbHelper = require("./helpers/dbHelper");
 
@@ -40,6 +41,7 @@ dbHelper.getConnection().then(() => {
 app.use("/api/auth", authRoutes);
 app.use("/api/captionize", captionRoutes);
 app.use("/api/anon", anonRoutes);
+app.use("/api/chats", chatRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {

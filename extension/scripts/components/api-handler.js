@@ -12,8 +12,8 @@ import {
 import { elements } from "./dom-elements.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import { openSignInAlertPopup } from "./event-handler.js";
-import { addChat, addMessage } from "./idb-handler.js";
-
+import ChatHandler from "./chat-handler.js";
+import IDBHandler from "./idb-handler.js";
 // Process a user query
 export async function processUserQuery(query) {
   // If user is unauthenticated & exceeded their query limit, force sign in
@@ -28,13 +28,15 @@ export async function processUserQuery(query) {
     const chatId = crypto.randomUUID();
     const pageUrl = state.pageContent?.url || window.location.href;
     const pageTitle = state.pageContent?.title || document.title;
-    await addChat({
+    await IDBHandler.addChat({
       id: chatId,
       title: pageTitle,
       page_url: pageUrl,
     });
     state.currentChat.id = chatId;
     state.currentChat.history = [];
+
+    // TODO: Create chat in server
   }
 
   addMessageToChat(query, "user");
@@ -81,11 +83,13 @@ export async function processUserQuery(query) {
       addMessageToChat(response.message, "assistant");
 
       // Add AI response to IndexedDB
-      await addMessage({
+      await IDBHandler.addMessage({
         chat_id: state.currentChat.id,
         role: "assistant",
         content: response.message,
       });
+
+      // TODO: Add message to chat in server
 
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({

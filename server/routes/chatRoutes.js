@@ -1,6 +1,12 @@
 const express = require("express");
 const router = express.Router();
 const chatController = require("../controllers/chatController");
+const {
+  verifyOrigin,
+  validateSession,
+} = require("../middlewares/authMiddlewares");
+
+router.use(verifyOrigin, validateSession);
 
 // Chat routes
 router.route("/").post(chatController.createChat);
@@ -13,7 +19,6 @@ router
 
 router.get("/user/:user_id", chatController.getChatsByUser);
 router.get("/anon/:anon_session_id", chatController.getChatsByAnonSession);
-router.post("/promote", chatController.promoteAnonChats);
 
 // Nested message routes under /:chat_id/messages
 router

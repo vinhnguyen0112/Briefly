@@ -74,17 +74,6 @@ const deleteChat = async (req, res, next) => {
   }
 };
 
-// Promote anon chats to user
-const promoteAnonChats = async (req, res, next) => {
-  try {
-    const { anon_session_id, user_id } = req.body;
-    await Chat.updateAnonChatsToUser(anon_session_id, user_id);
-    res.json({ success: true });
-  } catch (err) {
-    next(err);
-  }
-};
-
 // Add a message to a chat
 const addMessage = async (req, res, next) => {
   try {
