@@ -2,7 +2,6 @@ import {
   clearUserSession,
   getAnonSession,
   getUserSession,
-  state,
 } from "./state.js";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";

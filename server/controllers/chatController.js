@@ -2,12 +2,13 @@ const Chat = require("../models/chat");
 const Message = require("../models/message");
 const { v4: uuidv4 } = require("uuid");
 
+// TODO: Get user_id or anon_session_id from req.session instead of req.body
 // Create a new chat
 const createChat = async (req, res, next) => {
   try {
-    const { user_id, anon_session_id, title } = req.body;
+    const { user_id, anon_session_id, page_id, title } = req.body;
     const id = uuidv4();
-    await Chat.create({ id, user_id, anon_session_id, title });
+    await Chat.create({ id, user_id, anon_session_id, page_id, title });
     res.json({ success: true, data: { id } });
   } catch (err) {
     next(err);
@@ -30,6 +31,7 @@ const getChatById = async (req, res, next) => {
   }
 };
 
+// TODO: Get user_id from req.session instead of req.body
 // Get all chats for a user
 const getChatsByUser = async (req, res, next) => {
   try {
@@ -78,9 +80,9 @@ const deleteChat = async (req, res, next) => {
 const addMessage = async (req, res, next) => {
   try {
     const { chat_id } = req.params;
-    const { query_text, response, model } = req.body;
+    const { role, content, model } = req.body;
     const id = uuidv4();
-    await Message.create({ id, chat_id, query_text, response, model });
+    await Message.create({ id, chat_id, role, content, model });
     res.json({ success: true, data: { id } });
   } catch (err) {
     next(err);
@@ -132,7 +134,6 @@ module.exports = {
   getChatsByAnonSession,
   updateChat,
   deleteChat,
-  promoteAnonChats,
   addMessage,
   getMessages,
   getMessageById,

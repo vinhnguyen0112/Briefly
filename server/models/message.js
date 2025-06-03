@@ -2,18 +2,15 @@ const dbHelper = require("../helpers/dbHelper");
 
 class Message {
   async create(messageData) {
-    const { id, chat_id, query_text, response, model } = messageData;
-    const query = `
-      INSERT INTO messages (id, chat_id, query_text, response, model)
-      VALUES (?, ?, ?, ?, ?)
-    `;
-    await dbHelper.executeQuery(query, [
-      id,
-      chat_id,
-      query_text,
-      response,
-      model,
-    ]);
+    // Only insert fields that are present in messageData
+    const columns = Object.keys(messageData).join(", ");
+    const placeholders = Object.keys(messageData)
+      .map(() => "?")
+      .join(", ");
+    const values = Object.values(messageData);
+
+    const query = `INSERT INTO messages (${columns}) VALUES (${placeholders})`;
+    await dbHelper.executeQuery(query, values);
   }
 
   async getById(id) {

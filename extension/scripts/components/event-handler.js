@@ -39,7 +39,7 @@ import {
   handleSaveNote,
 } from "./notes-handler.js";
 import { switchLanguage } from "./i18n.js";
-import { getAllChats, getMessagesForChat } from "./idb-handler.js";
+import IDBHandler from "./idb-handler.js";
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
@@ -513,7 +513,7 @@ async function renderChatHistory() {
   chatHistoryList.innerHTML = "";
 
   try {
-    const chats = await getAllChats();
+    const chats = await IDBHandler.getAllChats();
 
     if (!chats || chats.length === 0) {
       if (chatHistoryEmpty) chatHistoryEmpty.style.display = "block";

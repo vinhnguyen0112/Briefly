@@ -28,6 +28,8 @@ export async function processUserQuery(query) {
     const chatId = crypto.randomUUID();
     const pageUrl = state.pageContent?.url || window.location.href;
     const pageTitle = state.pageContent?.title || document.title;
+
+    // Create chat in IndexedDB
     await IDBHandler.addChat({
       id: chatId,
       title: pageTitle,
@@ -37,6 +39,7 @@ export async function processUserQuery(query) {
     state.currentChat.history = [];
 
     // TODO: Create chat in server
+    await ChatHandler.createChat({});
   }
 
   addMessageToChat(query, "user");
@@ -90,6 +93,11 @@ export async function processUserQuery(query) {
       });
 
       // TODO: Add message to chat in server
+      await ChatHandler.addMessage(state.currentChat.id, {
+        role: "assistant",
+        content: response.message,
+        model: "gpt-4o-mini",
+      });
 
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({

@@ -2,12 +2,15 @@ const dbHelper = require("../helpers/dbHelper");
 
 class Chat {
   async create(chatData) {
-    const { id, user_id, anon_session_id, title } = chatData;
-    const query = `
-      INSERT INTO chats (id, user_id, anon_session_id, title)
-      VALUES (?, ?, ?, ?)
-    `;
-    await dbHelper.executeQuery(query, [id, user_id, anon_session_id, title]);
+    // Only insert fields that are present in chatData
+    const columns = Object.keys(chatData).join(", ");
+    const placeholders = Object.keys(chatData)
+      .map(() => "?")
+      .join(", ");
+    const values = Object.values(chatData);
+
+    const query = `INSERT INTO chats (${columns}) VALUES (${placeholders})`;
+    await dbHelper.executeQuery(query, values);
   }
 
   async getById(id) {

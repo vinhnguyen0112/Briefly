@@ -1,14 +1,12 @@
-import { get } from "http";
-import { update } from "../../../server/models/session";
-
 const API_BASE = "http://localhost:3000/api/chats";
 
+// TODO: Send auth_session_id or anon_session_id in header instead. Do this for all functions.
 // Create a new chat (for anon or authenticated user)
-async function createChat({ user_id, anon_session_id, title }) {
+async function createChat({ user_id, anon_session_id, page_id, title }) {
   const response = await fetch(API_BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id, anon_session_id, title }),
+    body: JSON.stringify({ user_id, anon_session_id, page_id, title }),
   });
   if (!response.ok) throw new Error("Failed to create chat");
   const data = await response.json();
@@ -60,11 +58,11 @@ async function deleteChat(id) {
 }
 
 // Add a message to a chat
-async function addMessage(chat_id, { query_text, response, model }) {
+async function addMessage(chat_id, { role, content, model }) {
   const res = await fetch(`${API_BASE}/${chat_id}/messages`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ query_text, response, model }),
+    body: JSON.stringify({ role, content, model }),
   });
   if (!res.ok) throw new Error("Failed to add message");
   const data = await res.json();
