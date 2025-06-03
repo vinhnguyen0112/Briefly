@@ -1,14 +1,6 @@
-const crypto = require("crypto");
 const { redisHelper } = require("../helpers/redisHelper");
 const AnonSession = require("../models/anonSession");
-
-// Generate session ID by hashing fingerprint + IP address
-function generateSessionId(fingerprint, ip) {
-  return crypto
-    .createHash("sha256")
-    .update(`${fingerprint}:${ip}`)
-    .digest("hex");
-}
+const { generateHash } = require("../helpers/commonHelper");
 
 // Get client IP from request
 function getClientIP(req) {
@@ -54,7 +46,7 @@ const handleAnonSession = async (req, res, next) => {
     }
 
     const clientIP = getClientIP(req);
-    const sessionId = generateSessionId(visitorId, clientIP);
+    const sessionId = generateHash(visitorId, clientIP);
 
     const data = await findOrCreateAnonSession(sessionId);
     return res.json({ success: true, data });

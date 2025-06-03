@@ -1,16 +1,31 @@
+import { sendRequestWithSession } from "./auth-handler";
+
 const API_BASE = "http://localhost:3000/api/chats";
 
 // TODO: Send auth_session_id or anon_session_id in header instead. Do this for all functions.
 // Create a new chat (for anon or authenticated user)
-async function createChat({ user_id, anon_session_id, page_id, title }) {
-  const response = await fetch(API_BASE, {
+async function createChat({ page_url, title }) {
+  // const sessionId = await getCurrentSessionId();
+  // if (!sessionId) throw new Error("No active session found");
+
+  // const response = await fetch(API_BASE, {
+  //   method: "POST",
+  //   headers: {
+  //     "Content-Type": "application/json",
+  //     Authorization: `Bearer ${sessionId}`,
+  //   },
+  //   body: JSON.stringify({ page_url, title }),
+  // });
+  // if (!response.ok) throw new Error("Failed to create chat");
+  // const data = await response.json();
+  // return data.data;
+
+  const data = await sendRequestWithSession(API_BASE, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ user_id, anon_session_id, page_id, title }),
+    body: { page_url, title },
   });
-  if (!response.ok) throw new Error("Failed to create chat");
-  const data = await response.json();
-  return data.data; // { id }
+
+  return data.data;
 }
 
 // Get a chat by ID

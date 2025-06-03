@@ -1,13 +1,14 @@
+const { default: cleanDeep } = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 
 class Message {
-  async create(messageData) {
-    // Only insert fields that are present in messageData
-    const columns = Object.keys(messageData).join(", ");
-    const placeholders = Object.keys(messageData)
+  async create(data) {
+    data = cleanDeep(data);
+    const columns = Object.keys(data).join(", ");
+    const placeholders = Object.keys(data)
       .map(() => "?")
       .join(", ");
-    const values = Object.values(messageData);
+    const values = Object.values(data);
 
     const query = `INSERT INTO messages (${columns}) VALUES (${placeholders})`;
     await dbHelper.executeQuery(query, values);

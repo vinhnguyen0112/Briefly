@@ -1,13 +1,14 @@
+const { default: cleanDeep } = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
-
 class Chat {
-  async create(chatData) {
-    // Only insert fields that are present in chatData
-    const columns = Object.keys(chatData).join(", ");
-    const placeholders = Object.keys(chatData)
+  // TODO: Test this with extension
+  async create(data) {
+    data = cleanDeep(data);
+    const columns = Object.keys(data).join(", ");
+    const placeholders = Object.keys(data)
       .map(() => "?")
       .join(", ");
-    const values = Object.values(chatData);
+    const values = Object.values(data);
 
     const query = `INSERT INTO chats (${columns}) VALUES (${placeholders})`;
     await dbHelper.executeQuery(query, values);

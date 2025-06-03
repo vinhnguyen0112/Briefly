@@ -117,6 +117,22 @@ export async function clearUserSession() {
   });
 }
 
+// Get the current session ID (either auth or anon)
+export async function getCurrentSessionId() {
+  try {
+    const userSession = await getUserSession(); // must be a lazy getter
+    if (userSession) return `auth:${userSession.id}`;
+
+    const anonSession = await getAnonSession();
+    if (anonSession) return `anon:${anonSession.id}`;
+
+    return null;
+  } catch (err) {
+    console.error("Error retrieving session:", err);
+    return null;
+  }
+}
+
 // API key management
 export async function getApiKey() {
   return new Promise((resolve) => {

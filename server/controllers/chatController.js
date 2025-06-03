@@ -1,14 +1,34 @@
+const { generateHash } = require("../helpers/commonHelper");
 const Chat = require("../models/chat");
 const Message = require("../models/message");
 const { v4: uuidv4 } = require("uuid");
 
-// TODO: Get user_id or anon_session_id from req.session instead of req.body
 // Create a new chat
 const createChat = async (req, res, next) => {
   try {
-    const { user_id, anon_session_id, page_id, title } = req.body;
-    const id = uuidv4();
-    await Chat.create({ id, user_id, anon_session_id, page_id, title });
+    let user_id = null;
+    let anon_session_id = null;
+
+    if (req.sessionType === "auth") {
+      user_id = req.session.user_id;
+    } else if (req.sessionType === "anon") {
+      anon_session_id = req.session.id;
+    }
+
+    const { id, page_url, title } = req.body;
+
+    // TODO: Pre-process page_url, e.g., remove query params, normalize.
+    // Consider making a middleware or helper func
+    const page_id = generateHash(page_url);
+
+    await Chat.create({
+      id,
+      user_id,
+      anon_session_id,
+      page_id,
+      title,
+    });
+
     res.json({ success: true, data: { id } });
   } catch (err) {
     next(err);

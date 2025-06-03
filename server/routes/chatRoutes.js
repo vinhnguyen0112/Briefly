@@ -17,6 +17,7 @@ router
   .put(chatController.updateChat)
   .delete(chatController.deleteChat);
 
+// TODO: Rework get functions to use session data instead of params. Centralize get function under same route
 router.get("/user/:user_id", chatController.getChatsByUser);
 router.get("/anon/:anon_session_id", chatController.getChatsByAnonSession);
 

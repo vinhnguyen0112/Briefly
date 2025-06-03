@@ -1,6 +1,7 @@
 import {
   clearUserSession,
   getAnonSession,
+  getCurrentSessionId,
   getUserSession,
 } from "./state.js";
 
@@ -275,3 +276,35 @@ const sendIdTokenToServer = async (idToken) => {
 
   return data.data;
 };
+
+export async function sendRequestWithSession(url, options = {}) {
+  const sessionId = await getCurrentSessionId();
+  if (!sessionId) throw new Error("No active session found");
+
+  // Set authorization header
+  const headers = new Headers(options.headers || {});
+  headers.set("Authorization", `Bearer ${sessionId}`);
+
+  // Default to JSON content type
+  if (
+    options.body &&
+    typeof options.body === "object" &&
+    !(options.body instanceof FormData)
+  ) {
+    headers.set("Content-Type", "application/json");
+    options.body = JSON.stringify(options.body);
+  }
+
+  const response = await fetch(url, { ...options, headers });
+
+  // Handle error
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Request failed with status ${response.status}: ${errorText}`
+    );
+  }
+
+  const data = await response.json();
+  return data;
+}

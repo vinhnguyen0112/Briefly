@@ -12,8 +12,9 @@ import {
 import { elements } from "./dom-elements.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import { openSignInAlertPopup } from "./event-handler.js";
-import ChatHandler from "./chat-handler.js";
 import IDBHandler from "./idb-handler.js";
+import ChatHandler from "./chat-handler.js";
+
 // Process a user query
 export async function processUserQuery(query) {
   // If user is unauthenticated & exceeded their query limit, force sign in
@@ -39,17 +40,23 @@ export async function processUserQuery(query) {
     state.currentChat.history = [];
 
     // TODO: Create chat in server
-    await ChatHandler.createChat({});
+    // await ChatHandler.createChat({
+    //   id: chatId,
+    //   page_url: pageUrl,
+    //   title: pageTitle,
+    // });
   }
 
   addMessageToChat(query, "user");
 
   // Add user message to IndexedDB
-  await addMessage({
+  await IDBHandler.addMessage({
     chat_id: state.currentChat.id,
     role: "user",
     content: query,
   });
+
+  // TODO: Add user message in server
 
   const typingIndicator = addTypingIndicator();
 
@@ -93,11 +100,11 @@ export async function processUserQuery(query) {
       });
 
       // TODO: Add message to chat in server
-      await ChatHandler.addMessage(state.currentChat.id, {
-        role: "assistant",
-        content: response.message,
-        model: "gpt-4o-mini",
-      });
+      // await ChatHandler.addMessage(state.currentChat.id, {
+      //   role: "assistant",
+      //   content: response.message,
+      //   model: "gpt-4o-mini",
+      // });
 
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({

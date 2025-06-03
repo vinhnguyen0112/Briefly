@@ -1,12 +1,14 @@
+const { default: cleanDeep } = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 
 class Session {
-  async create(sessionData) {
-    const columns = Object.keys(sessionData).join(", ");
-    const placeholders = Object.keys(sessionData)
+  async create(data) {
+    data = cleanDeep(data);
+    const columns = Object.keys(data).join(", ");
+    const placeholders = Object.keys(data)
       .map(() => "?")
       .join(", ");
-    const values = Object.values(sessionData);
+    const values = Object.values(data);
 
     const query = `INSERT INTO sessions (${columns}) VALUES (${placeholders})`;
     await dbHelper.executeQuery(query, values);
