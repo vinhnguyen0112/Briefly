@@ -1,4 +1,4 @@
-const { default: cleanDeep } = require("clean-deep");
+const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 
 class AnonSession {

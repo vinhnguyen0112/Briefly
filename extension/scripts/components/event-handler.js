@@ -39,7 +39,7 @@ import {
   handleSaveNote,
 } from "./notes-handler.js";
 import { switchLanguage } from "./i18n.js";
-import IDBHandler from "./idb-handler.js";
+import idbHandler from "./idb-handler.js";
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
@@ -513,7 +513,7 @@ async function renderChatHistory() {
   chatHistoryList.innerHTML = "";
 
   try {
-    const chats = await IDBHandler.getAllChats();
+    const chats = await idbHandler.getAllChats();
 
     if (!chats || chats.length === 0) {
       if (chatHistoryEmpty) chatHistoryEmpty.style.display = "block";
@@ -544,7 +544,7 @@ async function renderChatHistory() {
         clearMessagesFromChat();
         closeChatHistoryScreen();
         switchToChat();
-        const messages = await getMessagesForChat(chat.id);
+        const messages = await idbHandler.getMessagesForChat(chat.id);
         messages.forEach((message) => {
           addMessageToChat(message.content, message.role);
           history.push({ role: message.role, content: message.content });

@@ -12,8 +12,8 @@ import {
 import { elements } from "./dom-elements.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import { openSignInAlertPopup } from "./event-handler.js";
-import IDBHandler from "./idb-handler.js";
-import ChatHandler from "./chat-handler.js";
+import idbHandler from "./idb-handler.js";
+import chatHandler from "./chat-handler.js";
 
 // Process a user query
 export async function processUserQuery(query) {
@@ -31,7 +31,7 @@ export async function processUserQuery(query) {
     const pageTitle = state.pageContent?.title || document.title;
 
     // Create chat in IndexedDB
-    await IDBHandler.addChat({
+    await idbHandler.addChat({
       id: chatId,
       title: pageTitle,
       page_url: pageUrl,
@@ -40,23 +40,27 @@ export async function processUserQuery(query) {
     state.currentChat.history = [];
 
     // TODO: Create chat in server
-    // await ChatHandler.createChat({
-    //   id: chatId,
-    //   page_url: pageUrl,
-    //   title: pageTitle,
-    // });
+    await chatHandler.createChat({
+      id: chatId,
+      page_url: pageUrl,
+      title: pageTitle,
+    });
   }
 
   addMessageToChat(query, "user");
 
   // Add user message to IndexedDB
-  await IDBHandler.addMessage({
+  await idbHandler.addMessage({
     chat_id: state.currentChat.id,
     role: "user",
     content: query,
   });
 
   // TODO: Add user message in server
+  await chatHandler.addMessage(state.currentChat.id, {
+    role: "user",
+    content: query,
+  });
 
   const typingIndicator = addTypingIndicator();
 
@@ -93,18 +97,18 @@ export async function processUserQuery(query) {
       addMessageToChat(response.message, "assistant");
 
       // Add AI response to IndexedDB
-      await IDBHandler.addMessage({
+      await idbHandler.addMessage({
         chat_id: state.currentChat.id,
         role: "assistant",
         content: response.message,
       });
 
       // TODO: Add message to chat in server
-      // await ChatHandler.addMessage(state.currentChat.id, {
-      //   role: "assistant",
-      //   content: response.message,
-      //   model: "gpt-4o-mini",
-      // });
+      await chatHandler.addMessage(state.currentChat.id, {
+        role: "assistant",
+        content: response.message,
+        model: "gpt-4o-mini",
+      });
 
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({

@@ -75,7 +75,7 @@ export function getAnonSession() {
 export function saveAnonSession(data) {
   return new Promise((resolve) => {
     chrome.storage.local.set({ anon_session: { ...data, id: data.id } }, () =>
-      resolve(prefixedData.id)
+      resolve(data.id)
     );
   });
 }
@@ -115,22 +115,6 @@ export async function clearUserSession() {
       resolve(true);
     });
   });
-}
-
-// Get the current session ID (either auth or anon)
-export async function getCurrentSessionId() {
-  try {
-    const userSession = await getUserSession(); // must be a lazy getter
-    if (userSession) return `auth:${userSession.id}`;
-
-    const anonSession = await getAnonSession();
-    if (anonSession) return `anon:${anonSession.id}`;
-
-    return null;
-  } catch (err) {
-    console.error("Error retrieving session:", err);
-    return null;
-  }
 }
 
 // API key management

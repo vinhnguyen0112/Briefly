@@ -223,7 +223,7 @@ async function getAllChats() {
   });
 }
 
-const IDBHandler = {
+const idbHandler = {
   openIndexedDB,
   addChat,
   addMessage,
@@ -232,4 +232,4 @@ const IDBHandler = {
   getAllChats,
 };
 
-export default IDBHandler;
+export default idbHandler;

@@ -1,115 +1,124 @@
-import { sendRequestWithSession } from "./auth-handler";
+import { getUserSession, getAnonSession } from "./state.js";
 
 const API_BASE = "http://localhost:3000/api/chats";
 
-// TODO: Send auth_session_id or anon_session_id in header instead. Do this for all functions.
+// Helper: send request with session (auth or anon)
+async function sendRequestWithSession(url, options = {}) {
+  // Try to get authenticated session first
+  const userSession = await getUserSession();
+  let sessionId = userSession ? `auth:${userSession.id}` : null;
+
+  // If no auth session, try anon session
+  if (!sessionId) {
+    const anonSession = await getAnonSession();
+    if (anonSession) {
+      sessionId = `anon:${anonSession.id}`;
+    }
+  }
+
+  if (!sessionId) throw new Error("No active session found");
+
+  // Set authorization header
+  const headers = new Headers(options.headers || {});
+  headers.set("Authorization", `Bearer ${sessionId}`);
+
+  // Default to JSON content type
+  if (
+    options.body &&
+    typeof options.body === "object" &&
+    !(options.body instanceof FormData)
+  ) {
+    headers.set("Content-Type", "application/json");
+    options.body = JSON.stringify(options.body);
+  }
+
+  const response = await fetch(url, { ...options, headers });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(
+      `Request failed with status ${response.status}: ${errorText}`
+    );
+  }
+
+  return response.json();
+}
+
 // Create a new chat (for anon or authenticated user)
-async function createChat({ page_url, title }) {
-  // const sessionId = await getCurrentSessionId();
-  // if (!sessionId) throw new Error("No active session found");
-
-  // const response = await fetch(API_BASE, {
-  //   method: "POST",
-  //   headers: {
-  //     "Content-Type": "application/json",
-  //     Authorization: `Bearer ${sessionId}`,
-  //   },
-  //   body: JSON.stringify({ page_url, title }),
-  // });
-  // if (!response.ok) throw new Error("Failed to create chat");
-  // const data = await response.json();
-  // return data.data;
-
-  const data = await sendRequestWithSession(API_BASE, {
+async function createChat({ id, page_url, title }) {
+  return sendRequestWithSession(API_BASE, {
     method: "POST",
-    body: { page_url, title },
-  });
-
-  return data.data;
+    body: { id, page_url, title },
+  }).then((data) => data.data);
 }
 
 // Get a chat by ID
 async function getChatById(id) {
-  const response = await fetch(`${API_BASE}/${id}`);
-  if (!response.ok) throw new Error("Failed to get chat");
-  const data = await response.json();
-  return data.data;
+  return sendRequestWithSession(`${API_BASE}/${id}`).then((data) => data.data);
 }
 
 // Get all chats for a user
 async function getChatsByUser(user_id) {
-  const response = await fetch(`${API_BASE}/user/${user_id}`);
-  if (!response.ok) throw new Error("Failed to get user chats");
-  const data = await response.json();
-  return data.data;
+  return sendRequestWithSession(`${API_BASE}/user/${user_id}`).then(
+    (data) => data.data
+  );
 }
 
 // Get all chats for an anonymous session
 async function getChatsByAnonSession(anon_session_id) {
-  const response = await fetch(`${API_BASE}/anon/${anon_session_id}`);
-  if (!response.ok) throw new Error("Failed to get anon chats");
-  const data = await response.json();
-  return data.data;
+  return sendRequestWithSession(`${API_BASE}/anon/${anon_session_id}`).then(
+    (data) => data.data
+  );
 }
 
 // Update a chat
 async function updateChat(id, updates) {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  return sendRequestWithSession(`${API_BASE}/${id}`, {
     method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(updates),
+    body: updates,
   });
-  if (!response.ok) throw new Error("Failed to update chat");
-  return await response.json();
 }
 
 // Delete a chat
 async function deleteChat(id) {
-  const response = await fetch(`${API_BASE}/${id}`, {
+  return sendRequestWithSession(`${API_BASE}/${id}`, {
     method: "DELETE",
   });
-  if (!response.ok) throw new Error("Failed to delete chat");
-  return await response.json();
 }
 
 // Add a message to a chat
 async function addMessage(chat_id, { role, content, model }) {
-  const res = await fetch(`${API_BASE}/${chat_id}/messages`, {
+  return sendRequestWithSession(`${API_BASE}/${chat_id}/messages`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ role, content, model }),
-  });
-  if (!res.ok) throw new Error("Failed to add message");
-  const data = await res.json();
-  return data.data; // { id }
+    body: { role, content, model },
+  }).then((data) => data.data);
 }
 
 // Get all messages for a chat
 async function getMessages(chat_id) {
-  const res = await fetch(`${API_BASE}/${chat_id}/messages`);
-  if (!res.ok) throw new Error("Failed to get messages");
-  const data = await res.json();
-  return data.data;
+  return sendRequestWithSession(`${API_BASE}/${chat_id}/messages`).then(
+    (data) => data.data
+  );
 }
 
 // Get a single message by ID
 async function getMessageById(chat_id, message_id) {
-  const res = await fetch(`${API_BASE}/${chat_id}/messages/${message_id}`);
-  if (!res.ok) throw new Error("Failed to get message");
-  const data = await res.json();
-  return data.data;
+  return sendRequestWithSession(
+    `${API_BASE}/${chat_id}/messages/${message_id}`
+  ).then((data) => data.data);
 }
 
 // Delete a message
 async function deleteMessage(chat_id, message_id) {
-  const res = await fetch(`${API_BASE}/${chat_id}/messages/${message_id}`, {
-    method: "DELETE",
-  });
-  if (!res.ok) throw new Error("Failed to delete message");
-  return await res.json();
+  return sendRequestWithSession(
+    `${API_BASE}/${chat_id}/messages/${message_id}`,
+    {
+      method: "DELETE",
+    }
+  );
 }
 
-const ChatHandler = {
+const chatHandler = {
   createChat,
   getChatById,
   getChatsByUser,
@@ -122,4 +131,4 @@ const ChatHandler = {
   deleteMessage,
 };
 
-export default ChatHandler;
+export default chatHandler;
