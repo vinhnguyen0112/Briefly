@@ -1,7 +1,6 @@
 const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 class Chat {
-  // TODO: Test this with extension
   async create(data) {
     data = cleanDeep(data);
     const columns = Object.keys(data).join(", ");
@@ -20,14 +19,28 @@ class Chat {
     return rows[0];
   }
 
-  async getByUserId(user_id) {
-    const query = "SELECT * FROM chats WHERE user_id = ?";
-    return dbHelper.executeQuery(query, [user_id]);
-  }
+  async getBy({ user_id, anon_session_id, offset = 0, limit = 20 }) {
+    let query = "SELECT * FROM chats";
+    const conditions = [];
+    const values = [];
 
-  async getByAnonSessionId(anon_session_id) {
-    const query = "SELECT * FROM chats WHERE anon_session_id = ?";
-    return dbHelper.executeQuery(query, [anon_session_id]);
+    if (user_id) {
+      conditions.push("user_id = ?");
+      values.push(user_id);
+    }
+    if (anon_session_id) {
+      conditions.push("anon_session_id = ?");
+      values.push(anon_session_id);
+    }
+
+    if (conditions.length > 0) {
+      query += " WHERE " + conditions.join(" AND ");
+    }
+
+    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
+    values.push(limit, offset);
+
+    return dbHelper.executeQuery(query, values);
   }
 
   async update(id, updates) {
@@ -57,6 +70,23 @@ class Chat {
   async delete(id) {
     const query = "DELETE FROM chats WHERE id = ?";
     await dbHelper.executeQuery(query, [id]);
+  }
+
+  async deleteBy({ user_id, anon_session_id }) {
+    let query = "DELETE FROM chats ";
+    let value;
+
+    if (user_id) {
+      query += `WHERE user_id = ?`;
+      value = user_id;
+    } else if (anon_session_id) {
+      query += `WHERE anon_session_id = ?`;
+      value = anon_session_id;
+    } else {
+      throw new Error("Missing both user_id and anon_session_id");
+    }
+
+    await dbHelper.executeQuery(query, [value]);
   }
 }
 

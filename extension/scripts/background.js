@@ -7,6 +7,7 @@ import {
   handleCaptionImages,
   resetProcessedImages,
 } from "./components/caption-handler.js";
+import chatHandler from "./components/chat-handler.js";
 import { saveUserSession } from "./components/state.js";
 
 //  first install
@@ -627,6 +628,16 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error(err);
         sendResponse({ success: false, message: err.message });
       });
+
+    return true;
+  }
+  if (message.action === "fetch_chat_history") {
+    chatHandler.getChatsForCurrentUser({}).then((chats) => {
+      sendResponse({
+        success: true,
+        chats,
+      });
+    });
 
     return true;
   }

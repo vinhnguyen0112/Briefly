@@ -24,43 +24,23 @@ export async function processUserQuery(query) {
     return;
   }
 
-  // Create new chat if doesn't exist
-  if (!state.currentChat.id) {
-    const chatId = crypto.randomUUID();
+  // Prepare chat info but don't persist yet
+  let chatId = state.currentChat.id;
+  let isNewChat = false;
+  if (!chatId) {
+    chatId = crypto.randomUUID();
     const pageUrl = state.pageContent?.url || window.location.href;
     const pageTitle = state.pageContent?.title || document.title;
 
-    // Create chat in IndexedDB
-    await idbHandler.addChat({
-      id: chatId,
-      title: pageTitle,
-      page_url: pageUrl,
-    });
+    // Update state with new chat info (not yet persisted)
     state.currentChat.id = chatId;
+    state.currentChat.title = pageTitle;
+    state.currentChat.pageUrl = pageUrl;
     state.currentChat.history = [];
-
-    // TODO: Create chat in server
-    await chatHandler.createChat({
-      id: chatId,
-      page_url: pageUrl,
-      title: pageTitle,
-    });
+    isNewChat = true;
   }
 
   addMessageToChat(query, "user");
-
-  // Add user message to IndexedDB
-  await idbHandler.addMessage({
-    chat_id: state.currentChat.id,
-    role: "user",
-    content: query,
-  });
-
-  // TODO: Add user message in server
-  await chatHandler.addMessage(state.currentChat.id, {
-    role: "user",
-    content: query,
-  });
 
   const typingIndicator = addTypingIndicator();
 
@@ -94,22 +74,44 @@ export async function processUserQuery(query) {
     removeTypingIndicator(typingIndicator);
 
     if (response.success) {
+      // If new chat, create in IndexedDB and server
+      if (isNewChat) {
+        await idbHandler.addChat({
+          id: chatId,
+          title: state.currentChat.title,
+          page_url: state.currentChat.pageUrl,
+        });
+        await chatHandler.createChat({
+          id: chatId,
+          page_url: state.currentChat.pageUrl,
+          title: state.currentChat.title,
+        });
+      }
+
+      // Add user message to IndexedDB and server
+      await idbHandler.addMessage(chatId, {
+        role: "user",
+        content: query,
+      });
+      await chatHandler.addMessage(chatId, {
+        role: "user",
+        content: query,
+      });
+
       addMessageToChat(response.message, "assistant");
 
-      // Add AI response to IndexedDB
-      await idbHandler.addMessage({
-        chat_id: state.currentChat.id,
+      // Add AI response to IndexedDB and server
+      await idbHandler.addMessage(chatId, {
         role: "assistant",
         content: response.message,
       });
-
-      // TODO: Add message to chat in server
-      await chatHandler.addMessage(state.currentChat.id, {
+      await chatHandler.addMessage(chatId, {
         role: "assistant",
         content: response.message,
         model: "gpt-4o-mini",
       });
 
+      // Update state history
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({
         role: "assistant",

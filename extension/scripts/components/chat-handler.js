@@ -4,25 +4,21 @@ const API_BASE = "http://localhost:3000/api/chats";
 
 // Helper: send request with session (auth or anon)
 async function sendRequestWithSession(url, options = {}) {
-  // Try to get authenticated session first
+  // Get user or anon session
   const userSession = await getUserSession();
-  let sessionId = userSession ? `auth:${userSession.id}` : null;
-
-  // If no auth session, try anon session
-  if (!sessionId) {
-    const anonSession = await getAnonSession();
-    if (anonSession) {
-      sessionId = `anon:${anonSession.id}`;
-    }
-  }
+  const anonSession = !userSession && (await getAnonSession());
+  const sessionId = userSession?.id || anonSession?.id;
 
   if (!sessionId) throw new Error("No active session found");
 
-  // Set authorization header
-  const headers = new Headers(options.headers || {});
-  headers.set("Authorization", `Bearer ${sessionId}`);
+  // Prepare headers
+  const headers = new Headers(options.headers);
+  headers.set(
+    "Authorization",
+    `Bearer ${userSession ? `auth:${sessionId}` : `anon:${sessionId}`}`
+  );
 
-  // Default to JSON content type
+  // JSON body handling
   if (
     options.body &&
     typeof options.body === "object" &&
@@ -35,10 +31,7 @@ async function sendRequestWithSession(url, options = {}) {
   const response = await fetch(url, { ...options, headers });
 
   if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(
-      `Request failed with status ${response.status}: ${errorText}`
-    );
+    throw new Error(`Request failed (${response.status})`);
   }
 
   return response.json();
@@ -58,17 +51,10 @@ async function getChatById(id) {
 }
 
 // Get all chats for a user
-async function getChatsByUser(user_id) {
-  return sendRequestWithSession(`${API_BASE}/user/${user_id}`).then(
-    (data) => data.data
-  );
-}
-
-// Get all chats for an anonymous session
-async function getChatsByAnonSession(anon_session_id) {
-  return sendRequestWithSession(`${API_BASE}/anon/${anon_session_id}`).then(
-    (data) => data.data
-  );
+async function getChatsForCurrentUser({ offset = 0, limit = 20 }) {
+  return sendRequestWithSession(
+    `${API_BASE}?offset=${offset}&limit=${limit}`
+  ).then((data) => data.data);
 }
 
 // Update a chat
@@ -87,47 +73,35 @@ async function deleteChat(id) {
 }
 
 // Add a message to a chat
-async function addMessage(chat_id, { role, content, model }) {
-  return sendRequestWithSession(`${API_BASE}/${chat_id}/messages`, {
+async function addMessage(chatId, { role, content, model }) {
+  return sendRequestWithSession(`${API_BASE}/${chatId}/messages`, {
     method: "POST",
     body: { role, content, model },
   }).then((data) => data.data);
 }
 
 // Get all messages for a chat
-async function getMessages(chat_id) {
-  return sendRequestWithSession(`${API_BASE}/${chat_id}/messages`).then(
+async function getMessages(chatId) {
+  return sendRequestWithSession(`${API_BASE}/${chatId}/messages`).then(
     (data) => data.data
   );
 }
 
-// Get a single message by ID
-async function getMessageById(chat_id, message_id) {
-  return sendRequestWithSession(
-    `${API_BASE}/${chat_id}/messages/${message_id}`
-  ).then((data) => data.data);
-}
-
 // Delete a message
-async function deleteMessage(chat_id, message_id) {
-  return sendRequestWithSession(
-    `${API_BASE}/${chat_id}/messages/${message_id}`,
-    {
-      method: "DELETE",
-    }
-  );
+async function deleteMessage(chatId, messageId) {
+  return sendRequestWithSession(`${API_BASE}/${chatId}/messages/${messageId}`, {
+    method: "DELETE",
+  });
 }
 
 const chatHandler = {
   createChat,
   getChatById,
-  getChatsByUser,
-  getChatsByAnonSession,
+  getChatsForCurrentUser,
   updateChat,
   deleteChat,
   addMessage,
   getMessages,
-  getMessageById,
   deleteMessage,
 };
 

@@ -50,6 +50,7 @@ async function executeQuery(query, params = []) {
   try {
     connection = await getConnection();
 
+    console.log("Query params: ", params);
     console.log("Executing query: ");
     console.log(query);
 

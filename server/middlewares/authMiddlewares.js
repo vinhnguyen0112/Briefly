@@ -2,21 +2,6 @@ const authHelper = require("../helpers/authHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const Session = require("../models/session");
 const AnonSession = require("../models/anonSession");
-// Verify the origin of the request
-const verifyOrigin = (req, res, next) => {
-  const origin = req.get("Origin");
-
-  // Request from our Chrome extension
-  if (origin && origin === `chrome-extension://${process.env.EXTENSION_ID}`) {
-    console.log("Request origin is valid, proceeding.");
-    return next();
-  }
-
-  return res.status(403).json({
-    success: false,
-    message: "Unauthorized request from invalid origin.",
-  });
-};
 
 // Validate the session and determine its type
 const validateSession = async (req, res, next) => {
@@ -97,4 +82,4 @@ const validateSession = async (req, res, next) => {
   }
 };
 
-module.exports = { verifyOrigin, validateSession };
+module.exports = { validateSession };

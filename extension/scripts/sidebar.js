@@ -19,6 +19,7 @@ import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
 import { isUserAuthenticated } from "./components/auth-handler.js";
 import { setupAnonSession } from "./components/anon-handler.js";
+import idbHandler from "./components/idb-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -32,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Force re-render of account popup UI on load
       // Because StorageArea observer doesn't auto run on reloads
       renderToggleAccountPopupUI(isAuthenticated);
+      fetchUserChatHistory();
     })
     .catch((err) => {
       console.error("CocBot: Error validating user session", err);
@@ -123,3 +125,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
 // expose certain functions to the global scope that might be needed by inline event handlers
 window.processUserQuery = processUserQuery;
+
+// TODO: Only call this when user auth state changes
+const fetchUserChatHistory = () => {
+  chrome.runtime.sendMessage(
+    {
+      action: "fetch_chat_history",
+    },
+    (response) => {
+      // Either persist chats into indexedDB or save them in state and only persist opened chats
+      idbHandler.clearChats().then(idbHandler.bulkAddChats(response.chats));
+    }
+  );
+};

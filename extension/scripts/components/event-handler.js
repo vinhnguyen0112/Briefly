@@ -40,6 +40,7 @@ import {
 } from "./notes-handler.js";
 import { switchLanguage } from "./i18n.js";
 import idbHandler from "./idb-handler.js";
+import chatHandler from "./chat-handler.js";
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
@@ -540,16 +541,31 @@ async function renderChatHistory() {
       // Open up chat history when clicked
       item.addEventListener("click", async () => {
         const history = [];
-
         clearMessagesFromChat();
         closeChatHistoryScreen();
         switchToChat();
-        const messages = await idbHandler.getMessagesForChat(chat.id);
+
+        // Check in IDB first
+        let messages = await idbHandler.getMessagesForChat(chat.id);
+
+        // If not found, fetch from server and update IDB, then use those messages
+        if (!messages || messages.length === 0) {
+          try {
+            messages = await chatHandler.getMessages(chat.id);
+            if (messages && messages.length > 0) {
+              await idbHandler.addMessagesToChat(chat.id, messages);
+            }
+          } catch (err) {
+            console.error("Failed to fetch messages from server:", err);
+            messages = [];
+          }
+        }
+
+        // Display to UI, update state
         messages.forEach((message) => {
           addMessageToChat(message.content, message.role);
           history.push({ role: message.role, content: message.content });
         });
-
         setCurrentChat({ ...chat, history });
       });
       chatHistoryList.appendChild(item);

@@ -1,5 +1,6 @@
 const { generateHash } = require("../helpers/commonHelper");
 const Chat = require("../models/chat");
+const message = require("../models/message");
 const Message = require("../models/message");
 const { v4: uuidv4 } = require("uuid");
 
@@ -51,24 +52,24 @@ const getChatById = async (req, res, next) => {
   }
 };
 
-// TODO: Get user_id from req.session instead of req.body
-// Get all chats for a user
-const getChatsByUser = async (req, res, next) => {
+const getChatsBy = async (req, res, next) => {
   try {
-    const { user_id } = req.params;
-    const chats = await Chat.getByUserId(user_id);
-    res.json({ success: true, data: chats });
-  } catch (err) {
-    next(err);
-  }
-};
+    const { sessionType, session } = req;
+    const { offset = 0, limit = 20 } = req.query;
 
-// Get all chats for an anonymous session
-const getChatsByAnonSession = async (req, res, next) => {
-  try {
-    const { anon_session_id } = req.params;
-    const chats = await Chat.getByAnonSessionId(anon_session_id);
-    res.json({ success: true, data: chats });
+    const filter = { offset, limit };
+    if (sessionType === "auth") {
+      filter.user_id = session.user_id;
+    } else if (sessionType === "anon") {
+      filter.anon_session_id = session.id;
+    } else {
+      return res
+        .status(400)
+        .json({ success: false, message: "Invalid session type" });
+    }
+
+    const chats = await Chat.getBy(filter);
+    return res.json({ success: true, data: chats });
   } catch (err) {
     next(err);
   }
@@ -94,6 +95,28 @@ const deleteChat = async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+};
+
+// Delete all user's chats
+const deleteChatsBy = async (req, res, next) => {
+  const { sessionType, session } = req;
+  const filter = {};
+
+  if (sessionType === "auth") {
+    filter.user_id = session.user_id;
+  } else if (sessionType === "anon") {
+    filter.anon_session_id = session.id;
+  } else {
+    return res
+      .status(400)
+      .json({ success: false, message: "Invalid session type" });
+  }
+
+  await Chat.deleteBy(filter);
+  return res.json({
+    success: true,
+    message: "User history deleted.",
+  });
 };
 
 // Add a message to a chat
@@ -150,8 +173,7 @@ const deleteMessage = async (req, res, next) => {
 module.exports = {
   createChat,
   getChatById,
-  getChatsByUser,
-  getChatsByAnonSession,
+  getChatsBy,
   updateChat,
   deleteChat,
   addMessage,

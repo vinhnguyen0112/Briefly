@@ -1,4 +1,5 @@
 // Global state object
+// TODO: Handle pagination state
 export const state = {
   welcomeMode: true,
   pageContent: null,

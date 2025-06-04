@@ -30,6 +30,7 @@ const handleSessionCreation = async (userId) => {
 // Authenticate with Google
 const authenticateWithGoogle = async (req, res, next) => {
   try {
+    console.log("Request origin in Google auth request: ", req.origin);
     const idToken = authHelper.extractFromAuthHeader(req);
     const { userId, name } = await authHelper.verifyGoogleToken(idToken);
 

@@ -1,8 +1,5 @@
 const express = require("express");
-const {
-  verifyOrigin,
-  validateSession,
-} = require("../middlewares/authMiddlewares");
+const { validateSession } = require("../middlewares/authMiddlewares");
 const {
   authenticateWithGoogle,
   authenticateWithFacebook,
@@ -14,7 +11,6 @@ const router = express.Router();
 // Check if session is valid on serverside (for testing purpose)
 router.post(
   "/session-validate",
-  verifyOrigin,
   validateSession,
   // If request passed validateSession, session is guaranteed to be valid
   (req, res) => {
@@ -26,9 +22,9 @@ router.post(
 );
 
 // Authentication redirects
-router.post("/google/callback", verifyOrigin, authenticateWithGoogle);
-router.post("/facebook/callback", verifyOrigin, authenticateWithFacebook);
+router.post("/google/callback", authenticateWithGoogle);
+router.post("/facebook/callback", authenticateWithFacebook);
 
 // Sign out
-router.post("/signout", verifyOrigin, validateSession, signOut);
+router.post("/signout", validateSession, signOut);
 module.exports = router;
