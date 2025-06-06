@@ -1,3 +1,5 @@
+import FingerprintJS from "../../libs/fingerprint.js";
+
 // Global state object
 // TODO: Handle pagination state
 export const state = {
@@ -24,6 +26,13 @@ export const state = {
     title: "",
     pageUrl: "",
     history: [],
+  },
+  isFetchingChatHistory: false,
+  isChatHistoryFetched: false,
+  pagination: {
+    currentPage: 0,
+    hasMore: true,
+    isFetching: false,
   },
 };
 
@@ -113,6 +122,34 @@ export async function clearUserSession() {
   return new Promise((resolve) => {
     chrome.storage.local.remove("auth_session", () => {
       console.log("CocBot: User session removed");
+      resolve(true);
+    });
+  });
+}
+
+// Visitor ID management
+export async function getVisitorId() {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["visitor_id"], (result) => {
+      console.log(`Cocbot: Gotten visitor ID: `, result.visitor_id);
+      resolve(result.visitor_id);
+    });
+  });
+}
+
+export async function setVisitorId(id) {
+  return new Promise((resolve) => {
+    chrome.storage.local.set({ visitor_id: id }, () => {
+      console.log("CocBot: Visitor ID saved", data);
+      resolve(true);
+    });
+  });
+}
+
+export async function removeVisitorId() {
+  return new Promise((resolve) => {
+    chrome.storage.local.remove("visitor_id", () => {
+      console.log("CocBot: Visitor ID removed");
       resolve(true);
     });
   });
@@ -238,17 +275,14 @@ export async function saveLanguage(language) {
   });
 }
 
-export async function resetCurrentChat() {
+export function resetCurrentChat() {
+  console.log("Resetting current chat state");
   state.currentChat = {
     id: null,
     title: "",
     pageUrl: "",
     history: [],
   };
-
-  const cleared = !state.currentChat.id;
-
-  return cleared;
 }
 
 export function setCurrentChat(chat) {
@@ -258,4 +292,80 @@ export function setCurrentChat(chat) {
     pageUrl: chat.pageUrl || "",
     history: chat.history || [],
   };
+}
+
+// Helper function to send requests with
+// session and visitor ID passed in as headers
+// By default, it will include both session and visitor ID headers
+export async function sendRequest(
+  url,
+  options = {},
+  { withSession = true, withVisitorId = true } = {}
+) {
+  const headers = new Headers(options.headers);
+
+  // Add session header if requested
+  if (withSession) {
+    const userSession = await getUserSession();
+    const anonSession = !userSession && (await getAnonSession());
+    const sessionId = userSession?.id || anonSession?.id;
+    if (!sessionId) throw new Error("No active session found");
+    headers.set(
+      "Authorization",
+      `Bearer ${userSession ? `auth:${sessionId}` : `anon:${sessionId}`}`
+    );
+  }
+
+  // Add visitor header if requested
+  if (withVisitorId) {
+    const visitorId = await getVisitorId();
+    headers.set("Visitor", visitorId);
+  }
+
+  // JSON body handling
+  if (
+    options.body &&
+    typeof options.body === "object" &&
+    !(options.body instanceof FormData)
+  ) {
+    headers.set("Content-Type", "application/json");
+    options.body = JSON.stringify(options.body);
+  }
+
+  const response = await fetch(url, { ...options, headers });
+
+  // Handle error responses
+  if (!response.ok) {
+    const data = await response.json();
+    const { code, message } = data.error;
+    if (code === "AUTH_SESSION_INVALID") {
+      clearUserSession().then(() => {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "session_expired",
+            });
+          }
+        });
+      });
+    } else {
+      console.error(`Error ${code}: ${message}`);
+    }
+    throw new Error(`Request failed: ${code}: ${message}`);
+  }
+
+  const data = await response.json();
+  // Handle assigning new anon session
+  if (
+    data.meta &&
+    data.meta.newAnonSessionAssigned &&
+    data.meta.newAnonSession
+  ) {
+    console.log("New anon session assigned. Updating storage");
+    saveAnonSession(data.meta.newAnonSession).then(() => {
+      console.log("CocBot: Updated anon session after request");
+    });
+  }
+
+  return data;
 }

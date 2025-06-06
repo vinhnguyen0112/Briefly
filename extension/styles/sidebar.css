@@ -1222,8 +1222,8 @@ input:checked + .slider {
   background-color: var(--border);
 }
 
-/* Overlay for sign-in alert */
-#sign-in-alert-overlay {
+/* General design for overlay */
+.overlay {
   position: fixed;
   top: 0;
   left: 0;
@@ -1249,11 +1249,7 @@ input:checked + .slider {
 }
 
 /* Sign-in alert popup styles */
-#sign-in-alert-popup {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.alert-popup {
   background-color: var(--background);
   border: 1px solid var(--border);
   border-radius: var(--radius);
@@ -1353,11 +1349,13 @@ input:checked + .slider {
 
 .chat-history-content {
   flex: 1;
-  overflow-y: auto;
   padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 12px;
+
+  max-height: 90%;
+  overflow-y: auto;
 }
 
 #chat-history-list {

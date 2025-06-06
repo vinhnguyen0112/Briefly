@@ -1,6 +1,5 @@
 const crypto = require("crypto");
-
-// TODO: Test generateHash with authentication
+const normalizeUrl = require("normalize-url").default;
 
 /**
  * Hashes any number of arguments into a single SHA-256 hex string.
@@ -11,4 +10,23 @@ function generateHash(...args) {
   return crypto.createHash("sha256").update(input).digest("hex");
 }
 
-module.exports = { generateHash };
+function generateName() {
+  const NAME_PREFIX = "Briefly_User_";
+  const uniquePart = crypto.randomBytes(8).toString("hex");
+  return NAME_PREFIX + uniquePart;
+}
+
+function processUrl(url) {
+  const normalizedUrl = normalizeUrl(url, {
+    removeQueryParameters: true,
+  });
+  return normalizedUrl;
+}
+
+const commonHelper = {
+  generateHash,
+  generateName,
+  processUrl,
+};
+
+module.exports = commonHelper;

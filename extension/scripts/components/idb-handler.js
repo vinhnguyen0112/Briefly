@@ -295,6 +295,7 @@ async function getAllChats() {
  * @returns {Promise<void>}
  */
 async function clearChats() {
+  console.log("Clearing all chats from IndexedDB...");
   const { db } = await openIndexedDB();
   return await new Promise((resolve, reject) => {
     const transaction = db.transaction("chats", "readwrite");

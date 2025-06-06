@@ -1,8 +1,6 @@
-const { generateHash } = require("../helpers/commonHelper");
+const commonHelper = require("../helpers/commonHelper");
 const Chat = require("../models/chat");
-const message = require("../models/message");
 const Message = require("../models/message");
-const { v4: uuidv4 } = require("uuid");
 
 // Create a new chat
 const createChat = async (req, res, next) => {
@@ -18,14 +16,14 @@ const createChat = async (req, res, next) => {
 
     const { id, page_url, title } = req.body;
 
-    // TODO: Pre-process page_url, e.g., remove query params, normalize.
-    // Consider making a middleware or helper func
-    const page_id = generateHash(page_url);
-
+    // Normalize page url and hash it
+    const normalizedPageUrl = commonHelper.processUrl(page_url);
+    const page_id = commonHelper.generateHash(normalizedPageUrl);
     await Chat.create({
       id,
       user_id,
       anon_session_id,
+      page_url: normalizedPageUrl,
       page_id,
       title,
     });
@@ -124,9 +122,9 @@ const addMessage = async (req, res, next) => {
   try {
     const { chat_id } = req.params;
     const { role, content, model } = req.body;
-    const id = uuidv4();
-    await Message.create({ id, chat_id, role, content, model });
-    res.json({ success: true, data: { id } });
+    // No need to generate id, it's auto-incremented in DB
+    await Message.create({ chat_id, role, content, model });
+    res.json({ success: true });
   } catch (err) {
     next(err);
   }

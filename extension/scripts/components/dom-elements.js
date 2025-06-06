@@ -1,5 +1,4 @@
 // DOM elements module - contains all references to DOM elements
-
 export const elements = {
   // Screens
   welcomeScreen: document.getElementById("welcome-screen"),
@@ -21,6 +20,15 @@ export const elements = {
   signInAlertPopup: document.getElementById("sign-in-alert-popup"),
   signInAlertOverlay: document.getElementById("sign-in-alert-overlay"),
   closeSignInAlertButton: document.getElementById("close-sign-in-alert-button"),
+  sessionExpiredAlertPopup: document.getElementById(
+    "session-expired-alert-popup"
+  ),
+  sessionExpiredAlertOverlay: document.getElementById(
+    "session-expired-alert-overlay"
+  ),
+  closeSessionExpiredAlertButton: document.getElementById(
+    "close-session-expired-alert-button"
+  ),
 
   // Content viewer elements
   contentDisplay: document.getElementById("content-display"),

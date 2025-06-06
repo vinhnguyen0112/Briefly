@@ -362,16 +362,16 @@ export function setupEventListeners() {
     closeSignInAlertPopup
   );
 
+  elements.closeSessionExpiredAlertButton.addEventListener(
+    "click",
+    closeSessionExpiredAlertPopup
+  );
+
   elements.newChatButton.addEventListener("click", () => {
     // Clear current chat state first before clear UI
-    resetCurrentChat().then((success) => {
-      if (success) {
-        clearMessagesFromChat();
-      } else {
-        // TODO: Popup an alert or sth here later on
-        console.error("Failed to refresh current chat state");
-      }
-    });
+    resetCurrentChat();
+    clearMessagesFromChat();
+    switchToChat();
   });
 
   elements.chatHistoryButton.addEventListener("click", () => {
@@ -498,7 +498,26 @@ function toggleChatHistoryScreen() {
   const chatHistory = elements.chatHistoryScreen;
   if (chatHistory.style.display === "none" || !chatHistory.style.display) {
     chatHistory.style.display = "block";
-    renderChatHistory();
+
+    // Prevent redundant fetches
+    if (state.pagination.isFetching) {
+      return;
+    }
+
+    state.pagination.isFetching = true;
+
+    chrome.runtime.sendMessage(
+      {
+        action: "fetch_chat_history",
+      },
+      async (response) => {
+        await idbHandler.clearChats();
+        await idbHandler.bulkAddChats(response.chats);
+        await renderChatHistory();
+        state.isFetchingChatHistory = false;
+        state.isChatHistoryFetched = true;
+      }
+    );
   } else {
     chatHistory.style.display = "none";
   }
@@ -523,6 +542,7 @@ async function renderChatHistory() {
       if (chatHistoryEmpty) chatHistoryEmpty.style.display = "none";
     }
 
+    // TODO: Should always fetch messages from server. Only fetch from IDB when offline
     chats.forEach((chat) => {
       const item = document.createElement("div");
       item.className = "chat-history-item";
@@ -545,20 +565,17 @@ async function renderChatHistory() {
         closeChatHistoryScreen();
         switchToChat();
 
-        // Check in IDB first
-        let messages = await idbHandler.getMessagesForChat(chat.id);
-
-        // If not found, fetch from server and update IDB, then use those messages
-        if (!messages || messages.length === 0) {
-          try {
-            messages = await chatHandler.getMessages(chat.id);
-            if (messages && messages.length > 0) {
-              await idbHandler.addMessagesToChat(chat.id, messages);
-            }
-          } catch (err) {
-            console.error("Failed to fetch messages from server:", err);
-            messages = [];
+        let messages;
+        // Fetch messages from server if online, otherwise from IDB
+        if (navigator.onLine) {
+          messages = await chatHandler.getMessages(chat.id);
+          if (messages && messages.length > 0) {
+            console.log("Fetched messages: ", messages);
+            // Cache into IDB
+            await idbHandler.addMessagesToChat(chat.id, messages);
           }
+        } else {
+          messages = await idbHandler.getMessagesForChat(chat.id);
         }
 
         // Display to UI, update state
@@ -593,14 +610,13 @@ function toggleAccountPopupUI() {
   }
 }
 
-// Show the signin alert overlay
-export function openSignInAlertPopup() {
-  elements.signInAlertOverlay.style.display = "flex";
-}
-
-// Hide the signin alert overlay
 function closeSignInAlertPopup() {
   elements.signInAlertOverlay.style.display = "none";
+}
+
+// Close the session expired alert overlay
+function closeSessionExpiredAlertPopup() {
+  elements.sessionExpiredAlertOverlay.style.display = "none";
 }
 
 // External function for rendering UI config

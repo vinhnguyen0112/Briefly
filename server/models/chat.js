@@ -13,6 +13,21 @@ class Chat {
     await dbHelper.executeQuery(query, values);
   }
 
+  // Bulk insert chats: accepts an array of chat objects
+  async bulkInsert(chats) {
+    if (!Array.isArray(chats) || chats.length === 0) return;
+    // Assume all chats have the same keys
+    const columns = Object.keys(chats[0]);
+    const placeholders = "(" + columns.map(() => "?").join(", ") + ")";
+    const allPlaceholders = chats.map(() => placeholders).join(", ");
+    const values = chats.flatMap((chat) => columns.map((col) => chat[col]));
+
+    const query = `INSERT INTO chats (${columns.join(
+      ", "
+    )}) VALUES ${allPlaceholders}`;
+    await dbHelper.executeQuery(query, values);
+  }
+
   async getById(id) {
     const query = "SELECT * FROM chats WHERE id = ?";
     const rows = await dbHelper.executeQuery(query, [id]);

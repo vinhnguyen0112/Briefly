@@ -3,12 +3,15 @@ const authHelper = require("../helpers/authHelper");
 const User = require("../models/user");
 const Session = require("../models/session");
 const { v4: uuidv4 } = require("uuid");
+const commonHelper = require("../helpers/commonHelper");
+const Chat = require("../models/chat");
 
 // Persist new user in db if not found
 const handleUserPersistence = async (userId, name) => {
   const user = await User.getById(userId);
   if (!user) {
     console.log(`User ${userId} not found. Creating new user.`);
+    if (!name) name = commonHelper.generateName();
     await User.create({ id: userId, name });
   }
 };
@@ -20,11 +23,20 @@ const handleSessionCreation = async (userId) => {
     user_id: userId,
   });
 
-  // TODO: QA history re-assign for promotion flow
   await redisHelper.createSession(authSessionId, { user_id: userId });
 
   console.log("Created new auth session:", authSessionId);
   return authSessionId;
+};
+
+// TODO: Test promotion flow
+const handleDataPromotion = async (promotedAnonSessionId, userId) => {
+  if (!promotedAnonSessionId) return;
+
+  console.log(
+    "Promotion detected, promoting anon chat history to authenticated user"
+  );
+  await Chat.updateAnonChatsToUser(promotedAnonSessionId, userId);
 };
 
 // Authenticate with Google
@@ -34,10 +46,11 @@ const authenticateWithGoogle = async (req, res, next) => {
     const idToken = authHelper.extractFromAuthHeader(req);
     const { userId, name } = await authHelper.verifyGoogleToken(idToken);
 
-    // TODO: Unused for now,
+    // Unused for now,
     const promotedAnonSessionId = authHelper.extractFromPromotionHeader(req);
 
     await handleUserPersistence(userId, name);
+    await handleDataPromotion(promotedAnonSessionId, userId);
     const sessionId = await handleSessionCreation(userId);
 
     return res.json({ success: true, data: { id: sessionId } });
@@ -55,10 +68,9 @@ const authenticateWithFacebook = async (req, res, next) => {
     const promotedAnonSessionId = authHelper.extractFromPromotionHeader(req);
 
     await handleUserPersistence(userId, name);
-    const sessionId = await handleSessionCreation(
-      userId,
-      promotedAnonSessionId
-    );
+    await handleDataPromotion(promotedAnonSessionId, userId);
+
+    const sessionId = await handleSessionCreation(userId);
 
     return res.json({ success: true, data: { id: sessionId } });
   } catch (error) {

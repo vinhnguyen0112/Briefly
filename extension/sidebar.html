@@ -608,7 +608,7 @@
     </div>
 
     <div id="sign-in-alert-overlay" class="overlay" style="display: none">
-      <div id="sign-in-alert-popup" class="popup">
+      <div id="sign-in-alert-popup" class="alert-popup">
         <div class="popup-content">
           <h3 class="popup-title">Sign In Required</h3>
           <p class="popup-message">
@@ -664,6 +664,30 @@
             class="button button-secondary"
           >
             Close
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Session Expired Alert Overlay -->
+    <div
+      id="session-expired-alert-overlay"
+      class="overlay"
+      style="display: none"
+    >
+      <div id="session-expired-alert-popup" class="alert-popup">
+        <div class="popup-content">
+          <h3 class="popup-title">Session Expired</h3>
+          <p class="popup-message">
+            Your session has expired and you have been signed out for security
+            reasons.<br />
+            Please sign in again to continue using Briefly.
+          </p>
+          <button
+            id="close-session-expired-alert-button"
+            class="button button-secondary"
+          >
+            Okay
           </button>
         </div>
       </div>

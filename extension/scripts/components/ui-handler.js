@@ -1,6 +1,6 @@
 // ui interaction stuff
 import { elements } from "./dom-elements.js";
-import { state, saveSidebarWidth } from "./state.js";
+import { state, saveSidebarWidth, resetCurrentChat } from "./state.js";
 import {
   renderContentInSidebar,
   requestPageContent,
@@ -29,6 +29,15 @@ export function closeAllPanels() {
   elements.notesScreen.style.display = "none";
   elements.notesButton.classList.remove("active");
   state.isNotesOpen = false;
+
+  // hide chat history
+  elements.chatHistoryScreen.style.display = "none";
+
+  // hide sign in alert
+  elements.signInAlertOverlay.style.display = "none";
+
+  // hide session expired alert
+  elements.sessionExpiredAlertOverlay.style.display = "none";
 
   // show main screen
   if (state.welcomeMode) {
@@ -294,7 +303,16 @@ export function handleContentMessage(message) {
 
     case "auth_session_changed":
       console.log("Auth state changed event received, updating UI!");
-      renderToggleAccountPopupUI(message.isAuth);
+      // TODO: Test this with edge cases
+      handleAuthStateChange(message.isAuth);
+      break;
+    case "session_expired":
+      // Show session expired alert overlay
+      elements.sessionExpiredAlertOverlay.style.display = "flex";
+      break;
+    case "sign_in_required":
+      elements.signInAlertOverlay.style.display = "flex";
+      break;
   }
 }
 
@@ -303,4 +321,20 @@ export function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+// Handle UI and state changes when authentication state changes
+function handleAuthStateChange(isAuth) {
+  // Refresh UI
+  renderToggleAccountPopupUI(isAuth);
+  clearMessagesFromChat();
+
+  // Reset welcomeMode upon auth state change
+  state.welcomeMode = true;
+  closeAllPanels();
+  // Force close chat screen
+  elements.chatScreen.style.display = "none";
+
+  // Refresh chat state
+  resetCurrentChat();
 }

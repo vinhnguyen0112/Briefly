@@ -11,6 +11,11 @@ const anonRoutes = require("./routes/anonRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const { redisCluster } = require("./helpers/redisHelper");
 const dbHelper = require("./helpers/dbHelper");
+const {
+  extractClientIp,
+  extractVisitorId,
+} = require("./middlewares/commonMiddlewares");
+const { bulkInsertChats } = require("./controllers/testController");
 
 // Initialize Express app
 const app = express();
@@ -21,7 +26,7 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" })); // Larger limit for content processing
 app.use(morgan("dev")); // HTTP request logging
 
-// Trust proxy (testing purpose for now)
+// Trust proxy (for testing with Postman)
 app.set("trust proxy", true);
 
 // Connect to redis cluster
@@ -37,7 +42,11 @@ dbHelper.getConnection().then(() => {
   console.log("MariaDB connected successfully!");
 });
 
+app.post("/api/test", bulkInsertChats);
+
 // Routes
+// Extract client IP and visitor ID for all routes
+app.use("/api", extractClientIp, extractVisitorId);
 app.use("/api/auth", authRoutes);
 app.use("/api/captionize", captionRoutes);
 app.use("/api/anon", anonRoutes);

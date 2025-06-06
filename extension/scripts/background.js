@@ -1,3 +1,4 @@
+import { saveUserSession, state } from "./components/state.js";
 import {
   authenticateWithFacebook,
   authenticateWithGoogle,
@@ -7,8 +8,10 @@ import {
   handleCaptionImages,
   resetProcessedImages,
 } from "./components/caption-handler.js";
+import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
-import { saveUserSession } from "./components/state.js";
+
+const API_BASE = "http://localhost:3000/api/chats";
 
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
@@ -633,6 +636,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.action === "fetch_chat_history") {
     chatHandler.getChatsForCurrentUser({}).then((chats) => {
+      console.log("Fetched user chat history:", chats);
       sendResponse({
         success: true,
         chats,
@@ -640,6 +644,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
 
     return true;
+  }
+  if (message.action === "create_chat") {
+    sendRequest(API_BASE, {
+      method: "POST",
+      body: { id, page_url, title },
+    }).then((response) => {
+      sendResponse({
+        success: response.success,
+        data: response.data,
+      });
+    });
   }
   if (message.action === "process_images") {
     resetProcessedImages();
@@ -685,5 +700,12 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
         );
       });
     });
+
+    // Refresh chat history fetching state
+    state.isChatHistoryFetched = false;
+    state.isFetchingChatHistory = false;
+
+    // Clear IDB upon auth state change
+    idbHandler.clearChats();
   }
 });

@@ -260,7 +260,42 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     sendResponse({ success: true });
   }
-  // Keep the message channel open for the async response in toggle_sidebar
+  if (message.action === "session_expired") {
+    const iframe = document.getElementById("isal-sidebar-iframe");
+    const container = document.getElementById("isal-sidebar-container");
+
+    // Only update if the sidebar is currently open
+    if (iframe && container && container.classList.contains("active")) {
+      console.log("CocBot: Notifying sidebar to react to auth session change");
+
+      // Send message to the sidebar and update the UI
+      iframe.contentWindow.postMessage(
+        {
+          action: "session_expired",
+        },
+        "*"
+      );
+    }
+    sendResponse({ success: true });
+  }
+  if (message.action === "sign_in_required") {
+    const iframe = document.getElementById("isal-sidebar-iframe");
+    const container = document.getElementById("isal-sidebar-container");
+
+    // Only update if the sidebar is currently open
+    if (iframe && container && container.classList.contains("active")) {
+      console.log("CocBot: Notifying sidebar to react to auth session change");
+
+      // Send message to the sidebar and update the UI
+      iframe.contentWindow.postMessage(
+        {
+          action: "sign_in_required",
+        },
+        "*"
+      );
+    }
+    sendResponse({ success: true });
+  }
   return true;
 });
 

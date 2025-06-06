@@ -3,6 +3,7 @@ import {
   getApiKey,
   incrementAnonQueryCount,
   getUserSession,
+  resetCurrentChat,
 } from "./state.js";
 import {
   addMessageToChat,
@@ -11,7 +12,6 @@ import {
 } from "./ui-handler.js";
 import { elements } from "./dom-elements.js";
 import { isSignInNeeded } from "./auth-handler.js";
-import { openSignInAlertPopup } from "./event-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 
@@ -20,7 +20,14 @@ export async function processUserQuery(query) {
   // If user is unauthenticated & exceeded their query limit, force sign in
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
-    openSignInAlertPopup();
+    // openSignInAlertPopup();
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs[0]) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "sign_in_required",
+        });
+      }
+    });
     return;
   }
 
@@ -74,42 +81,44 @@ export async function processUserQuery(query) {
     removeTypingIndicator(typingIndicator);
 
     if (response.success) {
-      // If new chat, create in IndexedDB and server
+      // If new chat, create in server and IDB
       if (isNewChat) {
-        await idbHandler.addChat({
-          id: chatId,
-          title: state.currentChat.title,
-          page_url: state.currentChat.pageUrl,
-        });
+        // Handle in server first
         await chatHandler.createChat({
           id: chatId,
           page_url: state.currentChat.pageUrl,
           title: state.currentChat.title,
         });
+        await idbHandler.addChat({
+          id: chatId,
+          title: state.currentChat.title,
+          page_url: state.currentChat.pageUrl,
+        });
       }
 
-      // Add user message to IndexedDB and server
-      await idbHandler.addMessage(chatId, {
-        role: "user",
-        content: query,
-      });
+      // Add user message to server and IDB
       await chatHandler.addMessage(chatId, {
         role: "user",
         content: query,
       });
-
-      addMessageToChat(response.message, "assistant");
-
-      // Add AI response to IndexedDB and server
       await idbHandler.addMessage(chatId, {
-        role: "assistant",
-        content: response.message,
+        role: "user",
+        content: query,
       });
+
+      // Add AI response to server and IDB
       await chatHandler.addMessage(chatId, {
         role: "assistant",
         content: response.message,
         model: "gpt-4o-mini",
       });
+      await idbHandler.addMessage(chatId, {
+        role: "assistant",
+        content: response.message,
+      });
+
+      // Add message to chat UI after all server operations succeed
+      addMessageToChat(response.message, "assistant");
 
       // Update state history
       state.currentChat.history.push({ role: "user", content: query });
@@ -136,6 +145,10 @@ export async function processUserQuery(query) {
     console.error("CocBot: Query error:", error);
     removeTypingIndicator(typingIndicator);
     addMessageToChat("Something went wrong. Try again?", "assistant");
+    // Message failed and it was a new chat, reset state
+    if (state.currentChat.history.length <= 0) {
+      resetCurrentChat();
+    }
   }
 }
 

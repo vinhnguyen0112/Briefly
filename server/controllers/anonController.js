@@ -1,13 +1,6 @@
 const { redisHelper } = require("../helpers/redisHelper");
 const AnonSession = require("../models/anonSession");
-const { generateHash } = require("../helpers/commonHelper");
-
-// Get client IP from request
-function getClientIP(req) {
-  let ip = req.ip || "";
-  if (ip.includes(",")) ip = ip.split(",")[0].trim();
-  return ip;
-}
+const commonHelper = require("../helpers/commonHelper");
 
 async function findOrCreateAnonSession(sessionId) {
   // Find cached anon session
@@ -38,15 +31,28 @@ async function findOrCreateAnonSession(sessionId) {
 
 const handleAnonSession = async (req, res, next) => {
   try {
-    const { visitorId } = req.body;
+    const { visitorId } = req;
     if (!visitorId) {
-      return res
-        .status(400)
-        .json({ success: false, message: "Missing visitorId" });
+      console.log("Missing visitorId in request");
+      return res.status(400).json({
+        success: false,
+        error: { code: "MISSING_VISITOR_ID", message: "Missing visitorId" },
+      });
     }
 
-    const clientIP = getClientIP(req);
-    const sessionId = generateHash(visitorId, clientIP);
+    const { clientIp } = req;
+    if (!clientIp) {
+      console.log("Missing client IP address");
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: "MISSING_CLIENT_IP",
+          message: "Missing client IP address",
+        },
+      });
+    }
+
+    const sessionId = commonHelper.generateHash(visitorId, clientIp);
 
     const data = await findOrCreateAnonSession(sessionId);
     return res.json({ success: true, data });
