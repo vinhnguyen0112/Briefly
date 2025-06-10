@@ -1,9 +1,8 @@
 import { saveAnonSession, sendRequest } from "./state.js";
 import FingerprintJS from "../../libs/fingerprint.js";
+
 // Loads FingerprintJS and gets the visitorId
 export async function getFingerprint() {
-  // const { default: FingerprintJS } = await import("../../libs/fingerprint.js");
-
   const fp = await FingerprintJS.load();
   const { visitorId } = await fp.get();
 
@@ -12,14 +11,6 @@ export async function getFingerprint() {
 
 // Requests a new anon session from the server
 async function requestAnonSession() {
-  // const response = await fetch("http://localhost:3000/api/anon", {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json", Visitor: visitorId },
-  // });
-  // if (!response.ok) throw new Error("Network response was not ok");
-  // const data = await response.json();
-  // return data.data;
-
   const response = await sendRequest(
     "http://localhost:3000/api/anon",
     {
@@ -34,7 +25,6 @@ async function requestAnonSession() {
 }
 
 // Request an anon session from the server
-// This function will not check for existing anon session
 export async function setupAnonSession() {
   try {
     const visitorId = await getFingerprint();

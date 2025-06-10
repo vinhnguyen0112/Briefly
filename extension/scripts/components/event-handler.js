@@ -362,11 +362,6 @@ export function setupEventListeners() {
     closeSignInAlertPopup
   );
 
-  elements.closeSessionExpiredAlertButton.addEventListener(
-    "click",
-    closeSessionExpiredAlertPopup
-  );
-
   elements.newChatButton.addEventListener("click", () => {
     // Clear current chat state first before clear UI
     resetCurrentChat();
@@ -381,6 +376,26 @@ export function setupEventListeners() {
   elements.closeChatHistoryButton.addEventListener("click", () =>
     closeChatHistoryScreen()
   );
+
+  // Chat history infinite scroll
+  elements.chatHistoryContent.addEventListener("scroll", (e) => {
+    const { scrollTop, scrollHeight, clientHeight } =
+      elements.chatHistoryContent;
+
+    if (
+      scrollTop + clientHeight >= scrollHeight - 100 &&
+      !state.pagination.isFetching &&
+      state.pagination.hasMore
+    ) {
+      fetchChatHistory();
+      return;
+    }
+  });
+
+  // Hide menus when clicking outside
+  document.addEventListener("click", () => {
+    closeAllActionMenus();
+  });
 }
 
 // set up quick action buttons
@@ -496,113 +511,366 @@ export function renderToggleAccountPopupUI(isAuthenticated) {
 // Toggle the display state of the chat history screen
 function toggleChatHistoryScreen() {
   const chatHistory = elements.chatHistoryScreen;
+  // Open
   if (chatHistory.style.display === "none" || !chatHistory.style.display) {
     chatHistory.style.display = "block";
-
-    // Prevent redundant fetches
-    if (state.pagination.isFetching) {
-      return;
+    // If first load
+    if (
+      state.pagination.currentPage === 0 &&
+      !state.pagination.isFetching &&
+      state.pagination.hasMore
+    ) {
+      fetchChatHistory();
     }
-
-    state.pagination.isFetching = true;
-
-    chrome.runtime.sendMessage(
-      {
-        action: "fetch_chat_history",
-      },
-      async (response) => {
-        await idbHandler.clearChats();
-        await idbHandler.bulkAddChats(response.chats);
-        await renderChatHistory();
-        state.isFetchingChatHistory = false;
-        state.isChatHistoryFetched = true;
-      }
-    );
-  } else {
+    // Else render all chat history incase of new chats
+    else {
+      console.log("Rendering all chat history");
+      renderAllChatHistory();
+    }
+  }
+  // Close
+  else {
     chatHistory.style.display = "none";
   }
 }
 
-// Render chat history list from IndexedDB
-async function renderChatHistory() {
+// Fetch chat history for the current page
+function fetchChatHistory() {
+  state.pagination.isFetching = true;
+
+  chrome.runtime.sendMessage(
+    {
+      action: "fetch_chat_history",
+      currentPage: state.pagination.currentPage,
+    },
+    async (response) => {
+      const processedChats = response.chats.map((chat) => ({
+        id: chat.id,
+        title: chat.title,
+        page_url: chat.page_url,
+        created_at: chat.created_at,
+      }));
+      state.chatHistory.push(...processedChats);
+      state.pagination.isFetching = false;
+      state.pagination.hasMore = response.hasMore;
+
+      console.log(`Fetched ${processedChats.length} chats: `, processedChats);
+      console.log("Has more chats: ", response.hasMore);
+
+      // Render new chats
+      renderCurrentPageChatHistory();
+
+      state.pagination.currentPage += 1;
+    }
+  );
+}
+
+// Render chat history for the current page, for pagination
+function renderCurrentPageChatHistory() {
+  const LIMIT = 20;
   const { chatHistoryList, chatHistoryEmpty } = elements;
 
   if (!chatHistoryList) return;
 
-  // Clear previous content
-  chatHistoryList.innerHTML = "";
-
   try {
-    const chats = await idbHandler.getAllChats();
-
-    if (!chats || chats.length === 0) {
-      if (chatHistoryEmpty) chatHistoryEmpty.style.display = "block";
+    // If no chats, display 'no chats'
+    if (!state.chatHistory || state.chatHistory.length === 0) {
+      chatHistoryEmpty.style.display = "block";
       return;
     } else {
-      if (chatHistoryEmpty) chatHistoryEmpty.style.display = "none";
+      // Hide 'no chats'
+      chatHistoryEmpty.style.display = "none";
     }
 
-    // TODO: Should always fetch messages from server. Only fetch from IDB when offline
-    chats.forEach((chat) => {
-      const item = document.createElement("div");
-      item.className = "chat-history-item";
-      item.innerHTML = `
-        <div class="chat-history-title">${chat.title}</div>
-        <div class="chat-history-meta">
-          <span class="chat-history-url">${chat.page_url}</span>
-          <span class="chat-history-date">${
-            chat.created_at
-              ? new Date(chat.created_at).toLocaleDateString()
-              : ""
-          }</span>
-        </div>
-      `;
+    // Only render chats of current page
+    const chats = state.chatHistory;
+    const sliceIdx = state.pagination.currentPage * LIMIT;
+    const chatsToRender = chats.slice(sliceIdx);
 
-      // Open up chat history when clicked
-      item.addEventListener("click", async () => {
-        const history = [];
-        clearMessagesFromChat();
-        closeChatHistoryScreen();
-        switchToChat();
-
-        let messages;
-        // Fetch messages from server if online, otherwise from IDB
-        if (navigator.onLine) {
-          messages = await chatHandler.getMessages(chat.id);
-          if (messages && messages.length > 0) {
-            console.log("Fetched messages: ", messages);
-            // Cache into IDB
-            await idbHandler.addMessagesToChat(chat.id, messages);
-          }
-        } else {
-          messages = await idbHandler.getMessagesForChat(chat.id);
-        }
-
-        // Display to UI, update state
-        messages.forEach((message) => {
-          addMessageToChat(message.content, message.role);
-          history.push({ role: message.role, content: message.content });
-        });
-        setCurrentChat({ ...chat, history });
-      });
+    chatsToRender.forEach((chat) => {
+      const item = createChatHistoryItem(chat);
       chatHistoryList.appendChild(item);
     });
   } catch (err) {
+    console.error(err);
     chatHistoryList.innerHTML =
       "<div style='color:red'>Failed to load chat history.</div>";
     if (chatHistoryEmpty) chatHistoryEmpty.style.display = "none";
   }
 }
 
+// Render all chat history, for on chat history open
+async function renderAllChatHistory() {
+  const { chatHistoryList, chatHistoryEmpty } = elements;
+
+  if (!chatHistoryList) return;
+
+  try {
+    if (!state.chatHistory || state.chatHistory.length === 0) {
+      chatHistoryEmpty.style.display = "block";
+      chatHistoryList.innerHTML = "";
+      return;
+    } else {
+      chatHistoryEmpty.style.display = "none";
+    }
+
+    chatHistoryList.innerHTML = "";
+    state.chatHistory.forEach((chat) => {
+      const item = createChatHistoryItem(chat);
+      chatHistoryList.appendChild(item);
+    });
+  } catch (err) {
+    console.error(err);
+    chatHistoryList.innerHTML =
+      "<div style='color:red'>Failed to load chat history.</div>";
+    if (chatHistoryEmpty) chatHistoryEmpty.style.display = "none";
+  }
+}
+
+// Create chat history item
+function createChatHistoryItem(chat) {
+  const item = document.createElement("div");
+  item.className = "chat-history-item";
+  item.setAttribute("data-chat-id", chat.id);
+  item.innerHTML = `
+    <div class="chat-history-header-row">
+      <div class="chat-history-title">${chat.title}</div>
+      <button class="chat-history-actions-button" title="More actions">⋯</button>
+    </div>
+    <div class="chat-history-meta">
+      <span class="chat-history-url">${chat.page_url}</span>
+      <span class="chat-history-date">${
+        chat.created_at ? new Date(chat.created_at).toLocaleTimeString() : ""
+      }</span>
+    </div>
+    <div class="chat-history-actions-menu hidden">
+      <button class="chat-history-actions-menu-item button" id="rename-button">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.779 17.779 4.36 19.918 6.5 13.5m4.279 4.279 8.364-8.643a3.027 3.027 0 0 0-2.14-5.165 3.03 3.03 0 0 0-2.14.886L6.5 13.5m4.279 4.279L6.499 13.5m2.14 2.14 6.213-6.504M12.75 7.04 17 11.28"/>
+        </svg>
+        Rename
+      </button>
+      <button class="chat-history-actions-menu-item button" id="delete-button" style="color:#E53E3E">
+        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+          <path stroke="#E53E3E" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
+        </svg>
+        Delete
+      </button>
+    </div>
+  `;
+
+  // Open chat logic
+  item.addEventListener("click", async (e) => {
+    if (
+      e.target.closest(".chat-history-actions-menu") ||
+      e.target.classList.contains("chat-history-actions-button") ||
+      e.target.classList.contains("chat-history-title-input")
+    )
+      return;
+
+    const history = [];
+    clearMessagesFromChat();
+    closeChatHistoryScreen();
+    switchToChat();
+
+    let messages;
+    if (navigator.onLine) {
+      messages = await chatHandler.getMessages(chat.id);
+      if (messages && messages.length > 0) {
+        const found = await idbHandler.getChatById(chat.id);
+        if (!found) await idbHandler.addChat(chat);
+        await idbHandler.overwriteChatMessages(chat.id, messages);
+      }
+    } else {
+      messages = await idbHandler.getMessagesForChat(chat.id);
+    }
+
+    messages.forEach((message) => {
+      addMessageToChat(message.content, message.role);
+      history.push({ role: message.role, content: message.content });
+    });
+
+    setCurrentChat({ ...chat, history });
+  });
+
+  setupChatHistoryActions(item, chat);
+
+  return item;
+}
+
+function setupChatHistoryActions(item, chat) {
+  const actionsBtn = item.querySelector(".chat-history-actions-button");
+  const menu = item.querySelector(".chat-history-actions-menu");
+
+  actionsBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    closeAllActionMenus();
+    menu.classList.toggle("hidden");
+
+    // Display menu above if not enough space
+    const menuRect = menu.getBoundingClientRect();
+    const buttonRect = actionsBtn.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - buttonRect.bottom;
+    const spaceAbove = buttonRect.top;
+
+    if (spaceBelow < menuRect.height && spaceAbove > menuRect.height) {
+      menu.style.top = `auto`;
+      menu.style.bottom = `${spaceBelow}px`;
+    }
+  });
+
+  item.querySelector("#rename-button").addEventListener("click", async (e) => {
+    e.stopPropagation();
+    menu.classList.add("hidden");
+
+    const titleDiv = item.querySelector(".chat-history-title");
+    const currentTitle = titleDiv.textContent.trim();
+    titleDiv.outerHTML = `<input type="text" class="chat-history-title-input" value="${currentTitle}" />`;
+    const input = item.querySelector(".chat-history-title-input");
+    input.focus();
+    input.select();
+
+    const save = async () => {
+      const newTitle = input.value.trim();
+      if (newTitle && newTitle !== currentTitle) {
+        try {
+          await chatHandler.updateChat(chat.id, { title: newTitle });
+          await idbHandler.updateChat(chat.id, { title: newTitle });
+          state.chatHistory = state.chatHistory.map((c) =>
+            c.id === chat.id ? { ...c, title: newTitle } : c
+          );
+        } catch (err) {
+          console.error(err);
+          showPopupAlert({
+            title: "Error",
+            message: "Failed to update chat title. Please try again later",
+          });
+          return;
+        }
+      }
+      input.outerHTML = `<div class="chat-history-title">${
+        newTitle || currentTitle
+      }</div>`;
+    };
+
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") save();
+      else if (e.key === "Escape") {
+        input.outerHTML = `<div class="chat-history-title">${currentTitle}</div>`;
+      }
+    });
+
+    input.addEventListener("blur", save);
+  });
+
+  item.querySelector("#delete-button").addEventListener("click", (e) => {
+    e.stopPropagation();
+    menu.classList.add("hidden");
+
+    showPopupAlert({
+      title: "Confirmation",
+      message: "Are you sure you want to delete this chat?",
+      buttons: [
+        {
+          label: "Yes",
+          eventHandler: async () => {
+            await chatHandler.deleteChat(chat.id);
+            await idbHandler.deleteChat(chat.id);
+            state.chatHistory = state.chatHistory.filter(
+              (c) => c.id !== chat.id
+            );
+            removeChatHistoryItem(chat.id);
+          },
+        },
+        {
+          label: "No",
+        },
+      ],
+    });
+  });
+}
+
+// Helper to close all chat history action menus
+function closeAllActionMenus() {
+  document.querySelectorAll(".chat-history-actions-menu").forEach((menu) => {
+    menu.classList.add("hidden");
+  });
+}
+
+function removeChatHistoryItem(id) {
+  const itemToRemove = document.querySelector(`[data-chat-id="${id}"]`);
+  elements.chatHistoryList.removeChild(itemToRemove);
+}
+
 function closeChatHistoryScreen() {
   elements.chatHistoryScreen.style.display = "none";
+}
+
+// Create and popup a custom alert
+export function showPopupAlert({ title, message = "", buttons = [] }) {
+  // Create overlay
+  const alertOverlay = document.createElement("div");
+  alertOverlay.className = "dynamic-alert-overlay overlay";
+
+  // Create popup
+  const popup = document.createElement("div");
+  popup.className = "alert-popup";
+
+  // content
+  const content = document.createElement("div");
+  content.className = "popup-content";
+
+  // title
+  const titleElement = document.createElement("h3");
+  titleElement.className = "popup-title";
+  titleElement.textContent = title;
+  content.appendChild(titleElement);
+
+  // Message
+  if (message) {
+    const messageElement = document.createElement("p");
+    messageElement.className = "popup-message";
+    messageElement.textContent = message;
+    content.appendChild(messageElement);
+  }
+
+  // Action buttons
+  buttons.forEach((btn) => {
+    const button = document.createElement("button");
+    button.className = `button button-${btn.style}`;
+    button.textContent = btn.label;
+    button.style.width = "100%";
+    button.style.marginBottom = "10px";
+    button.onclick = (e) => {
+      e.stopPropagation();
+      if (typeof btn.eventHandler === "function") btn.eventHandler();
+      alertOverlay.remove();
+    };
+    content.appendChild(button);
+  });
+
+  // Close button
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "button button-secondary";
+  closeBtn.textContent = "Close";
+  closeBtn.style.width = "100%";
+
+  closeBtn.onclick = () => {
+    alertOverlay.remove();
+  };
+
+  // Appending
+  content.appendChild(closeBtn);
+  popup.appendChild(content);
+  alertOverlay.appendChild(popup);
+
+  document.body.appendChild(alertOverlay);
 }
 
 // Toggle on/off the account popup UI
 function toggleAccountPopupUI() {
   const popup = elements.accountPopup;
 
-  // Toggle the display state of the popup
   if (popup.style.display === "none" || !popup.style.display) {
     popup.style.display = "block";
   } else {
@@ -612,11 +880,6 @@ function toggleAccountPopupUI() {
 
 function closeSignInAlertPopup() {
   elements.signInAlertOverlay.style.display = "none";
-}
-
-// Close the session expired alert overlay
-function closeSessionExpiredAlertPopup() {
-  elements.sessionExpiredAlertOverlay.style.display = "none";
 }
 
 // External function for rendering UI config

@@ -13,7 +13,7 @@ class Chat {
     await dbHelper.executeQuery(query, values);
   }
 
-  // Bulk insert chats: accepts an array of chat objects
+  // Bulk insert chats
   async bulkInsert(chats) {
     if (!Array.isArray(chats) || chats.length === 0) return;
     // Assume all chats have the same keys
@@ -53,7 +53,8 @@ class Chat {
     }
 
     query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
-    values.push(limit, offset);
+    // Increase LIMIT by 1 to determine hasMore
+    values.push((parseInt(limit) + 1).toString(), offset);
 
     return dbHelper.executeQuery(query, values);
   }

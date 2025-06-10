@@ -50,6 +50,7 @@ const getChatById = async (req, res, next) => {
   }
 };
 
+// Get paginated chats
 const getChatsBy = async (req, res, next) => {
   try {
     const { sessionType, session } = req;
@@ -67,7 +68,12 @@ const getChatsBy = async (req, res, next) => {
     }
 
     const chats = await Chat.getBy(filter);
-    return res.json({ success: true, data: chats });
+    let hasMore = false;
+    if (chats.length > limit) {
+      hasMore = true;
+      chats.pop(); // Slice off last element to avoid duplication
+    }
+    return res.json({ success: true, data: { chats, hasMore } });
   } catch (err) {
     next(err);
   }

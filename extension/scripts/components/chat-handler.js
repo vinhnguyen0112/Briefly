@@ -13,7 +13,7 @@ async function createChat({ id, page_url, title }) {
 // Get all chats for a user
 async function getChatsForCurrentUser({ offset = 0, limit = 20 }) {
   return sendRequest(`${API_BASE}?offset=${offset}&limit=${limit}`).then(
-    (data) => data.data
+    (response) => response.data
   );
 }
 

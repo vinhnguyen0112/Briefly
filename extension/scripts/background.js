@@ -1,4 +1,4 @@
-import { saveUserSession, state } from "./components/state.js";
+import { saveUserSession } from "./components/state.js";
 import {
   authenticateWithFacebook,
   authenticateWithGoogle,
@@ -12,7 +12,7 @@ import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 
 const API_BASE = "http://localhost:3000/api/chats";
-
+const CHAT_QUERY_LIMIT = 20;
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
   console.log("CocBot extension installed");
@@ -635,26 +635,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.action === "fetch_chat_history") {
-    chatHandler.getChatsForCurrentUser({}).then((chats) => {
-      console.log("Fetched user chat history:", chats);
-      sendResponse({
-        success: true,
-        chats,
+    console.log("Current page: ", message.currentPage);
+    chatHandler
+      .getChatsForCurrentUser({
+        offset: message.currentPage * CHAT_QUERY_LIMIT,
+      })
+      .then((data) => {
+        sendResponse({
+          success: true,
+          chats: data.chats,
+          hasMore: data.hasMore,
+        });
       });
-    });
 
     return true;
-  }
-  if (message.action === "create_chat") {
-    sendRequest(API_BASE, {
-      method: "POST",
-      body: { id, page_url, title },
-    }).then((response) => {
-      sendResponse({
-        success: response.success,
-        data: response.data,
-      });
-    });
   }
   if (message.action === "process_images") {
     resetProcessedImages();
@@ -677,7 +671,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.storage.onChanged.addListener((changes, areaName) => {
   // Notify all tabs if auth session changed
   if (areaName === "local" && changes.auth_session) {
-    // The newValue directly reflects if a session exists (truthy/falsy)
     const hasSession = changes.auth_session.newValue;
     console.log("Briefly: Auth state changed: ", hasSession);
 
@@ -701,11 +694,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
       });
     });
 
-    // Refresh chat history fetching state
-    state.isChatHistoryFetched = false;
-    state.isFetchingChatHistory = false;
-
-    // Clear IDB upon auth state change
+    // Clear chats from IDB
     idbHandler.clearChats();
   }
 });

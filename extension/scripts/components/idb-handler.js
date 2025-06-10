@@ -83,11 +83,38 @@ async function addChat(chat) {
 }
 
 /**
- * Adds a new message to the messages array of a chat in the "chats" object store.
+ * Get a chat by ID
+ * @param {string} id - The ID of the chat to check.
+ * @returns {Promise<boolean>} - Resolves to true if the chat exists, false otherwise.
+ */
+async function getChatById(id) {
+  const { db } = await openIndexedDB();
+  return await new Promise((resolve, reject) => {
+    const transaction = db.transaction("chats", "readonly");
+    const store = transaction.objectStore("chats");
+    const getRequest = store.get(id);
+
+    getRequest.onsuccess = (event) => {
+      const chat = event.target.result;
+      resolve(chat);
+    };
+
+    getRequest.onerror = (event) => {
+      reject(
+        new Error(
+          "Failed to check chat existence: " + event.target.error.message
+        )
+      );
+    };
+  });
+}
+
+/**
+ * Adds a single message to chat.
  * @param {Object} message - The message object to store. Must include chat_id.
  * @returns {Promise<void>}
  */
-async function addMessage(chatId, message) {
+async function addMessageToChat(chatId, message) {
   const { db } = await openIndexedDB();
   return await new Promise((resolve, reject) => {
     if (!chatId) {
@@ -136,12 +163,12 @@ async function addMessage(chatId, message) {
 }
 
 /**
- * Adds multiple messages to the messages array of a chat in the "chats" object store.
+ * Override chat's messages
  * @param {string} chatId - The ID of the chat to add messages to.
  * @param {Array<Object>} messages - Array of message objects to add.
  * @returns {Promise<void>}
  */
-async function addMessagesToChat(chatId, messages) {
+async function overwriteChatMessages(chatId, messages) {
   const { db } = await openIndexedDB();
   return await new Promise((resolve, reject) => {
     if (!chatId) {
@@ -214,7 +241,7 @@ async function updateChat(chatId, updates) {
 
       if (!chat) {
         // Chat does not exist
-        reject(new Error(`Chat with ID ${chatId} does not exist`));
+        resolve();
         return;
       }
 
@@ -244,6 +271,30 @@ async function updateChat(chatId, updates) {
     getRequest.onerror = (event) => {
       console.error("Error fetching chat:", event.target.error);
       reject(new Error("Failed to fetch chat: " + event.target.error.message));
+    };
+  });
+}
+
+/**
+ * Deletes a chat by ID from the "chats" object store.
+ * @param {string} id - The ID of the chat to delete.
+ * @returns {Promise<void>}
+ */
+async function deleteChat(id) {
+  const { db } = await openIndexedDB();
+  return await new Promise((resolve, reject) => {
+    const transaction = db.transaction("chats", "readwrite");
+    const store = transaction.objectStore("chats");
+    const request = store.delete(id);
+
+    request.onsuccess = () => {
+      console.log(`Chat with ID ${id} deleted from IndexedDB.`);
+      resolve();
+    };
+
+    request.onerror = (event) => {
+      console.error("Error deleting chat:", event.target.error);
+      reject(new Error("Failed to delete chat: " + event.target.error.message));
     };
   });
 }
@@ -314,65 +365,17 @@ async function clearChats() {
   });
 }
 
-/**
- * Bulk adds an array of chat objects to the "chats" object store.
- * @param {Array<Object>} chats - Array of chat objects to add.
- * @returns {Promise<void>}
- */
-async function bulkAddChats(chats) {
-  if (!Array.isArray(chats)) throw new Error("Input must be an array of chats");
-  const { db } = await openIndexedDB();
-  return await new Promise((resolve, reject) => {
-    const transaction = db.transaction("chats", "readwrite");
-    const store = transaction.objectStore("chats");
-
-    let completed = 0;
-    let hasError = false;
-
-    if (chats.length === 0) return resolve();
-
-    chats.forEach((chat) => {
-      // If no id, generate one
-      if (!chat.id) chat.id = crypto.randomUUID();
-      chat.title = chat.title || "Untitled";
-      chat.page_url = chat.page_url || "";
-      chat.created_at = chat.created_at || new Date();
-      chat.updated_at = chat.updated_at || new Date();
-
-      const request = store.add(chat);
-
-      request.onsuccess = () => {
-        completed++;
-        if (completed === chats.length && !hasError) {
-          console.log("Bulk add chats completed.");
-          resolve();
-        }
-      };
-
-      request.onerror = (event) => {
-        if (!hasError) {
-          hasError = true;
-          console.error("Error bulk adding chats:", event.target.error);
-          reject(
-            new Error("Failed to bulk add chats: " + event.target.error.message)
-          );
-        }
-      };
-    });
-  });
-}
-
 // Add to the exported handler
 const idbHandler = {
   openIndexedDB,
   addChat,
-  addMessage,
-  addMessagesToChat,
+  getChatById,
+  addMessageToChat,
+  overwriteChatMessages,
   updateChat,
+  deleteChat,
   getMessagesForChat,
-  getAllChats,
   clearChats,
-  bulkAddChats,
 };
 
 export default idbHandler;

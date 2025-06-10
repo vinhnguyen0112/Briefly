@@ -29,14 +29,15 @@ const handleSessionCreation = async (userId) => {
   return authSessionId;
 };
 
-// TODO: Test promotion flow
 const handleDataPromotion = async (promotedAnonSessionId, userId) => {
   if (!promotedAnonSessionId) return;
 
-  console.log(
-    "Promotion detected, promoting anon chat history to authenticated user"
-  );
-  await Chat.updateAnonChatsToUser(promotedAnonSessionId, userId);
+  // TODO: Uncommented this if allow chat history promotion
+
+  // console.log(
+  //   "Promotion detected, promoting anon chat history to authenticated user"
+  // );
+  // await Chat.updateAnonChatsToUser(promotedAnonSessionId, userId);
 };
 
 // Authenticate with Google

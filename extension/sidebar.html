@@ -402,9 +402,9 @@
               ×
             </button>
           </div>
-          <div class="chat-history-content">
+          <div id="chat-history-content">
             <div id="chat-history-list"></div>
-            <div class="chat-history-empty" style="display: none">
+            <div id="chat-history-empty" style="display: none">
               <p data-i18n="noChats">No chat history yet.</p>
             </div>
           </div>
@@ -669,31 +669,6 @@
       </div>
     </div>
 
-    <!-- Session Expired Alert Overlay -->
-    <div
-      id="session-expired-alert-overlay"
-      class="overlay"
-      style="display: none"
-    >
-      <div id="session-expired-alert-popup" class="alert-popup">
-        <div class="popup-content">
-          <h3 class="popup-title">Session Expired</h3>
-          <p class="popup-message">
-            Your session has expired and you have been signed out for security
-            reasons.<br />
-            Please sign in again to continue using Briefly.
-          </p>
-          <button
-            id="close-session-expired-alert-button"
-            class="button button-secondary"
-          >
-            Okay
-          </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Load scripts in correct order -->
     <script src="components/utils/ContentViewer.js"></script>
     <script type="module" src="scripts/sidebar.js"></script>
 

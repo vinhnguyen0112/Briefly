@@ -1,7 +1,5 @@
-import FingerprintJS from "../../libs/fingerprint.js";
-
 // Global state object
-// TODO: Handle pagination state
+// Only persist in IDB when user click to view a chat
 export const state = {
   welcomeMode: true,
   pageContent: null,
@@ -27,13 +25,12 @@ export const state = {
     pageUrl: "",
     history: [],
   },
-  isFetchingChatHistory: false,
-  isChatHistoryFetched: false,
   pagination: {
     currentPage: 0,
     hasMore: true,
     isFetching: false,
   },
+  chatHistory: [],
 };
 
 // Load sidebar width from storage
@@ -285,6 +282,15 @@ export function resetCurrentChat() {
   };
 }
 
+export function resetPagination() {
+  console.log("Reseting pagination state");
+  state.pagination = {
+    currentPage: 0,
+    hasMore: true,
+    isFetching: false,
+  };
+}
+
 export function setCurrentChat(chat) {
   state.currentChat = {
     id: chat.id || null,
@@ -294,8 +300,7 @@ export function setCurrentChat(chat) {
   };
 }
 
-// Helper function to send requests with
-// session and visitor ID passed in as headers
+// Helper function to send requests with session and visitor ID
 // By default, it will include both session and visitor ID headers
 export async function sendRequest(
   url,

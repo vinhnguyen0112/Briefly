@@ -81,9 +81,8 @@ export async function processUserQuery(query) {
     removeTypingIndicator(typingIndicator);
 
     if (response.success) {
-      // If new chat, create in server and IDB
+      // Create new chat is needed
       if (isNewChat) {
-        // Handle in server first
         await chatHandler.createChat({
           id: chatId,
           page_url: state.currentChat.pageUrl,
@@ -94,6 +93,14 @@ export async function processUserQuery(query) {
           title: state.currentChat.title,
           page_url: state.currentChat.pageUrl,
         });
+
+        // Add new chat to state
+        state.chatHistory.unshift({
+          id: chatId,
+          title: state.currentChat.title,
+          page_url: state.currentChat.pageUrl,
+          created_at: Date.now(),
+        });
       }
 
       // Add user message to server and IDB
@@ -101,7 +108,7 @@ export async function processUserQuery(query) {
         role: "user",
         content: query,
       });
-      await idbHandler.addMessage(chatId, {
+      await idbHandler.addMessageToChat(chatId, {
         role: "user",
         content: query,
       });
@@ -112,7 +119,7 @@ export async function processUserQuery(query) {
         content: response.message,
         model: "gpt-4o-mini",
       });
-      await idbHandler.addMessage(chatId, {
+      await idbHandler.addMessageToChat(chatId, {
         role: "assistant",
         content: response.message,
       });

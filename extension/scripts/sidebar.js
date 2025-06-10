@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // Set visitorId if not exists
   getVisitorId().then((visitorId) => {
     if (!visitorId) {
-      console.log("No visitorId found, generating a new one");
+      console.log("CocBot: No visitorId found, generating a new one");
       getFingerprint().then((fp) => {
         setVisitorId(fp);
       });
@@ -56,7 +56,9 @@ document.addEventListener("DOMContentLoaded", () => {
   // Set up anonymous session if not exists
   getAnonSession().then((anonSession) => {
     if (!anonSession) {
-      console.log("No anon session found, requesting new session from server");
+      console.log(
+        "CocBot: No anon session found, requesting new session from server"
+      );
       setupAnonSession();
     }
   });

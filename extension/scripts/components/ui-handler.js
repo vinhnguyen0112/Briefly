@@ -1,12 +1,17 @@
 // ui interaction stuff
 import { elements } from "./dom-elements.js";
-import { state, saveSidebarWidth, resetCurrentChat } from "./state.js";
+import {
+  state,
+  saveSidebarWidth,
+  resetCurrentChat,
+  resetPagination,
+} from "./state.js";
 import {
   renderContentInSidebar,
   requestPageContent,
   updateContentStatus,
 } from "./content-handler.js";
-import { renderToggleAccountPopupUI } from "./event-handler.js";
+import { renderToggleAccountPopupUI, showPopupAlert } from "./event-handler.js";
 
 // close all panels
 export function closeAllPanels() {
@@ -29,9 +34,6 @@ export function closeAllPanels() {
   elements.notesScreen.style.display = "none";
   elements.notesButton.classList.remove("active");
   state.isNotesOpen = false;
-
-  // hide chat history
-  elements.chatHistoryScreen.style.display = "none";
 
   // hide sign in alert
   elements.signInAlertOverlay.style.display = "none";
@@ -148,6 +150,9 @@ export function switchToChat() {
   // hide welcome
   elements.welcomeScreen.style.display = "none";
 
+  // hide chat history
+  elements.chatHistoryScreen.style.display = "none";
+
   // show chat
   elements.chatScreen.style.display = "flex";
 
@@ -202,6 +207,7 @@ export function switchToChat() {
 
 // add message to chat
 export function addMessageToChat(message, role) {
+  console.log("Adding message to chat: ", message);
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
   messageElement.innerHTML = `
@@ -216,6 +222,12 @@ export function addMessageToChat(message, role) {
 export function clearMessagesFromChat() {
   if (elements.chatContainer) {
     elements.chatContainer.innerHTML = "";
+  }
+}
+
+export function clearChatHistory() {
+  if (elements.chatHistoryList) {
+    elements.chatHistoryList.innerHTML = "";
   }
 }
 
@@ -303,12 +315,14 @@ export function handleContentMessage(message) {
 
     case "auth_session_changed":
       console.log("Auth state changed event received, updating UI!");
-      // TODO: Test this with edge cases
       handleAuthStateChange(message.isAuth);
       break;
     case "session_expired":
-      // Show session expired alert overlay
-      elements.sessionExpiredAlertOverlay.style.display = "flex";
+      showPopupAlert({
+        title: "Session Expires",
+        message:
+          "Your session has expired and you have been signed out for security reasons",
+      });
       break;
     case "sign_in_required":
       elements.signInAlertOverlay.style.display = "flex";
@@ -323,18 +337,24 @@ export function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Handle UI and state changes when authentication state changes
+// Handle UI changes when authentication state changes
 function handleAuthStateChange(isAuth) {
-  // Refresh UI
+  // Reset UI
   renderToggleAccountPopupUI(isAuth);
   clearMessagesFromChat();
+  clearChatHistory();
 
-  // Reset welcomeMode upon auth state change
+  // Navigate back to welcome page
   state.welcomeMode = true;
   closeAllPanels();
-  // Force close chat screen
-  elements.chatScreen.style.display = "none";
 
-  // Refresh chat state
+  // Reset chat, pagination and history state
   resetCurrentChat();
+  resetPagination();
+  state.chatHistory = [];
+
+  // Close chat screen
+  elements.chatScreen.style.display = "none";
+  // hide chat history
+  elements.chatHistoryScreen.style.display = "none";
 }

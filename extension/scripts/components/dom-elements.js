@@ -3,6 +3,7 @@ export const elements = {
   // Screens
   welcomeScreen: document.getElementById("welcome-screen"),
   chatScreen: document.getElementById("chat-screen"),
+  chatHistoryScreen: document.getElementById("chat-history-screen"),
   contentViewerScreen: document.getElementById("content-viewer-screen"),
   notesScreen: document.getElementById("notes-screen"),
 
@@ -20,15 +21,6 @@ export const elements = {
   signInAlertPopup: document.getElementById("sign-in-alert-popup"),
   signInAlertOverlay: document.getElementById("sign-in-alert-overlay"),
   closeSignInAlertButton: document.getElementById("close-sign-in-alert-button"),
-  sessionExpiredAlertPopup: document.getElementById(
-    "session-expired-alert-popup"
-  ),
-  sessionExpiredAlertOverlay: document.getElementById(
-    "session-expired-alert-overlay"
-  ),
-  closeSessionExpiredAlertButton: document.getElementById(
-    "close-session-expired-alert-button"
-  ),
 
   // Content viewer elements
   contentDisplay: document.getElementById("content-display"),
@@ -91,9 +83,8 @@ export const elements = {
 
   // Chat history elements
   chatHistoryButton: document.getElementById("chat-history-button"),
-  chatHistoryScreen: document.getElementById("chat-history-screen"),
+  chatHistoryContent: document.getElementById("chat-history-content"),
   chatHistoryList: document.getElementById("chat-history-list"),
   chatHistoryEmpty: document.getElementById("chat-history-empty"),
-  chatHistoryItem: document.getElementById("chat-history-item"),
   closeChatHistoryButton: document.getElementById("close-chat-history-button"),
 };
