@@ -297,17 +297,17 @@
   .content-viewer {
     padding: 10px;
   }
-  
+
   .content-viewer-meta div {
     font-size: 12px;
   }
-  
+
   .jsonld-summary {
     flex-direction: column;
     align-items: flex-start;
   }
-  
+
   .jsonld-summary button {
     margin-top: 8px;
   }
-} 
+}
