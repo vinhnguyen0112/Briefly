@@ -23,7 +23,8 @@
     "mysql2": "^3.14.1",
     "openai": "^4.96.0",
     "p-limit": "^3.1.0",
-    "redis": "^4.7.0"
+    "redis": "^4.7.0",
+    "uuid": "^11.1.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.10"

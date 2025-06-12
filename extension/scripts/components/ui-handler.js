@@ -303,22 +303,58 @@ function showFeedbackModal() {
   });
 
   // Submit/cancel logic
-  submitBtn.onclick = () => {
+  submitBtn.onclick = async () => {
     if (submitBtn.disabled) return;
-    const reason = modal.querySelector(".feedback-reason-input").value.trim();
-    console.log("Feedback submitted:", { rate: selectedRate, reason });
-    modal.remove();
-    if (sidebar) sidebar.classList.remove("cocbot-blur");
+    const stars = selectedRate;
+    const comment = modal.querySelector(".feedback-reason-input").value.trim();
+
+    try {
+      const res = await fetch("http://localhost:3000/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stars, comment }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Feedback received!");
+        modal.remove();
+        if (sidebar) sidebar.classList.remove("cocbot-blur");
+      } else {
+        alert(data.error || "fail!");
+      }
+    } catch (err) {
+      alert("server fail");
+    }
   };
-  modal.querySelector(".feedback-cancel").onclick = () => {
-    console.log("Feedback canceled");
+
+  function showToast(message) {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.style.position = "fixed";
+    toast.style.top = "24px";
+    toast.style.left = "50%";
+    toast.style.transform = "translateX(-50%)";
+    toast.style.background = "#222";
+    toast.style.color = "#fff";
+    toast.style.padding = "12px 24px";
+    toast.style.borderRadius = "8px";
+    toast.style.zIndex = 99999;
+    toast.style.fontSize = "1rem";
+    toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+    toast.style.opacity = "0.92";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2200);
+  }
+
+  const cancelBtn = modal.querySelector(".feedback-cancel");
+  cancelBtn.onclick = () => {
     modal.remove();
     if (sidebar) sidebar.classList.remove("cocbot-blur");
   };
 }
 
 function renderStars() {
-  if (window.innerWidth < 366) {
+  if (window.innerWidth < 386) {
     // 3 trên, 2 dưới
     return `
       <div class="feedback-rating-row">

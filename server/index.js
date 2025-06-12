@@ -6,6 +6,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 
 const imageCaptionRoutes = require("./routes/imageCaptionRoutes");
+const feedbackRoutes = require("./routes/feedbackRoutes");
 const dbHelper = require("./helpers/dbHelper");
 
 // Initialize Express app
@@ -23,7 +24,8 @@ dbHelper.getConnection().then(() => {
 });
 
 // Routes
-app.use("/api/captionize", imageCaptionRoutes);
+// app.use("/api/captionize", imageCaptionRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
