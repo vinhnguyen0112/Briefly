@@ -268,12 +268,13 @@ function showFeedbackModal() {
   // Star rating logic
   const ratingItems = modal.querySelectorAll(".feedback-rating-item");
   let selectedRate = null;
+  const submitBtn = modal.querySelector(".feedback-submit");
+  submitBtn.disabled = true; // Disable submit ban đầu
+
   ratingItems.forEach((item, idx) => {
     item.addEventListener("mouseenter", () => {
-      // Highlight từ 0 đến idx (hovered)
       ratingItems.forEach((el, i) => {
         el.classList.toggle("hovered", i <= idx);
-        // Khi hover, chỉ giữ trạng thái selected cho các sao <= idx nếu đã chọn nhiều hơn
         el.classList.toggle(
           "selected",
           selectedRate && i < selectedRate && i <= idx
@@ -281,9 +282,7 @@ function showFeedbackModal() {
       });
     });
     item.addEventListener("mouseleave", () => {
-      // Bỏ hover
       ratingItems.forEach((el) => el.classList.remove("hovered"));
-      // Khôi phục trạng thái selected đúng với selectedRate
       ratingItems.forEach((el, i) => {
         el.classList.toggle("selected", selectedRate && i < selectedRate);
       });
@@ -292,17 +291,20 @@ function showFeedbackModal() {
       if (selectedRate === idx + 1) {
         selectedRate = null;
         ratingItems.forEach((el) => el.classList.remove("selected"));
+        submitBtn.disabled = true; // Disable khi bỏ chọn
       } else {
         selectedRate = idx + 1;
         ratingItems.forEach((el, i) => {
           el.classList.toggle("selected", i < selectedRate);
         });
+        submitBtn.disabled = false; // Enable khi đã chọn
       }
     });
   });
 
   // Submit/cancel logic
-  modal.querySelector(".feedback-submit").onclick = () => {
+  submitBtn.onclick = () => {
+    if (submitBtn.disabled) return;
     const reason = modal.querySelector(".feedback-reason-input").value.trim();
     console.log("Feedback submitted:", { rate: selectedRate, reason });
     modal.remove();
