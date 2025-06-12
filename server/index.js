@@ -6,6 +6,7 @@ const cors = require("cors");
 const morgan = require("morgan");
 
 const imageCaptionRoutes = require("./routes/imageCaptionRoutes");
+const dbHelper = require("./helpers/dbHelper");
 
 // Initialize Express app
 const app = express();
@@ -15,6 +16,11 @@ const PORT = process.env.PORT || 3000;
 app.use(cors());
 app.use(express.json({ limit: "10mb" })); // Larger limit for content processing
 app.use(morgan("dev")); // HTTP request logging
+
+// Connect to MariaDB
+dbHelper.getConnection().then(() => {
+  console.log("MariaDB connected successfully!");
+});
 
 // Routes
 app.use("/api/captionize", imageCaptionRoutes);
