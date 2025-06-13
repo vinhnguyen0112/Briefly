@@ -1303,6 +1303,20 @@ input:checked+.slider:before {
 
 /* ============================================================= */
 
+#cocbot-feedback-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 10000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
 .feedback-modal {
   width: 100%;
   max-width: min(var(--sidebar-max-width, 500px), calc(100vw - 72px));
@@ -1311,8 +1325,7 @@ input:checked+.slider:before {
   padding: 48px 32px 36px 32px;
   text-align: center;
   border-radius: 18px;
-  margin-left: auto;
-  margin-right: auto;
+  margin: auto;
 }
 
 @media (max-width: 385px) {
@@ -1533,7 +1546,7 @@ input:checked+.slider:before {
 }
 
 .sidebar.cocbot-blur {
-  filter: blur(6px) brightness(0.90);
+  filter: blur(1px) brightness(0.90);
   pointer-events: none;
   user-select: none;
 }
