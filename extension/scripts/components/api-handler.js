@@ -147,6 +147,9 @@ export async function processUserQuery(query) {
       }
     } else {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");
+      if (state.currentChat.history.length <= 0) {
+        resetCurrentChat();
+      }
     }
   } catch (error) {
     console.error("CocBot: Query error:", error);

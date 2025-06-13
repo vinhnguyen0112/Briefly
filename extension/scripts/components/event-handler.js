@@ -513,7 +513,7 @@ function toggleChatHistoryScreen() {
   const chatHistory = elements.chatHistoryScreen;
   // Open
   if (chatHistory.style.display === "none" || !chatHistory.style.display) {
-    chatHistory.style.display = "block";
+    chatHistory.style.display = "flex";
     // If first load
     if (
       state.pagination.currentPage === 0 &&
@@ -544,17 +544,36 @@ function fetchChatHistory() {
       currentPage: state.pagination.currentPage,
     },
     async (response) => {
-      const processedChats = response.chats.map((chat) => ({
-        id: chat.id,
-        title: chat.title,
-        page_url: chat.page_url,
-        created_at: chat.created_at,
-      }));
-      state.chatHistory.push(...processedChats);
+      // Replace duplicated IDs with new chat
+      const fetchedChats = new Map(
+        response.chats.map((chat) => [
+          chat.id,
+          {
+            id: chat.id,
+            title: chat.title,
+            page_url: chat.page_url,
+            created_at: chat.created_at,
+          },
+        ])
+      );
+
+      const existingChats = new Map(
+        state.chatHistory.map((chat) => [chat.id, chat])
+      );
+
+      for (const [id, newChat] of fetchedChats.entries()) {
+        existingChats.set(id, newChat);
+      }
+
+      state.chatHistory = Array.from(existingChats.values());
+
       state.pagination.isFetching = false;
       state.pagination.hasMore = response.hasMore;
 
-      console.log(`Fetched ${processedChats.length} chats: `, processedChats);
+      console.log(
+        `Fetched ${fetchedChats.length} chats: `,
+        fetchedChats.values()
+      );
       console.log("Has more chats: ", response.hasMore);
 
       // Render new chats
@@ -583,9 +602,11 @@ function renderCurrentPageChatHistory() {
     }
 
     // Only render chats of current page
-    const chats = state.chatHistory;
-    const sliceIdx = state.pagination.currentPage * LIMIT;
-    const chatsToRender = chats.slice(sliceIdx);
+    const startIdx = state.pagination.currentPage * LIMIT;
+    const endIdx = startIdx + LIMIT;
+    const chatsToRender = state.chatHistory.slice(startIdx, endIdx);
+
+    console.log("Chats to render: ", chatsToRender);
 
     chatsToRender.forEach((chat) => {
       const item = createChatHistoryItem(chat);
@@ -704,18 +725,35 @@ function setupChatHistoryActions(item, chat) {
 
   actionsBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-    closeAllActionMenus();
-    menu.classList.toggle("hidden");
 
-    // Display menu above if not enough space
-    const menuRect = menu.getBoundingClientRect();
-    const buttonRect = actionsBtn.getBoundingClientRect();
-    const spaceBelow = window.innerHeight - buttonRect.bottom;
-    const spaceAbove = buttonRect.top;
+    const isHidden = menu.classList.contains("hidden");
 
-    if (spaceBelow < menuRect.height && spaceAbove > menuRect.height) {
-      menu.style.top = `auto`;
-      menu.style.bottom = `${spaceBelow}px`;
+    // Close all *other* menus, not this one
+    closeAllActionMenus(menu);
+
+    if (isHidden) {
+      menu.classList.remove("hidden");
+    } else {
+      menu.classList.add("hidden");
+    }
+
+    // Positioning logic
+    if (!menu.classList.contains("hidden")) {
+      const menuRect = menu.getBoundingClientRect();
+      const buttonRect = actionsBtn.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - buttonRect.bottom;
+      const spaceAbove = buttonRect.top;
+
+      if (spaceBelow < menuRect.height && spaceAbove > menuRect.height) {
+        menu.style.top = `auto`;
+        menu.style.bottom = `${spaceBelow}px`;
+      } else {
+        menu.style.top = "";
+        menu.style.bottom = "";
+      }
+    } else {
+      menu.style.top = "";
+      menu.style.bottom = "";
     }
   });
 
@@ -791,9 +829,11 @@ function setupChatHistoryActions(item, chat) {
 }
 
 // Helper to close all chat history action menus
-function closeAllActionMenus() {
-  document.querySelectorAll(".chat-history-actions-menu").forEach((menu) => {
-    menu.classList.add("hidden");
+function closeAllActionMenus(except = null) {
+  document.querySelectorAll(".chat-history-actions-menu").forEach((el) => {
+    if (el !== except) {
+      el.classList.add("hidden");
+    }
   });
 }
 

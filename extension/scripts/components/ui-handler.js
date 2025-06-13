@@ -38,9 +38,6 @@ export function closeAllPanels() {
   // hide sign in alert
   elements.signInAlertOverlay.style.display = "none";
 
-  // hide session expired alert
-  elements.sessionExpiredAlertOverlay.style.display = "none";
-
   // show main screen
   if (state.welcomeMode) {
     elements.welcomeScreen.style.display = "flex";
@@ -207,7 +204,6 @@ export function switchToChat() {
 
 // add message to chat
 export function addMessageToChat(message, role) {
-  console.log("Adding message to chat: ", message);
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
   messageElement.innerHTML = `

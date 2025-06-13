@@ -163,14 +163,16 @@ async function addMessageToChat(chatId, message) {
 }
 
 /**
- * Override chat's messages
+ * Overwrite chat's messages
  * @param {string} chatId - The ID of the chat to add messages to.
  * @param {Array<Object>} messages - Array of message objects to add.
  * @returns {Promise<void>}
  */
 async function overwriteChatMessages(chatId, messages) {
+  console.log("Overwriting messages for: ", chatId);
   const { db } = await openIndexedDB();
-  return await new Promise((resolve, reject) => {
+
+  return new Promise((resolve, reject) => {
     if (!chatId) {
       reject(new Error("Chat ID is required to add messages"));
       return;
@@ -179,37 +181,40 @@ async function overwriteChatMessages(chatId, messages) {
       reject(new Error("Messages must be an array"));
       return;
     }
+
     const transaction = db.transaction("chats", "readwrite");
     const store = transaction.objectStore("chats");
     const getRequest = store.get(chatId);
 
     getRequest.onsuccess = (event) => {
       const chat = event.target.result;
+
       if (!chat) {
         reject(new Error(`Chat with ID ${chatId} does not exist`));
         return;
       }
-      if (!Array.isArray(chat.messages)) chat.messages = [];
-      // Simplify message structure
-      messages.forEach((msg) => {
-        chat.messages.push({
-          role: msg.role,
-          content: msg.content,
-          model: msg.model,
-          created_at: msg.created_at,
-        });
-      });
+
+      // Overwrite messages
+      chat.messages = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+        model: msg.model,
+        created_at: msg.created_at,
+      }));
+
       chat.updated_at = new Date();
 
       const updateRequest = store.put(chat);
       updateRequest.onsuccess = () => {
-        console.log(`Added ${messages.length} messages to chat ${chatId}`);
+        console.log(`Overwrote ${messages.length} messages in chat ${chatId}`);
         resolve();
       };
       updateRequest.onerror = (event) => {
-        console.error("Error adding messages to chat:", event.target.error);
+        console.error("Error overwriting messages:", event.target.error);
         reject(
-          new Error("Failed to add messages: " + event.target.error.message)
+          new Error(
+            "Failed to overwrite messages: " + event.target.error.message
+          )
         );
       };
     };
