@@ -97,31 +97,31 @@ npm start
 ### 1. Launch the Sidebar
 
 - Click the CocBot icon in the browser toolbar. The sidebar appears on the right.  
-  <img src="assets/home-panel.png" alt="Home Panel" width="500"/>
+  <img src="assets/home-panel.png" alt="Home Panel" width="400"/>
 
 ### 2. Summarize and Ask Questions
 
 - Type queries into the chat bar.  
-  <img src="assets/chat-bar.png" alt="Chat Bar" width="500"/>
+  <img src="assets/chat-bar.png" alt="Chat Bar" width="400"/>
 - Use Quick Action buttons to generate summaries, explanations or extract highlights.  
-  <img src="assets/quick-actions.png" alt="Quick Actions" width="500"/>
+  <img src="assets/quick-actions.png" alt="Quick Actions" width="400"/>
 
 ### 3. View Extracted Content
 
 - Click **View Page Content** to explore a structured version of the page (text, images, tables, etc.).  
-  <img src="assets/view-content-panel.png" alt="View Content" width="500"/>
+  <img src="assets/view-content-panel.png" alt="View Content" width="400"/>
 
 ### 4. Add Personal Notes
 
 - Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.  
-  <img src="assets/notes-panel.png" alt="Notes Panel" width="500"/>
+  <img src="assets/notes-panel.png" alt="Notes Panel" width="400"/>
 
 ### 5. Adjust AI Behavior
 
 - Visit **Configure** panel to choose:
   - Summary style
   - Max response length  
-    <img src="assets/response-settings.png" alt="Response Settings UI" width="500"/>
+    <img src="assets/response-settings.png" alt="Response Settings UI" width="400"/>
 
 ---
 
