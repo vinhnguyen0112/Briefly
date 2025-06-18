@@ -96,8 +96,8 @@ npm start
 
 ### 1. Launch the Sidebar
 
-Click the CocBot icon in the browser toolbar. The sidebar appears on the right.  
-<img src="assets/home-panel.png" alt="Home Panel" width="500"/>
+- Click the CocBot icon in the browser toolbar. The sidebar appears on the right.  
+  <img src="assets/home-panel.png" alt="Home Panel" width="500"/>
 
 ### 2. Summarize and Ask Questions
 
