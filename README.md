@@ -96,35 +96,35 @@ npm start
 
 ### 1. Launch the Sidebar
 
-Click the CocBot icon in the browser toolbar. The sidebar appears on the right.
-![Home Panel](assets/home-panel.png)
+Click the CocBot icon in the browser toolbar. The sidebar appears on the right.  
+<img src="assets/home-panel.png" alt="Home Panel" width="500"/>
 
 ### 2. Summarize and Ask Questions
 
-- Type queries into the chat bar.
-  ![Chat Bar](assets/chat-bar.png)
-- Use Quick Action buttons to generate summaries, explanations or extract highlights.
-  ![Quick Actions](assets/quick-actions.png)
+- Type queries into the chat bar.  
+  <img src="assets/chat-bar.png" alt="Chat Bar" width="500"/>
+- Use Quick Action buttons to generate summaries, explanations or extract highlights.  
+  <img src="assets/quick-actions.png" alt="Quick Actions" width="500"/>
 
 ### 3. View Extracted Content
 
-- Click **View Page Content** to explore a structured version of the page (text, images, tables, etc.).
-  ![View Content](assets/view-content-panel.png)
+- Click **View Page Content** to explore a structured version of the page (text, images, tables, etc.).  
+  <img src="assets/view-content-panel.png" alt="View Content" width="500"/>
 
 ### 4. Add Personal Notes
 
-- Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.
-  ![Notes Panel](assets/notes-panel.png)
+- Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.  
+  <img src="assets/notes-panel.png" alt="Notes Panel" width="500"/>
 
 ### 5. Adjust AI Behavior
 
 - Visit **Configure** panel to choose:
   - Summary style
-  - Max response length
-    ![Response Settings UI](assets/response-settings.png)
+  - Max response length  
+    <img src="assets/response-settings.png" alt="Response Settings UI" width="500"/>
 
 ---
 
 ## 📄 License
 
-MIT
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
