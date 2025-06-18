@@ -118,10 +118,8 @@ npm start
 
 ### 5. Adjust AI Behavior
 
-- Visit **Configure** panel to choose:
-  - Summary style
-  - Max response length  
-    <img src="assets/response-settings.png" alt="Response Settings UI" width="400"/>
+- Visit **Configure** panel to choose Summary style and Max response length
+  <img src="assets/response-settings.png" alt="Response Settings UI" width="400"/>
 
 ---
 
