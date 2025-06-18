@@ -4,7 +4,7 @@ CocBot is a Chrome-compatible browser extension designed to help users read and 
 
 ---
 
-## Features
+## ✨ Features
 
 - **Sidebar Assistant**: Chat with AI about the current page, ask context-aware questions, and receive summaries.
 - **Quick Actions**: Summarize, extract key points, and explain content instantly.
@@ -19,7 +19,7 @@ CocBot is a Chrome-compatible browser extension designed to help users read and 
 
 ---
 
-## Installation
+## 🛠️ Installation
 
 ### 1. Clone the Repository
 
@@ -57,7 +57,7 @@ npm start
 
 ---
 
-## Usage
+## 🚀 Usage
 
 ### 1. Launch the Sidebar
 
@@ -95,6 +95,14 @@ Click the CocBot icon in the browser toolbar. The sidebar appears on the right.
 
 ---
 
-## License
+## 🧱 Architecture (Overview)
+
+- **Frontend**: Vanilla JS Chrome Extension using DOM API, IndexedDB.
+- **Backend**: Node.js, Express, MariaDB, Redis, RAG pipeline with OpenAI/Gemini.
+- **Deployment**: Supports containerization (Docker) and modular microservices.
+
+---
+
+## 📄 License
 
 MIT
