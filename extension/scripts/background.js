@@ -1,7 +1,13 @@
 import {
+  authenticateWithFacebook,
+  authenticateWithGoogle,
+  signOut,
+} from "./components/auth-handler.js";
+import {
   handleCaptionImages,
   resetProcessedImages,
 } from "./components/caption-handler.js";
+import { saveUserSession } from "./components/state.js";
 
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
@@ -567,10 +573,63 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       return true;
     }
   }
-});
 
-// Handle image processing request
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "google_login") {
+    console.log("CocBot: Received request to authenticate with Google");
+
+    authenticateWithGoogle()
+      .then((sessionData) => {
+        saveUserSession(sessionData)
+          .then(() => {
+            sendResponse({ success: true });
+          })
+          .catch((err) => {
+            throw err;
+          });
+      })
+      .catch((err) => {
+        console.error(err);
+        sendResponse({ success: false, error: err.message });
+      });
+
+    return true; // Keep the message channel open for async response
+  }
+  if (message.action === "facebook_login") {
+    console.log("CocBot: Received request to authenticate with Facebook");
+    authenticateWithFacebook()
+      .then((session) => {
+        saveUserSession(session)
+          .then(() => {
+            sendResponse({ success: true });
+          })
+          .catch((err) => {
+            throw err;
+          });
+      })
+      .catch((error) => {
+        console.error("Failed to handle captions", error);
+      });
+
+    return true;
+  }
+  if (message.action === "sign_out") {
+    console.log("CocBot: Received request to sign out");
+    signOut()
+      .then((success) => {
+        if (success) {
+          console.log("Sign out sucessfully");
+          sendResponse({ success: true });
+        } else {
+          sendResponse({ success: false });
+        }
+      })
+      .catch((err) => {
+        console.error(err);
+        sendResponse({ success: false, message: err.message });
+      });
+
+    return true;
+  }
   if (message.action === "process_images") {
     resetProcessedImages();
     handleCaptionImages(message.images)
@@ -585,5 +644,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       });
 
     return true;
+  }
+});
+
+// Observe change in storage
+chrome.storage.onChanged.addListener((changes, areaName) => {
+  // Notify all tabs if auth session changed
+  if (areaName === "local" && changes.auth_session) {
+    // The newValue directly reflects if a session exists (truthy/falsy)
+    const hasSession = changes.auth_session.newValue;
+    console.log("Briefly: Auth state changed: ", hasSession);
+
+    chrome.tabs.query({}, (tabs) => {
+      tabs.forEach((tab) => {
+        chrome.tabs.sendMessage(
+          tab.id,
+          {
+            action: "auth_session_changed",
+            isAuth: hasSession,
+          },
+          () => {
+            if (chrome.runtime.lastError) {
+              console.error(
+                `Error sending message to tab ${tab.id}:`,
+                chrome.runtime.lastError.message
+              );
+            }
+          }
+        );
+      });
+    });
   }
 });

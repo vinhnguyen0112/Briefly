@@ -3,19 +3,49 @@ import {
   getApiKey,
   getConfig,
   getLanguage,
+  clearUserSession,
+  getAnonSession,
   state,
 } from "./components/state.js";
-import { setupEventListeners } from "./components/event-handler.js";
+import {
+  renderToggleAccountPopupUI,
+  setupEventListeners,
+} from "./components/event-handler.js";
 import {
   requestPageContent,
   setupContentExtractionReliability,
 } from "./components/content-handler.js";
 import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
+import { isUserAuthenticated } from "./components/auth-handler.js";
+import { setupAnonSession } from "./components/anon-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
+  // Validate the user session
+  isUserAuthenticated()
+    .then((isAuthenticated) => {
+      if (!isAuthenticated) {
+        clearUserSession();
+      }
+      // Force re-render of account popup UI on load
+      // Because StorageArea observer doesn't auto run on reloads
+      renderToggleAccountPopupUI(isAuthenticated);
+    })
+    .catch((err) => {
+      console.error("CocBot: Error validating user session", err);
+      console.log("Forcing user to sign out");
+      clearUserSession();
+    });
+
+  // Set up anonymous session if not exists
+  getAnonSession().then((anonSession) => {
+    if (!anonSession) {
+      console.log("No anon session found, requesting new session from server");
+      setupAnonSession();
+    }
+  });
 
   // check for api key
   getApiKey().then((key) => {

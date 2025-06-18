@@ -17,7 +17,7 @@ const imageCaption = async (req, res, next) => {
     console.log(usage);
     res.json({ captions, usage });
   } catch (err) {
-    next(err);
+    return next(err);
   }
 };
 

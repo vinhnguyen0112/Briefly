@@ -151,12 +151,7 @@ function handleSidebarMessage(message) {
     case "get_page_content":
       console.log("CocBot: Extracting page content");
       try {
-        collectedCaptions = [];
-        lastExtractedContent = null;
-        const pageContent = extractAndCachePageContent();
-        console.log(
-          "✅ Reset collectedCaptions and lastExtractedContent before extracting new page content"
-        );
+        const pageContent = extractPageContent(); // Uses the global function
         console.log("CocBot: Content extracted successfully", {
           title: pageContent.title,
           url: pageContent.url,
@@ -246,6 +241,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       const pageContent = extractAndCachePageContent();
       sendToSidebar(pageContent);
     }
+  } else if (message.action === "auth_session_changed") {
+    const iframe = document.getElementById("isal-sidebar-iframe");
+    const container = document.getElementById("isal-sidebar-container");
+
+    // Only update if the sidebar is currently open
+    if (iframe && container && container.classList.contains("active")) {
+      console.log("CocBot: Notifying sidebar to react to auth session change");
+
+      // Send message to the sidebar and update the UI
+      iframe.contentWindow.postMessage(
+        {
+          action: "auth_session_changed",
+          isAuth: message.isAuth,
+        },
+        "*"
+      );
+    }
+    sendResponse({ success: true });
   }
   // Keep the message channel open for the async response in toggle_sidebar
   return true;

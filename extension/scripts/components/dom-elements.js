@@ -10,6 +10,19 @@ export const elements = {
   // Header elements
   cocbotTitle: document.getElementById("cocbot-title"),
 
+  // Authentication elements
+  // Use classname for authentication buttons to support multiple instances
+  googleLoginButtons: document.querySelectorAll(".google-login-button"),
+  facebookLoginButtons: document.querySelectorAll(".facebook-login-button"),
+  accountButton: document.getElementById("account-button"),
+  accountPopup: document.getElementById("account-popup"),
+  signOutButton: document.getElementById("sign-out-button"),
+
+  // Alert elements
+  signInAlertPopup: document.getElementById("sign-in-alert-popup"),
+  signInAlertOverlay: document.getElementById("sign-in-alert-overlay"),
+  closeSignInAlertButton: document.getElementById("close-sign-in-alert-button"),
+
   // Content viewer elements
   contentDisplay: document.getElementById("content-display"),
 
@@ -45,7 +58,11 @@ export const elements = {
   // Settings button
   settingsButton: document.getElementById("settings-button"),
 
+  settingsButton: document.getElementById("settings-button"),
+
   // Language toggle
+  languageToggle: document.getElementById("language-toggle"),
+
   languageToggle: document.getElementById("language-toggle"),
 
   // Quick action buttons

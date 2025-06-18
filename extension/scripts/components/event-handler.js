@@ -1,9 +1,19 @@
 import { elements } from "./dom-elements.js";
-import { state, saveApiKey, getConfig, saveConfig } from "./state.js";
+import {
+  state,
+  getApiKey,
+  saveApiKey,
+  getConfig,
+  saveConfig,
+  getLanguage,
+  saveLanguage,
+} from "./state.js";
 import {
   handleResize,
   stopResize,
   addMessageToChat,
+  addTypingIndicator,
+  removeTypingIndicator,
   closeAllPanels,
   switchToChat,
   handleContentMessage,
@@ -11,8 +21,14 @@ import {
 import {
   requestPageContent,
   openContentViewerPopup,
+  renderContentInSidebar,
+  setupContentExtractionReliability,
 } from "./content-handler.js";
-import { processUserQuery } from "./api-handler.js";
+import {
+  callOpenAI,
+  constructPromptWithPageContent,
+  processUserQuery,
+} from "./api-handler.js";
 import {
   openNotesPanel,
   openNoteEditor,
@@ -45,6 +61,8 @@ export function setupEventListeners() {
       state.welcomeMode = true;
     }
   });
+
+  setupAuthenticationButtons();
 
   setupQuickActions();
 
@@ -327,6 +345,11 @@ export function setupEventListeners() {
       addMessageToChat(message, "assistant");
     });
   });
+
+  elements.closeSignInAlertButton.addEventListener(
+    "click",
+    closeSignInAlertPopup
+  );
 }
 
 // set up quick action buttons
@@ -356,7 +379,112 @@ function setupQuickActions() {
   });
 }
 
-// external function for rendering UI config
+function setupAuthenticationButtons() {
+  // Google authentication button
+  elements.googleLoginButtons.forEach((b) => {
+    b.addEventListener("click", () => {
+      chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
+        if (response.success) {
+          // Close the account popup & sign in alert
+          closeAccountPopupUI();
+          closeSignInAlertPopup();
+          console.log("User authenticated via Google");
+        }
+      });
+    });
+  });
+
+  // Facebook authentication button
+  elements.facebookLoginButtons.forEach((b) => {
+    b.addEventListener("click", () => {
+      chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
+        if (response.success) {
+          // Close the account popup & sign in alert
+          closeAccountPopupUI();
+          closeSignInAlertPopup();
+          console.log("User authenticated via Facebook");
+        }
+      });
+    });
+  });
+
+  // Sign out button
+  elements.signOutButton.addEventListener("click", () => {
+    chrome.runtime.sendMessage({ action: "sign_out" }, (response) => {
+      if (response.success) {
+        // Close the account popup
+        closeAccountPopupUI();
+        console.log("User signed out");
+      }
+    });
+  });
+
+  elements.accountButton.addEventListener("click", () =>
+    toggleAccountPopupUI()
+  );
+}
+
+// Close the account popup UI
+function closeAccountPopupUI() {
+  elements.accountPopup.style.display = "none";
+}
+
+// Render the account popup UI
+export function renderToggleAccountPopupUI(isAuthenticated) {
+  if (isAuthenticated) {
+    elements.signOutButton.style.display = "flex";
+
+    // Hide all Google and Facebook login buttons in the header
+    elements.googleLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "none";
+      }
+    });
+    elements.facebookLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "none";
+      }
+    });
+  } else {
+    elements.signOutButton.style.display = "none";
+
+    // Show all Google and Facebook login buttons in the header
+    elements.googleLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "flex";
+      }
+    });
+    elements.facebookLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "flex";
+      }
+    });
+  }
+}
+
+// Toggle on/off the account popup UI
+async function toggleAccountPopupUI() {
+  const popup = elements.accountPopup;
+
+  // Toggle the display state of the popup
+  if (popup.style.display === "none" || !popup.style.display) {
+    popup.style.display = "block";
+  } else {
+    popup.style.display = "none";
+  }
+}
+
+// Show the signin alert overlay
+export function openSignInAlertPopup() {
+  elements.signInAlertOverlay.style.display = "flex";
+}
+
+// Hide the signin alert overlay
+function closeSignInAlertPopup() {
+  elements.signInAlertOverlay.style.display = "none";
+}
+
+// External function for rendering UI config
 function renderConfigUI(containerId, onSave) {
   const container = document.getElementById(containerId);
 
