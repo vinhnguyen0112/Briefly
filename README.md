@@ -11,11 +11,11 @@ CocBot is a Chrome-compatible browser extension designed to help users read and 
 - **Notes**: Add, edit, and manage notes per webpage with persistent storage.
 - **Content Viewer**: View extracted content, tables, images, and structured data.
 - **Image Captioning**: Automatically generates captions for images using backend AI.
-- **Feedback System**: Rate responses with stars and optional comments.
 - **Multilingual Support**: Works in English and Vietnamese.
 - **Personalization**: Configure response style, length, and language.
-- **Session Persistence**: Retain chat and notes across reloads (including anonymous sessions).
-- **Offline Access**: Recent chat history is available offline.
+- **Feedback System**: Rate responses with stars and optional comments. ![WIP](https://img.shields.io/badge/status-WIP-orange)
+- **Chat History Persistence:**: Retain chat and notes across reloads (including anonymous sessions). ![WIP](https://img.shields.io/badge/status-WIP-orange)
+- **Offline Access**: Recent chat history is available offline. ![WIP](https://img.shields.io/badge/status-WIP-orange)
 
 ---
 
@@ -37,10 +37,45 @@ npm install
 
 ### 3. Configure Environment
 
-Edit the `server/.env` file with the required credentials:
+Create a `.env` file inside the `/server` directory with the following structure:
 
-- OpenAI/Gemini API keys
-- Database credentials
+```env
+# General
+LOCAL_DEV=true
+NODE_ENV=development
+PORT=3000
+EXTENSION_ID=<your-extension-id>
+GOOGLE_CLIENT_ID=<your-google-client-id>
+FACEBOOK_APP_ID=<your-facebook-app-id>
+FACEBOOK_APP_SECRET=<your-facebook-app-secret>
+SESSION_TTL=604800
+OPENAI_API_KEY=<your-openai-api-key>
+FACEBOOK_TOKEN_DEBUG_URL=https://graph.facebook.com/debug_token
+
+# Redis config
+REDIS_HOST_1=<your-redis-host-1>
+REDIS_HOST_2=<your-redis-host-2>
+REDIS_HOST_3=<your-redis-host-3>
+REDIS_PORT=6379
+REDIS_USERNAME=<your-redis-username>
+REDIS_PASSWORD=<your-redis-password>
+REDIS_PREFIX=capstone
+LOCAL_REDIS_URL=redis://localhost:6379
+
+# MySQL config
+MYSQL_HOST=<your-mysql-host>
+MYSQL_PORT=6446
+MYSQL_USERNAME=<your-mysql-username>
+MYSQL_PASSWORD=<your-mysql-password>
+MYSQL_DB=<your-database-name>
+
+# Local dev config (optional)
+LOCAL_MYSQL_HOST=localhost
+LOCAL_MYSQL_PORT=3306
+LOCAL_MYSQL_USERNAME=root
+LOCAL_MYSQL_PASSWORD=<your-local-password>
+LOCAL_MYSQL_DB=coccoc
+```
 
 ### 4. Start the Backend Server
 
@@ -62,44 +97,31 @@ npm start
 ### 1. Launch the Sidebar
 
 Click the CocBot icon in the browser toolbar. The sidebar appears on the right.
+![Home Panel](assets/home-panel.png)
 
 ### 2. Summarize and Ask Questions
 
 - Type queries into the chat bar.
-- Use Quick Action buttons to generate summaries or extract highlights.
+  ![Chat Bar](assets/chat-bar.png)
+- Use Quick Action buttons to generate summaries, explanations or extract highlights.
+  ![Quick Actions](assets/quick-actions.png)
 
 ### 3. View Extracted Content
 
 - Click **View Page Content** to explore a structured version of the page (text, images, tables, etc.).
+  ![View Content](assets/view-content-panel.png)
 
 ### 4. Add Personal Notes
 
 - Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.
+  ![Notes Panel](assets/notes-panel.png)
 
 ### 5. Adjust AI Behavior
 
 - Visit **Configure** panel to choose:
-  - Summary style (bullet, narrative...)
+  - Summary style
   - Max response length
-  - Language preference
-
-### 6. Provide Feedback
-
-- Click the feedback icon near any AI message.
-- Submit a star rating and optional comment.
-
-### 7. Authentication
-
-- On first use, login using **Google** or **Facebook**.
-- Anonymous mode is supported for limited use (3 queries).
-
----
-
-## 🧱 Architecture (Overview)
-
-- **Frontend**: Vanilla JS Chrome Extension using DOM API, IndexedDB.
-- **Backend**: Node.js, Express, MariaDB, Redis, RAG pipeline with OpenAI/Gemini.
-- **Deployment**: Supports containerization (Docker) and modular microservices.
+    ![Response Settings UI](assets/response-settings.png)
 
 ---
 
