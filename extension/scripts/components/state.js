@@ -31,6 +31,7 @@ export const state = {
     isFetching: false,
   },
   chatHistory: [],
+  isChatHistoryEventsInitialized: false,
 };
 
 // Load sidebar width from storage
@@ -88,7 +89,7 @@ export function saveAnonSession(data) {
 }
 
 // Increase anon query count for the current anon session
-export async function incrementAnonQueryCount() {
+export async function increaseAnonQueryCount() {
   const anonSession = await getAnonSession();
   await saveAnonSession({
     ...anonSession,
@@ -292,6 +293,7 @@ export function resetPagination() {
 }
 
 export function setCurrentChat(chat) {
+  console.log("Setting current chat to: ", chat.id);
   state.currentChat = {
     id: chat.id || null,
     title: chat.title || "",

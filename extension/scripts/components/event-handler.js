@@ -186,7 +186,7 @@ export function setupEventListeners() {
     const query = elements.welcomeInput.value.trim();
     if (!query) return;
 
-    switchToChat();
+    switchToChat({ newChat: true });
 
     processUserQuery(query);
 
@@ -199,7 +199,7 @@ export function setupEventListeners() {
 
       const query = elements.welcomeInput.value.trim();
       if (query) {
-        switchToChat();
+        switchToChat({ newChat: true });
         processUserQuery(query);
         elements.welcomeInput.value = "";
       }
@@ -363,24 +363,42 @@ export function setupEventListeners() {
   );
 
   elements.newChatButton.addEventListener("click", () => {
-    // Clear current chat state first before clear UI
-    resetCurrentChat();
-    clearMessagesFromChat();
-    switchToChat();
+    switchToChat({ newChat: true });
   });
 
-  elements.chatHistoryButton.addEventListener("click", () => {
+  setupChatHistoryEvents();
+
+  // Hide menus when clicking outside
+  document.addEventListener("click", () => {
+    closeAllActionMenus();
+  });
+}
+
+export function setupChatHistoryEvents() {
+  if (state.isChatHistoryEventsInitialized) {
+    console.log("Chat history event already initialized, returning");
+    return;
+  }
+  console.log("Setting up chat history events");
+
+  // Re-querying elements incase they are removed
+  const chatHistoryButton = document.getElementById("chat-history-button");
+  const chatHistoryContent = document.getElementById("chat-history-content");
+  const closeChatHistoryButton = document.getElementById(
+    "close-chat-history-button"
+  );
+
+  chatHistoryButton.addEventListener("click", (e) => {
     toggleChatHistoryScreen();
   });
 
-  elements.closeChatHistoryButton.addEventListener("click", () =>
+  closeChatHistoryButton.addEventListener("click", (e) =>
     closeChatHistoryScreen()
   );
 
   // Chat history infinite scroll
-  elements.chatHistoryContent.addEventListener("scroll", (e) => {
-    const { scrollTop, scrollHeight, clientHeight } =
-      elements.chatHistoryContent;
+  chatHistoryContent.addEventListener("scroll", (e) => {
+    const { scrollTop, scrollHeight, clientHeight } = chatHistoryContent;
 
     if (
       scrollTop + clientHeight >= scrollHeight - 100 &&
@@ -392,10 +410,7 @@ export function setupEventListeners() {
     }
   });
 
-  // Hide menus when clicking outside
-  document.addEventListener("click", () => {
-    closeAllActionMenus();
-  });
+  state.isChatHistoryEventsInitialized = true;
 }
 
 // set up quick action buttons
@@ -418,7 +433,7 @@ function setupQuickActions() {
       }
 
       if (query) {
-        switchToChat();
+        switchToChat({ newChat: true });
         processUserQuery(query);
       }
     });
@@ -509,8 +524,9 @@ export function renderToggleAccountPopupUI(isAuthenticated) {
 }
 
 // Toggle the display state of the chat history screen
-function toggleChatHistoryScreen() {
+export function toggleChatHistoryScreen() {
   const chatHistory = elements.chatHistoryScreen;
+  console.log("Chat history screen: ", chatHistory);
   // Open
   if (chatHistory.style.display === "none" || !chatHistory.style.display) {
     chatHistory.style.display = "flex";
@@ -535,7 +551,8 @@ function toggleChatHistoryScreen() {
 }
 
 // Fetch chat history for the current page
-function fetchChatHistory() {
+export function fetchChatHistory() {
+  console.log("Fetching chat history");
   state.pagination.isFetching = true;
 
   chrome.runtime.sendMessage(
@@ -680,7 +697,7 @@ function createChatHistoryItem(chat) {
     </div>
   `;
 
-  // Open chat logic
+  // Open chat when click on chat history item
   item.addEventListener("click", async (e) => {
     if (
       e.target.closest(".chat-history-actions-menu") ||
@@ -692,16 +709,17 @@ function createChatHistoryItem(chat) {
     const history = [];
     clearMessagesFromChat();
     closeChatHistoryScreen();
-    switchToChat();
+    switchToChat({ newChat: true });
 
     let messages;
+    // If online
     if (navigator.onLine) {
-      messages = await chatHandler.getMessages(chat.id);
-      if (messages && messages.length > 0) {
-        const found = await idbHandler.getChatById(chat.id);
-        if (!found) await idbHandler.addChat(chat);
-        await idbHandler.overwriteChatMessages(chat.id, messages);
-      }
+      // Get messages from DB, default to empty
+      messages = (await chatHandler.getMessages(chat.id)) || [];
+      // Update IDB cache
+      const found = await idbHandler.getChatById(chat.id);
+      if (!found) await idbHandler.addChat(chat);
+      await idbHandler.overwriteChatMessages(chat.id, messages);
     } else {
       messages = await idbHandler.getMessagesForChat(chat.id);
     }
@@ -829,7 +847,7 @@ function setupChatHistoryActions(item, chat) {
 }
 
 // Helper to close all chat history action menus
-function closeAllActionMenus(except = null) {
+export function closeAllActionMenus(except = null) {
   document.querySelectorAll(".chat-history-actions-menu").forEach((el) => {
     if (el !== except) {
       el.classList.add("hidden");
@@ -842,7 +860,7 @@ function removeChatHistoryItem(id) {
   elements.chatHistoryList.removeChild(itemToRemove);
 }
 
-function closeChatHistoryScreen() {
+export function closeChatHistoryScreen() {
   elements.chatHistoryScreen.style.display = "none";
 }
 

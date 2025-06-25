@@ -10,18 +10,16 @@ function formatMySQLTimestamp(date) {
 
 /**
  * Bulk insert test chats for pagination testing.
- * Expects { user_id } or { anon_session_id } in req.body.
- * Optionally accepts { count } for number of chats (default: 30).
  */
 async function bulkInsertChats(req, res) {
   try {
-    const { user_id, anon_session_id, count = 30 } = req.body;
-    if (!user_id && !anon_session_id) {
+    const { user_id, count = 30 } = req.body;
+    if (!user_id) {
       return res.status(400).json({
         success: false,
         error: {
           code: "MISSING_ID",
-          message: "user_id or anon_session_id required",
+          message: "user_id required",
         },
       });
     }
@@ -34,7 +32,6 @@ async function bulkInsertChats(req, res) {
       chats.push({
         id: crypto.randomUUID(),
         user_id: user_id || null,
-        anon_session_id: anon_session_id || null,
         title: `Test Chat #${i + 1}`,
         page_url: pageUrl,
         page_id: commonHelper.generateHash(pageUrl),

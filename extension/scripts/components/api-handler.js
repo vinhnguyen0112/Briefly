@@ -1,7 +1,7 @@
 import {
   state,
   getApiKey,
-  incrementAnonQueryCount,
+  increaseAnonQueryCount,
   getUserSession,
   resetCurrentChat,
 } from "./state.js";
@@ -17,10 +17,9 @@ import chatHandler from "./chat-handler.js";
 
 // Process a user query
 export async function processUserQuery(query) {
-  // If user is unauthenticated & exceeded their query limit, force sign in
+  // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
-    // openSignInAlertPopup();
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
         chrome.tabs.sendMessage(tabs[0].id, {
@@ -31,24 +30,7 @@ export async function processUserQuery(query) {
     return;
   }
 
-  // Prepare chat info but don't persist yet
-  let chatId = state.currentChat.id;
-  let isNewChat = false;
-  if (!chatId) {
-    chatId = crypto.randomUUID();
-    const pageUrl = state.pageContent?.url || window.location.href;
-    const pageTitle = state.pageContent?.title || document.title;
-
-    // Update state with new chat info (not yet persisted)
-    state.currentChat.id = chatId;
-    state.currentChat.title = pageTitle;
-    state.currentChat.pageUrl = pageUrl;
-    state.currentChat.history = [];
-    isNewChat = true;
-  }
-
   addMessageToChat(query, "user");
-
   const typingIndicator = addTypingIndicator();
 
   try {
@@ -64,11 +46,6 @@ export async function processUserQuery(query) {
       return;
     }
 
-    console.log("CocBot: Got page content:", state.pageContent ? "Yes" : "No");
-    if (state.pageContent) {
-      console.log("CocBot: Page title:", state.pageContent.title);
-    }
-
     const messages = await constructPromptWithPageContent(
       query,
       state.pageContent,
@@ -80,54 +57,73 @@ export async function processUserQuery(query) {
 
     removeTypingIndicator(typingIndicator);
 
+    // Auth check
+    const userSession = await getUserSession();
+
     if (response.success) {
-      // Create new chat is needed
-      if (isNewChat) {
-        await chatHandler.createChat({
-          id: chatId,
-          page_url: state.currentChat.pageUrl,
-          title: state.currentChat.title,
+      if (userSession && userSession.id) {
+        // Prepare chat info but don't persist yet
+        let chatId = state.currentChat.id;
+        let isNewChat = false;
+        if (!chatId) {
+          chatId = crypto.randomUUID();
+          const pageUrl = state.pageContent?.url || window.location.href;
+          const pageTitle = state.pageContent?.title || document.title;
+
+          // Update state with new chat info (not yet persisted)
+          state.currentChat.id = chatId;
+          state.currentChat.title = pageTitle;
+          state.currentChat.pageUrl = pageUrl;
+          state.currentChat.history = [];
+          isNewChat = true;
+        }
+
+        // Save chat to DB and IDB if new chat
+        if (isNewChat) {
+          await chatHandler.createChat({
+            id: chatId,
+            page_url: state.currentChat.pageUrl,
+            title: state.currentChat.title,
+          });
+          await idbHandler.addChat({
+            id: chatId,
+            title: state.currentChat.title,
+            page_url: state.currentChat.pageUrl,
+          });
+
+          state.chatHistory.unshift({
+            id: chatId,
+            title: state.currentChat.title,
+            page_url: state.currentChat.pageUrl,
+            created_at: Date.now(),
+          });
+        }
+
+        // Save user message to DB and IDB
+        await chatHandler.addMessage(chatId, {
+          role: "user",
+          content: query,
         });
-        await idbHandler.addChat({
-          id: chatId,
-          title: state.currentChat.title,
-          page_url: state.currentChat.pageUrl,
+        await idbHandler.addMessageToChat(chatId, {
+          role: "user",
+          content: query,
         });
 
-        // Add new chat to state
-        state.chatHistory.unshift({
-          id: chatId,
-          title: state.currentChat.title,
-          page_url: state.currentChat.pageUrl,
-          created_at: Date.now(),
+        // Save AI response to DB and IDB
+        await chatHandler.addMessage(chatId, {
+          role: "assistant",
+          content: response.message,
+          model: "gpt-4o-mini",
+        });
+        await idbHandler.addMessageToChat(chatId, {
+          role: "assistant",
+          content: response.message,
         });
       }
 
-      // Add user message to server and IDB
-      await chatHandler.addMessage(chatId, {
-        role: "user",
-        content: query,
-      });
-      await idbHandler.addMessageToChat(chatId, {
-        role: "user",
-        content: query,
-      });
-
-      // Add AI response to server and IDB
-      await chatHandler.addMessage(chatId, {
-        role: "assistant",
-        content: response.message,
-        model: "gpt-4o-mini",
-      });
-      await idbHandler.addMessageToChat(chatId, {
-        role: "assistant",
-        content: response.message,
-      });
-
-      // Add message to chat UI after all server operations succeed
       addMessageToChat(response.message, "assistant");
 
-      // Update state history
+      // Update history stack
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({
         role: "assistant",
@@ -141,12 +137,13 @@ export async function processUserQuery(query) {
       }
 
       // Increase anon query count if user is not authenticated
-      const userSession = await getUserSession();
+      // TODO: Increase in DB and Redis when have server API
       if (!userSession) {
-        await incrementAnonQueryCount();
+        await increaseAnonQueryCount();
       }
     } else {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");
+      // Reset chat to assign new chat if no prior history
       if (state.currentChat.history.length <= 0) {
         resetCurrentChat();
       }
@@ -155,7 +152,6 @@ export async function processUserQuery(query) {
     console.error("CocBot: Query error:", error);
     removeTypingIndicator(typingIndicator);
     addMessageToChat("Something went wrong. Try again?", "assistant");
-    // Message failed and it was a new chat, reset state
     if (state.currentChat.history.length <= 0) {
       resetCurrentChat();
     }

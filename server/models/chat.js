@@ -34,7 +34,9 @@ class Chat {
     return rows[0];
   }
 
-  async getBy({ user_id, anon_session_id, offset = 0, limit = 20 }) {
+  async getBy({ user_id, offset = 0, limit = 20 }) {
+    if (!user_id) throw new Error("Missing user_id");
+
     let query = "SELECT * FROM chats";
     const conditions = [];
     const values = [];
@@ -42,10 +44,6 @@ class Chat {
     if (user_id) {
       conditions.push("user_id = ?");
       values.push(user_id);
-    }
-    if (anon_session_id) {
-      conditions.push("anon_session_id = ?");
-      values.push(anon_session_id);
     }
 
     if (conditions.length > 0) {
@@ -74,32 +72,20 @@ class Chat {
     await dbHelper.executeQuery(query, values);
   }
 
-  async updateAnonChatsToUser(anon_session_id, user_id) {
-    const query = `
-      UPDATE chats
-      SET user_id = ?, anon_session_id = NULL, updated_at = CURRENT_TIMESTAMP
-      WHERE anon_session_id = ?
-    `;
-    await dbHelper.executeQuery(query, [user_id, anon_session_id]);
-  }
-
   async delete(id) {
     const query = "DELETE FROM chats WHERE id = ?";
     await dbHelper.executeQuery(query, [id]);
   }
 
-  async deleteBy({ user_id, anon_session_id }) {
+  async deleteBy({ user_id }) {
     let query = "DELETE FROM chats ";
     let value;
 
     if (user_id) {
       query += `WHERE user_id = ?`;
       value = user_id;
-    } else if (anon_session_id) {
-      query += `WHERE anon_session_id = ?`;
-      value = anon_session_id;
     } else {
-      throw new Error("Missing both user_id and anon_session_id");
+      throw new Error("Missing user_id");
     }
 
     await dbHelper.executeQuery(query, [value]);

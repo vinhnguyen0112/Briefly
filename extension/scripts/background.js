@@ -641,6 +641,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         offset: message.currentPage * CHAT_QUERY_LIMIT,
       })
       .then((data) => {
+        console.log("Fetch chat history request's data: ", data);
         sendResponse({
           success: true,
           chats: data.chats,
@@ -671,8 +672,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 chrome.storage.onChanged.addListener((changes, areaName) => {
   // Notify all tabs if auth session changed
   if (areaName === "local" && changes.auth_session) {
-    const hasSession = changes.auth_session.newValue;
-    console.log("Briefly: Auth state changed: ", hasSession);
+    const isAuth = !!changes.auth_session.newValue; // Convert to boolean
+    console.log("Briefly: Auth state changed: ", isAuth);
 
     chrome.tabs.query({}, (tabs) => {
       tabs.forEach((tab) => {
@@ -680,7 +681,7 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
           tab.id,
           {
             action: "auth_session_changed",
-            isAuth: hasSession,
+            isAuth,
           },
           () => {
             if (chrome.runtime.lastError) {

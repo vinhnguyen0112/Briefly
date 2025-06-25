@@ -29,17 +29,6 @@ const handleSessionCreation = async (userId) => {
   return authSessionId;
 };
 
-const handleDataPromotion = async (promotedAnonSessionId, userId) => {
-  if (!promotedAnonSessionId) return;
-
-  // TODO: Uncommented this if allow chat history promotion
-
-  // console.log(
-  //   "Promotion detected, promoting anon chat history to authenticated user"
-  // );
-  // await Chat.updateAnonChatsToUser(promotedAnonSessionId, userId);
-};
-
 // Authenticate with Google
 const authenticateWithGoogle = async (req, res, next) => {
   try {
@@ -51,7 +40,6 @@ const authenticateWithGoogle = async (req, res, next) => {
     const promotedAnonSessionId = authHelper.extractFromPromotionHeader(req);
 
     await handleUserPersistence(userId, name);
-    await handleDataPromotion(promotedAnonSessionId, userId);
     const sessionId = await handleSessionCreation(userId);
 
     return res.json({ success: true, data: { id: sessionId } });
@@ -69,7 +57,6 @@ const authenticateWithFacebook = async (req, res, next) => {
     const promotedAnonSessionId = authHelper.extractFromPromotionHeader(req);
 
     await handleUserPersistence(userId, name);
-    await handleDataPromotion(promotedAnonSessionId, userId);
 
     const sessionId = await handleSessionCreation(userId);
 

@@ -1,4 +1,4 @@
-import { sendRequest } from "./state.js";
+import { getUserSession, sendRequest } from "./state.js";
 
 const API_BASE = "http://localhost:3000/api/chats";
 
@@ -12,9 +12,19 @@ async function createChat({ id, page_url, title }) {
 
 // Get all chats for a user
 async function getChatsForCurrentUser({ offset = 0, limit = 20 }) {
-  return sendRequest(`${API_BASE}?offset=${offset}&limit=${limit}`).then(
-    (response) => response.data
-  );
+  const userSession = await getUserSession();
+
+  if (!userSession) throw new Error("No authenticated user session found");
+  const response = await fetch(`${API_BASE}?offset=${offset}&limit=${limit}`, {
+    method: "GET",
+    headers: {
+      Authorization: `Bearer auth:${userSession.id}`,
+    },
+  });
+
+  const data = await response.json();
+
+  return data.data;
 }
 
 // Update a chat

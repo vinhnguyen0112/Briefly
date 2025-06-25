@@ -11,7 +11,12 @@ import {
   requestPageContent,
   updateContentStatus,
 } from "./content-handler.js";
-import { renderToggleAccountPopupUI, showPopupAlert } from "./event-handler.js";
+import {
+  renderToggleAccountPopupUI,
+  setupChatHistoryEvents,
+  showPopupAlert,
+  toggleChatHistoryScreen,
+} from "./event-handler.js";
 
 // close all panels
 export function closeAllPanels() {
@@ -68,7 +73,7 @@ export function setupQuickActions() {
 
       if (query) {
         // jump to chat and fire the query
-        switchToChat();
+        switchToChat({ newChat: true });
         processUserQuery(query);
       }
     });
@@ -139,8 +144,14 @@ export function stopResize() {
 }
 
 // switch from welcome to chat view
-export function switchToChat() {
+export function switchToChat({ newChat = false } = {}) {
   if (!state.welcomeMode) return;
+
+  // If new chat, reset state and clear all messages
+  if (newChat) {
+    resetCurrentChat();
+    clearMessagesFromChat();
+  }
 
   state.welcomeMode = false;
 
@@ -335,16 +346,23 @@ export function escapeHtml(text) {
 
 // Handle UI changes when authentication state changes
 function handleAuthStateChange(isAuth) {
+  console.log("Received auth state in sidebar: ", isAuth);
+
   // Reset UI
   renderToggleAccountPopupUI(isAuth);
   clearMessagesFromChat();
   clearChatHistory();
 
+  state.isChatHistoryEventsInitialized = false;
+
+  // Inject or remove chat history screen based on user session state
+  injectChatHistoryElements(isAuth);
+
   // Navigate back to welcome page
   state.welcomeMode = true;
   closeAllPanels();
 
-  // Reset chat, pagination and history state
+  // Reset state
   resetCurrentChat();
   resetPagination();
   state.chatHistory = [];
@@ -353,4 +371,109 @@ function handleAuthStateChange(isAuth) {
   elements.chatScreen.style.display = "none";
   // hide chat history
   elements.chatHistoryScreen.style.display = "none";
+}
+
+export function injectChatHistoryElements(isAuth) {
+  const sidebarContentWrapper = document.querySelector(
+    ".sidebar-content-wrapper"
+  );
+  let chatHistoryScreen = document.getElementById("chat-history-screen");
+  let chatHistoryButton = document.getElementById("chat-history-button");
+
+  console.log("Queried chat history screen: ", chatHistoryScreen);
+  console.log("Queried chat history button: ", chatHistoryButton);
+
+  // Helper function to create chat history button
+  function createChatHistoryButton() {
+    const btn = document.createElement("button");
+    btn.id = "chat-history-button";
+    btn.className = "button";
+    btn.innerHTML = `
+      <svg
+        aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg"
+        width="16"
+        height="16"
+        fill="none"
+        viewBox="0 0 24 24"
+        style="margin-right: 8px"
+      >
+        <path
+          stroke="currentColor"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          stroke-width="2"
+          d="M12 8v4l3 3M3.22302 14C4.13247 18.008 7.71683 21 12 21c4.9706 0 9-4.0294 9-9 0-4.97056-4.0294-9-9-9-3.72916 0-6.92858 2.26806-8.29409 5.5M7 9H3V5"
+        />
+      </svg>
+      Chat History
+    `;
+    return btn;
+  }
+
+  if (isAuth) {
+    // Inject chat history screen if not present
+    if (!chatHistoryScreen) {
+      console.log("Chat history screen not found, injecting new");
+      chatHistoryScreen = document.createElement("div");
+      chatHistoryScreen.id = "chat-history-screen";
+      chatHistoryScreen.style.display = "none";
+      chatHistoryScreen.innerHTML = `
+          <div class="chat-history-header">
+            <h3 data-i18n="chatHistory">Chat History</h3>
+            <button
+              id="close-chat-history-button"
+              class="icon-button"
+              title="Close"
+            >
+              ×
+            </button>
+          </div>
+          <div id="chat-history-content">
+            <div id="chat-history-list"></div>
+            <div id="chat-history-empty" style="display: none">
+              <p data-i18n="noChats">No chat history yet.</p>
+            </div>
+          </div>
+      `;
+
+      // Inject chat history screen
+      sidebarContentWrapper.appendChild(chatHistoryScreen);
+      // Reference to new chat history elements
+      elements.chatHistoryScreen = chatHistoryScreen;
+      elements.chatHistoryList =
+        chatHistoryScreen.querySelector("#chat-history-list");
+      elements.chatHistoryEmpty = chatHistoryScreen.querySelector(
+        "#chat-history-empty"
+      );
+    }
+
+    // Inject chat history button if not present
+    if (!chatHistoryButton) {
+      console.log("Chat history button not found, injecting new");
+      const popupContent = document.querySelector(".popup-content");
+      console.log("Queried popup content: ", popupContent);
+      // Insert after new-chat-button if present, else at top
+      const newChatBtn = popupContent.querySelector("#new-chat-button");
+      chatHistoryButton = createChatHistoryButton();
+      console.log("Create chat history button: ", chatHistoryButton);
+      if (newChatBtn && newChatBtn.nextSibling) {
+        popupContent.insertBefore(chatHistoryButton, newChatBtn.nextSibling);
+      } else {
+        popupContent.appendChild(chatHistoryButton);
+      }
+    }
+
+    setupChatHistoryEvents();
+  } else {
+    // Remove chat history screen if present
+    if (chatHistoryScreen) {
+      chatHistoryScreen.remove();
+      // TODO: Might need to reference to null
+    }
+    // Remove chat history button if present
+    if (chatHistoryButton) {
+      chatHistoryButton.remove();
+    }
+  }
 }

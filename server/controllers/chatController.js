@@ -6,12 +6,11 @@ const Message = require("../models/message");
 const createChat = async (req, res, next) => {
   try {
     let user_id = null;
-    let anon_session_id = null;
 
     if (req.sessionType === "auth") {
       user_id = req.session.user_id;
-    } else if (req.sessionType === "anon") {
-      anon_session_id = req.session.id;
+    } else {
+      throw new Error("Only authenticated user can save chat to database");
     }
 
     const { id, page_url, title } = req.body;
@@ -22,7 +21,6 @@ const createChat = async (req, res, next) => {
     await Chat.create({
       id,
       user_id,
-      anon_session_id,
       page_url: normalizedPageUrl,
       page_id,
       title,
@@ -59,8 +57,6 @@ const getChatsBy = async (req, res, next) => {
     const filter = { offset, limit };
     if (sessionType === "auth") {
       filter.user_id = session.user_id;
-    } else if (sessionType === "anon") {
-      filter.anon_session_id = session.id;
     } else {
       return res
         .status(400)
@@ -108,8 +104,6 @@ const deleteChatsBy = async (req, res, next) => {
 
   if (sessionType === "auth") {
     filter.user_id = session.user_id;
-  } else if (sessionType === "anon") {
-    filter.anon_session_id = session.id;
   } else {
     return res
       .status(400)

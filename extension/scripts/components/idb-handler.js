@@ -206,7 +206,6 @@ async function overwriteChatMessages(chatId, messages) {
 
       const updateRequest = store.put(chat);
       updateRequest.onsuccess = () => {
-        console.log(`Overwrote ${messages.length} messages in chat ${chatId}`);
         resolve();
       };
       updateRequest.onerror = (event) => {

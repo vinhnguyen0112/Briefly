@@ -21,7 +21,7 @@ import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
 import { isUserAuthenticated } from "./components/auth-handler.js";
 import { getFingerprint, setupAnonSession } from "./components/anon-handler.js";
-import idbHandler from "./components/idb-handler.js";
+import { injectChatHistoryElements } from "./components/ui-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -36,6 +36,7 @@ document.addEventListener("DOMContentLoaded", () => {
       // Force re-render of account popup UI on load
       // Because StorageArea observer doesn't auto run on reloads
       renderToggleAccountPopupUI(isAuthenticated);
+      injectChatHistoryElements(isAuthenticated);
     })
     .catch((err) => {
       console.error("CocBot: Error validating user session", err);
