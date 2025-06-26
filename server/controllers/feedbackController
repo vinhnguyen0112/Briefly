@@ -4,22 +4,23 @@ const dbHelper = require("../helpers/dbHelper");
 const submitFeedback = async (req, res, next) => {
   try {
     const { stars, comment } = req.body;
+    const user_id = req.session?.user_id || null;
     // Validate stars
     if (!stars || typeof stars !== "number" || stars < 1 || stars > 5) {
       return res.status(400).json({ error: "Invalid stars" });
     }
     const id = uuidv4();
     const created_at = new Date();
-    // message_id, user_id, anon_session_id để null
     await dbHelper.executeQuery(
-      `INSERT INTO feedbacks (id, message_id, user_id, anon_session_id, stars, comment, created_at)
-       VALUES (?, NULL, NULL, NULL, ?, ?, ?)`,
-      [id, stars, comment || null, created_at]
+      `INSERT INTO feedbacks (id, message_id, user_id, stars, comment, created_at)
+       VALUES (?, NULL, ?, ?, ?, ?)`,
+      [id, user_id || null, stars, comment || null, created_at]
     );
     res.json({ success: true, id });
   } catch (err) {
     next(err);
   }
+  console.log("Received feedback:", req.body);
 };
 
 module.exports = { submitFeedback };

@@ -339,11 +339,16 @@ async function showFeedbackModal() {
     if (submitBtn.disabled) return;
     const stars = selectedRate;
     const comment = modal.querySelector(".feedback-reason-input").value.trim();
+    const userSession = await getUserSession();
+    const sessionId = "auth:" + userSession?.id;
 
     try {
       const res = await fetch("http://localhost:3000/api/feedback", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${sessionId}`,
+        },
         body: JSON.stringify({ stars, comment }),
       });
       const data = await res.json();
