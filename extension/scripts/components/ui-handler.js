@@ -1,6 +1,6 @@
 // ui interaction stuff
 import { elements } from "./dom-elements.js";
-import { state, saveSidebarWidth } from "./state.js";
+import { state, saveSidebarWidth, getUserSession } from "./state.js";
 import {
   renderContentInSidebar,
   requestPageContent,
@@ -192,26 +192,29 @@ export function switchToChat() {
 }
 
 // add message to chat
-// ...existing code...
-export function addMessageToChat(message, role) {
+export async function addMessageToChat(message, role) {
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
+
   if (role === "assistant") {
     messageElement.innerHTML = `
-    <div class="message-content">${formatMessage(message)}</div>
-  `;
-    const feedbackBtn = document.createElement("button");
-    feedbackBtn.className = "feedback-icon";
-    feedbackBtn.title = "Send feedback";
-    const img = document.createElement("img");
-    img.src = chrome.runtime.getURL("icons/feedback.png");
-    img.alt = "Feedback";
-    feedbackBtn.appendChild(img);
-    feedbackBtn.onclick = () => {
-      console.log("Feedback icon clicked!");
-      showFeedbackModal();
-    };
-    messageElement.appendChild(feedbackBtn);
+      <div class="message-content">${formatMessage(message)}</div>
+    `;
+
+    const userSession = await getUserSession();
+    if (userSession) {
+      const feedbackBtn = document.createElement("button");
+      feedbackBtn.className = "feedback-icon";
+      feedbackBtn.title = "Send feedback";
+      const img = document.createElement("img");
+      img.src = chrome.runtime.getURL("icons/feedback.png");
+      img.alt = "Feedback";
+      feedbackBtn.appendChild(img);
+      feedbackBtn.onclick = () => {
+        showFeedbackModal();
+      };
+      messageElement.appendChild(feedbackBtn);
+    }
   } else {
     messageElement.innerHTML = `
       <div class="message-content">${formatMessage(message)}</div>
@@ -222,12 +225,40 @@ export function addMessageToChat(message, role) {
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 }
 
-function showFeedbackModal() {
+export async function updateFeedbackIconsForAssistantMessages() {
+  const userSession = await getUserSession();
+  if (!userSession) return;
+
+  const messages = document.querySelectorAll(".chat-message.assistant-message");
+  messages.forEach((msg) => {
+    if (msg.querySelector(".feedback-icon")) return;
+
+    const feedbackBtn = document.createElement("button");
+    feedbackBtn.className = "feedback-icon";
+    feedbackBtn.title = "Send feedback";
+    const img = document.createElement("img");
+    img.src = chrome.runtime.getURL("icons/feedback.png");
+    img.alt = "Feedback";
+    feedbackBtn.appendChild(img);
+    feedbackBtn.onclick = () => {
+      showFeedbackModal();
+    };
+    msg.appendChild(feedbackBtn);
+  });
+}
+
+async function showFeedbackModal() {
+  const userSession = await getUserSession();
+  if (!userSession) {
+    alert("you need to login to give feedback");
+    return;
+  }
+
   if (document.getElementById("cocbot-feedback-modal")) return;
 
   console.log("Opening feedback modal...");
 
-  // Thêm blur cho sidebar
+  // Add blur to sidebar
   const sidebar = document.querySelector(".sidebar");
   if (sidebar) sidebar.classList.add("cocbot-blur");
 
@@ -500,4 +531,13 @@ export function escapeHtml(text) {
   const div = document.createElement("div");
   div.textContent = text;
   return div.innerHTML;
+}
+
+// remove feedback icons from assistant messages
+export function removeFeedbackIconsForAssistantMessages() {
+  const messages = document.querySelectorAll(".chat-message.assistant-message");
+  messages.forEach((msg) => {
+    const feedbackBtn = msg.querySelector(".feedback-icon");
+    if (feedbackBtn) feedbackBtn.remove();
+  });
 }
