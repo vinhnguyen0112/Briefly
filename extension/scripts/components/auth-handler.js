@@ -8,17 +8,20 @@ const SERVER_URL = "http://localhost:3000";
 export const isUserAuthenticated = async () => {
   try {
     // Check for ongoing session
-    console.log("Running isAuthenticated");
-
     const session = await getUserSession();
     if (!session) {
-      return false;
+      return {
+        isAuth: false,
+        isValid: false,
+      };
     }
 
     // Check for session validity
-    const prefixedSessionId = `auth:${session.id}`;
-    const isValid = await isSessionValid(prefixedSessionId);
-    return isValid;
+    const isValid = await isSessionValid(session.id);
+    return {
+      isAuth: true,
+      isValid,
+    };
   } catch (err) {
     console.error(err);
   }
@@ -31,7 +34,7 @@ export const isSessionValid = async (sessionId) => {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${sessionId}`,
+        Authorization: `Bearer auth:${sessionId}`,
       },
     });
 
@@ -40,11 +43,17 @@ export const isSessionValid = async (sessionId) => {
     }
 
     const data = await response.json();
-    console.log(data);
     return data.success;
   } catch (err) {
-    console.error(err);
-    throw err;
+    // If validation endpoint is unreachable, keep user authenticated
+    // Further requests will invalidate them
+    if (err instanceof TypeError) {
+      console.error("Validation endpoint is unreachable");
+      return true;
+    } else {
+      console.error(err);
+      throw err;
+    }
   }
 };
 
@@ -60,8 +69,10 @@ export const isSignInNeeded = async () => {
 export const signOut = async () => {
   try {
     const session = await getUserSession();
-    if (!session)
-      throw new Error("There's no on going session. Cannot sign user out");
+    // If no session, UI bugged, return true
+    if (!session) {
+      return await clearUserSession();
+    }
 
     const prefixedSessionId = `auth:${session.id}`;
     const response = await fetch(`${SERVER_URL}/api/auth/signout`, {

@@ -864,7 +864,7 @@ body.sidebar-resizing * {
 }
 
 /* back button */
-.back-to-welcome-button {
+.back-button {
   display: inline-flex;
   align-items: center;
   padding: 6px 12px;
@@ -880,13 +880,13 @@ body.sidebar-resizing * {
   overflow: hidden;
 }
 
-.back-to-welcome-button:hover {
+.back-button:hover {
   background-color: var(--border);
   transform: translateY(-1px);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.back-to-welcome-button:active {
+.back-button:active {
   transform: translateY(0);
   box-shadow: none;
   transition: all 0.1s ease;
@@ -1537,4 +1537,27 @@ input:checked + .slider {
 .button-confirm:focus {
   background-color: #1d4ed8; /* blue-700 */
   color: #fff;
+}
+
+.sidebar-toolbar .left-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sidebar-toolbar .left-actions button {
+  padding: 4px;
+  color: var(--muted-foreground);
+  border: none;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  transition: background-color 0.2s, color 0.2s;
+  padding: 6px;
+  border-radius: var(--radius);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.sidebar-toolbar .left-actions button {
+  opacity: 0.8;
 }

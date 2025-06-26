@@ -12,6 +12,7 @@ import {
 import {
   renderToggleAccountPopupUI,
   setupEventListeners,
+  showPopupAlert,
 } from "./components/event-handler.js";
 import {
   requestPageContent,
@@ -26,17 +27,23 @@ import { injectChatHistoryElements } from "./components/ui-handler.js";
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
-  // Validate the user session
+
+  // If user is authenticated but session invalid
   isUserAuthenticated()
-    .then((isAuthenticated) => {
-      if (!isAuthenticated) {
+    .then(({ isAuth, isValid }) => {
+      if (isAuth && !isValid) {
         console.log("User session is invalid, signing out user");
         clearUserSession();
+        showPopupAlert({
+          title: "Session Expired",
+          message:
+            "Your session has expired and we have signed you out for security reasons",
+        });
       }
-      // Force re-render of account popup UI on load
-      // Because StorageArea observer doesn't auto run on reloads
-      renderToggleAccountPopupUI(isAuthenticated);
-      injectChatHistoryElements(isAuthenticated);
+
+      // Render UI on first load based on user authentication state
+      renderToggleAccountPopupUI(isAuth);
+      injectChatHistoryElements(isAuth);
     })
     .catch((err) => {
       console.error("CocBot: Error validating user session", err);
@@ -44,7 +51,7 @@ document.addEventListener("DOMContentLoaded", () => {
       clearUserSession();
     });
 
-  // Set visitorId if not exists
+  // Get user fingerprint
   getVisitorId().then((visitorId) => {
     if (!visitorId) {
       console.log("CocBot: No visitorId found, generating a new one");

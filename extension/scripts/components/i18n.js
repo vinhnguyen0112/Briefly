@@ -57,6 +57,8 @@ const translations = {
 
     chatHistory: "Chat History",
     noChats: "No chats yet.",
+    rename: "Rename",
+    delete: "Delete",
   },
 
   vi: {
@@ -113,6 +115,8 @@ const translations = {
 
     chatHistory: "Lịch Sử Trò Chuyện",
     noChats: "Chưa có cuộc trò chuyện nào.",
+    rename: "Sửa tên",
+    delete: "Xóa",
   },
 };
 

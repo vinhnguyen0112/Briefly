@@ -32,7 +32,17 @@ export const state = {
   },
   chatHistory: [],
   isChatHistoryEventsInitialized: false,
+  screenStack: [],
 };
+
+/**
+ * Push screen into the stack, avoid duplicate
+ * @param {String} screen name of the screen
+ */
+export function addToScreenStack(screen) {
+  if (state.screenStack.includes(screen)) return;
+  state.screenStack.push(screen);
+}
 
 // Load sidebar width from storage
 export function loadSidebarWidth() {
@@ -273,8 +283,7 @@ export async function saveLanguage(language) {
   });
 }
 
-export function resetCurrentChat() {
-  console.log("Resetting current chat state");
+export function resetCurrentChatState() {
   state.currentChat = {
     id: null,
     title: "",
@@ -283,8 +292,7 @@ export function resetCurrentChat() {
   };
 }
 
-export function resetPagination() {
-  console.log("Reseting pagination state");
+export function resetPaginationState() {
   state.pagination = {
     currentPage: 0,
     hasMore: true,
@@ -292,8 +300,7 @@ export function resetPagination() {
   };
 }
 
-export function setCurrentChat(chat) {
-  console.log("Setting current chat to: ", chat.id);
+export function setCurrentChatState(chat) {
   state.currentChat = {
     id: chat.id || null,
     title: chat.title || "",

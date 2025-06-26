@@ -3,7 +3,7 @@ import {
   getApiKey,
   increaseAnonQueryCount,
   getUserSession,
-  resetCurrentChat,
+  resetCurrentChatState,
 } from "./state.js";
 import {
   addMessageToChat,
@@ -61,6 +61,7 @@ export async function processUserQuery(query) {
     const userSession = await getUserSession();
 
     if (response.success) {
+      // Only persist chats and messages for authenticated users
       if (userSession && userSession.id) {
         // Prepare chat info but don't persist yet
         let chatId = state.currentChat.id;
@@ -145,7 +146,7 @@ export async function processUserQuery(query) {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");
       // Reset chat to assign new chat if no prior history
       if (state.currentChat.history.length <= 0) {
-        resetCurrentChat();
+        resetCurrentChatState();
       }
     }
   } catch (error) {
@@ -153,7 +154,7 @@ export async function processUserQuery(query) {
     removeTypingIndicator(typingIndicator);
     addMessageToChat("Something went wrong. Try again?", "assistant");
     if (state.currentChat.history.length <= 0) {
-      resetCurrentChat();
+      resetCurrentChatState();
     }
   }
 }

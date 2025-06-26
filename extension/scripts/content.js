@@ -243,13 +243,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   } else if (message.action === "auth_session_changed") {
     const iframe = document.getElementById("isal-sidebar-iframe");
-    const container = document.getElementById("isal-sidebar-container");
 
-    // Only update if the sidebar is currently open
-    if (iframe && container && container.classList.contains("active")) {
+    // Update UI via sidebar
+    if (iframe) {
       console.log("CocBot: Notifying sidebar to react to auth session change");
 
-      // Send message to the sidebar and update the UI
       iframe.contentWindow.postMessage(
         {
           action: "auth_session_changed",
@@ -257,6 +255,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         },
         "*"
       );
+    } else {
+      console.error("Iframe is not ready, cannot post message");
     }
     sendResponse({ success: true });
   }

@@ -407,7 +407,7 @@ export async function generateAndDisplayQuestions() {
         questionButton.textContent = question;
         questionButton.onclick = () => {
           // use the question as a query
-          switchToChat({ newChat: true });
+          switchToChat();
           processUserQuery(question);
         };
 

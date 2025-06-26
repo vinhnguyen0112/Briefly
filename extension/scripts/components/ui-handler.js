@@ -3,8 +3,8 @@ import { elements } from "./dom-elements.js";
 import {
   state,
   saveSidebarWidth,
-  resetCurrentChat,
-  resetPagination,
+  resetCurrentChatState,
+  resetPaginationState,
 } from "./state.js";
 import {
   renderContentInSidebar,
@@ -15,6 +15,7 @@ import {
   renderToggleAccountPopupUI,
   setupChatHistoryEvents,
   showPopupAlert,
+  showSignInAlertPopup,
   toggleChatHistoryScreen,
 } from "./event-handler.js";
 
@@ -73,7 +74,7 @@ export function setupQuickActions() {
 
       if (query) {
         // jump to chat and fire the query
-        switchToChat({ newChat: true });
+        switchToChat();
         processUserQuery(query);
       }
     });
@@ -144,14 +145,8 @@ export function stopResize() {
 }
 
 // switch from welcome to chat view
-export function switchToChat({ newChat = false } = {}) {
+export function switchToChat() {
   if (!state.welcomeMode) return;
-
-  // If new chat, reset state and clear all messages
-  if (newChat) {
-    resetCurrentChat();
-    clearMessagesFromChat();
-  }
 
   state.welcomeMode = false;
 
@@ -172,44 +167,60 @@ export function switchToChat({ newChat = false } = {}) {
 
   // store a reference to switch back
   const backButton = document.createElement("button");
-  backButton.className = "back-to-welcome-button";
+  backButton.className = "back-button";
   backButton.textContent = "← Back";
   backButton.onclick = () => {
-    state.welcomeMode = true;
+    // Hide chat screen
     elements.chatScreen.style.display = "none";
-    elements.welcomeScreen.style.display = "flex";
 
-    // restore questions if we had them
-    if (existingQuestions && existingQuestions.length > 0) {
-      state.generatedQuestions = existingQuestions;
-      const questionsContainer = document.querySelector(".generated-questions");
-      const buttonContainer = document.querySelector(
-        ".question-buttons-container"
-      );
-
-      if (questionsContainer && buttonContainer) {
-        questionsContainer.style.display = "block";
-        buttonContainer.innerHTML = "";
-
-        existingQuestions.forEach((question) => {
-          const questionButton = document.createElement("button");
-          questionButton.className = "question-button";
-          questionButton.textContent = question;
-          questionButton.onclick = () => {
-            switchToChat();
-            processUserQuery(question);
-          };
-
-          buttonContainer.appendChild(questionButton);
-        });
+    console.log("Current stack: ", state.screenStack);
+    // Check screen stack
+    if (state.screenStack[state.screenStack.length - 1] === "history") {
+      elements.chatHistoryScreen.style.display = "flex";
+      // If we only history screen is in the stack (excluding welcome screen)
+      // Render welcome screen
+      if (state.screenStack.length <= 1) {
+        renderWelcomeScreen(existingQuestions);
       }
+    } else {
+      renderWelcomeScreen(existingQuestions);
     }
 
     backButton.remove();
   };
 
-  if (!document.querySelector(".back-to-welcome-button")) {
+  if (!document.querySelector(".back-button")) {
     document.querySelector(".sidebar-content").prepend(backButton);
+  }
+}
+
+function renderWelcomeScreen(existingQuestions) {
+  state.welcomeMode = true;
+  elements.welcomeScreen.style.display = "flex";
+  // restore questions if we had them
+  if (existingQuestions && existingQuestions.length > 0) {
+    state.generatedQuestions = existingQuestions;
+    const questionsContainer = document.querySelector(".generated-questions");
+    const buttonContainer = document.querySelector(
+      ".question-buttons-container"
+    );
+
+    if (questionsContainer && buttonContainer) {
+      questionsContainer.style.display = "block";
+      buttonContainer.innerHTML = "";
+
+      existingQuestions.forEach((question) => {
+        const questionButton = document.createElement("button");
+        questionButton.className = "question-button";
+        questionButton.textContent = question;
+        questionButton.onclick = () => {
+          switchToChat();
+          processUserQuery(question);
+        };
+
+        buttonContainer.appendChild(questionButton);
+      });
+    }
   }
 }
 
@@ -326,13 +337,13 @@ export function handleContentMessage(message) {
       break;
     case "session_expired":
       showPopupAlert({
-        title: "Session Expires",
+        title: "Session Expired",
         message:
           "Your session has expired and you have been signed out for security reasons",
       });
       break;
     case "sign_in_required":
-      elements.signInAlertOverlay.style.display = "flex";
+      showSignInAlertPopup();
       break;
   }
 }
@@ -346,8 +357,6 @@ export function escapeHtml(text) {
 
 // Handle UI changes when authentication state changes
 function handleAuthStateChange(isAuth) {
-  console.log("Received auth state in sidebar: ", isAuth);
-
   // Reset UI
   renderToggleAccountPopupUI(isAuth);
   clearMessagesFromChat();
@@ -363,8 +372,8 @@ function handleAuthStateChange(isAuth) {
   closeAllPanels();
 
   // Reset state
-  resetCurrentChat();
-  resetPagination();
+  resetCurrentChatState();
+  resetPaginationState();
   state.chatHistory = [];
 
   // Close chat screen
@@ -380,14 +389,10 @@ export function injectChatHistoryElements(isAuth) {
   let chatHistoryScreen = document.getElementById("chat-history-screen");
   let chatHistoryButton = document.getElementById("chat-history-button");
 
-  console.log("Queried chat history screen: ", chatHistoryScreen);
-  console.log("Queried chat history button: ", chatHistoryButton);
-
   // Helper function to create chat history button
   function createChatHistoryButton() {
     const btn = document.createElement("button");
     btn.id = "chat-history-button";
-    btn.className = "button";
     btn.innerHTML = `
       <svg
         aria-hidden="true"
@@ -396,7 +401,6 @@ export function injectChatHistoryElements(isAuth) {
         height="16"
         fill="none"
         viewBox="0 0 24 24"
-        style="margin-right: 8px"
       >
         <path
           stroke="currentColor"
@@ -406,7 +410,6 @@ export function injectChatHistoryElements(isAuth) {
           d="M12 8v4l3 3M3.22302 14C4.13247 18.008 7.71683 21 12 21c4.9706 0 9-4.0294 9-9 0-4.97056-4.0294-9-9-9-3.72916 0-6.92858 2.26806-8.29409 5.5M7 9H3V5"
         />
       </svg>
-      Chat History
     `;
     return btn;
   }
@@ -451,17 +454,9 @@ export function injectChatHistoryElements(isAuth) {
     // Inject chat history button if not present
     if (!chatHistoryButton) {
       console.log("Chat history button not found, injecting new");
-      const popupContent = document.querySelector(".popup-content");
-      console.log("Queried popup content: ", popupContent);
-      // Insert after new-chat-button if present, else at top
-      const newChatBtn = popupContent.querySelector("#new-chat-button");
+      const newChatBtn = document.querySelector("#new-chat-button");
       chatHistoryButton = createChatHistoryButton();
-      console.log("Create chat history button: ", chatHistoryButton);
-      if (newChatBtn && newChatBtn.nextSibling) {
-        popupContent.insertBefore(chatHistoryButton, newChatBtn.nextSibling);
-      } else {
-        popupContent.appendChild(chatHistoryButton);
-      }
+      newChatBtn.insertAdjacentElement("afterend", chatHistoryButton);
     }
 
     setupChatHistoryEvents();
@@ -469,7 +464,6 @@ export function injectChatHistoryElements(isAuth) {
     // Remove chat history screen if present
     if (chatHistoryScreen) {
       chatHistoryScreen.remove();
-      // TODO: Might need to reference to null
     }
     // Remove chat history button if present
     if (chatHistoryButton) {

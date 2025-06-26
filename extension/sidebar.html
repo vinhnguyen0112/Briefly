@@ -139,18 +139,61 @@
       </div>
 
       <div class="sidebar-content-wrapper">
-        <!-- Language toggle -->
-        <div class="language-toggle-section">
-          <div class="language-toggle-container">
-            <span class="toggle-label" id="en-label">EN</span>
-            <label class="switch">
-              <input type="checkbox" id="language-toggle" />
-              <span class="slider round"></span>
-            </label>
-            <span class="toggle-label" id="vi-label">VI</span>
+        <!-- Toolbar -->
+        <div class="sidebar-toolbar">
+          <div class="left-actions">
+            <!-- New chat button -->
+            <button id="new-chat-button">
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M5 12h14m-7 7V5"
+                />
+              </svg>
+            </button>
+            <!-- Chat history button -->
+            <button id="chat-history-button">
+              <svg
+                aria-hidden="true"
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  stroke="currentColor"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  stroke-width="2"
+                  d="M12 8v4l3 3M3.22302 14C4.13247 18.008 7.71683 21 12 21c4.9706 0 9-4.0294 9-9 0-4.97056-4.0294-9-9-9-3.72916 0-6.92858 2.26806-8.29409 5.5M7 9H3V5"
+                />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Language toggle -->
+          <div class="right-actions">
+            <div class="language-toggle-container">
+              <span class="toggle-label" id="en-label">EN</span>
+              <label class="switch">
+                <input type="checkbox" id="language-toggle" />
+                <span class="slider round"></span>
+              </label>
+              <span class="toggle-label" id="vi-label">VI</span>
+            </div>
           </div>
         </div>
-
         <!-- Welcome screen (shown by default) -->
         <div id="welcome-screen">
           <div class="welcome-content">
@@ -502,47 +545,6 @@
 
     <div id="account-popup" class="popup" style="display: none">
       <div class="popup-content">
-        <button id="new-chat-button" class="button">
-          <svg
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            fill="none"
-            viewBox="0 0 24 24"
-            style="margin-right: 8px"
-          >
-            <path
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M5 12h14m-7 7V5"
-            />
-          </svg>
-
-          New Chat
-        </button>
-        <button id="chat-history-button" class="button">
-          <svg
-            aria-hidden="true"
-            xmlns="http://www.w3.org/2000/svg"
-            width="16"
-            height="16"
-            fill="none"
-            viewBox="0 0 24 24"
-            style="margin-right: 8px"
-          >
-            <path
-              stroke="currentColor"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-              stroke-width="2"
-              d="M12 8v4l3 3M3.22302 14C4.13247 18.008 7.71683 21 12 21c4.9706 0 9-4.0294 9-9 0-4.97056-4.0294-9-9-9-3.72916 0-6.92858 2.26806-8.29409 5.5M7 9H3V5"
-            />
-          </svg>
-          Chat History
-        </button>
         <button id="sign-out-button" class="button button-secondary">
           Sign Out
           <svg
@@ -673,17 +675,18 @@
     <script type="module" src="scripts/sidebar.js"></script>
 
     <style>
-      .language-toggle-section {
+      .sidebar-toolbar {
         display: flex;
-        justify-content: flex-end;
         padding: 8px 16px;
         border-bottom: 1px solid var(--border);
+        align-items: center;
+        justify-content: space-between;
       }
 
       .language-toggle-container {
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 8px;
       }
 
       .toggle-label {

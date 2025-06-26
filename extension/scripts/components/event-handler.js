@@ -7,8 +7,9 @@ import {
   saveConfig,
   getLanguage,
   saveLanguage,
-  resetCurrentChat,
-  setCurrentChat,
+  resetCurrentChatState,
+  setCurrentChatState,
+  addToScreenStack,
 } from "./state.js";
 import {
   handleResize,
@@ -50,21 +51,21 @@ export function setupEventListeners() {
 
   // CocBot title click to return to welcome screen
   elements.cocbotTitle.addEventListener("click", () => {
-    if (!state.welcomeMode) {
-      elements.chatScreen.style.display = "none";
-      elements.contentViewerScreen.style.display = "none";
-      elements.configContainer.style.display = "none";
-      elements.apiKeyContainer.style.display = "none";
-      elements.notesScreen.style.display = "none";
+    elements.chatScreen.style.display = "none";
+    elements.contentViewerScreen.style.display = "none";
+    elements.configContainer.style.display = "none";
+    elements.apiKeyContainer.style.display = "none";
+    elements.notesScreen.style.display = "none";
 
-      elements.configButton.classList.remove("active");
-      elements.settingsButton.classList.remove("active");
-      elements.viewContentButton.classList.remove("active");
-      elements.notesButton.classList.remove("active");
+    elements.configButton.classList.remove("active");
+    elements.settingsButton.classList.remove("active");
+    elements.viewContentButton.classList.remove("active");
+    elements.notesButton.classList.remove("active");
 
-      elements.welcomeScreen.style.display = "flex";
-      state.welcomeMode = true;
-    }
+    elements.welcomeScreen.style.display = "flex";
+    state.welcomeMode = true;
+
+    state.screenStack = []; // Reset screen stack
   });
 
   setupAuthenticationButtons();
@@ -186,7 +187,7 @@ export function setupEventListeners() {
     const query = elements.welcomeInput.value.trim();
     if (!query) return;
 
-    switchToChat({ newChat: true });
+    switchToChat();
 
     processUserQuery(query);
 
@@ -199,7 +200,7 @@ export function setupEventListeners() {
 
       const query = elements.welcomeInput.value.trim();
       if (query) {
-        switchToChat({ newChat: true });
+        switchToChat();
         processUserQuery(query);
         elements.welcomeInput.value = "";
       }
@@ -363,14 +364,16 @@ export function setupEventListeners() {
   );
 
   elements.newChatButton.addEventListener("click", () => {
-    switchToChat({ newChat: true });
+    resetCurrentChatState();
+    clearMessagesFromChat();
+    switchToChat();
   });
 
   setupChatHistoryEvents();
 
   // Hide menus when clicking outside
   document.addEventListener("click", () => {
-    closeAllActionMenus();
+    closeAllChatHistoryItemsMenu();
   });
 }
 
@@ -392,9 +395,10 @@ export function setupChatHistoryEvents() {
     toggleChatHistoryScreen();
   });
 
-  closeChatHistoryButton.addEventListener("click", (e) =>
-    closeChatHistoryScreen()
-  );
+  closeChatHistoryButton.addEventListener("click", (e) => {
+    closeChatHistoryScreen();
+    state.screenStack.pop();
+  });
 
   // Chat history infinite scroll
   chatHistoryContent.addEventListener("scroll", (e) => {
@@ -433,7 +437,7 @@ function setupQuickActions() {
       }
 
       if (query) {
-        switchToChat({ newChat: true });
+        switchToChat();
         processUserQuery(query);
       }
     });
@@ -475,6 +479,7 @@ function setupAuthenticationButtons() {
       if (response.success) {
         // Close the account popup
         closeAccountPopupUI();
+
         console.log("User signed out");
       }
     });
@@ -526,10 +531,10 @@ export function renderToggleAccountPopupUI(isAuthenticated) {
 // Toggle the display state of the chat history screen
 export function toggleChatHistoryScreen() {
   const chatHistory = elements.chatHistoryScreen;
-  console.log("Chat history screen: ", chatHistory);
   // Open
   if (chatHistory.style.display === "none" || !chatHistory.style.display) {
     chatHistory.style.display = "flex";
+    addToScreenStack("history");
     // If first load
     if (
       state.pagination.currentPage === 0 &&
@@ -547,7 +552,10 @@ export function toggleChatHistoryScreen() {
   // Close
   else {
     chatHistory.style.display = "none";
+    state.screenStack.pop();
   }
+
+  console.log("Current stack: ", state.screenStack);
 }
 
 // Fetch chat history for the current page
@@ -682,13 +690,13 @@ function createChatHistoryItem(chat) {
       }</span>
     </div>
     <div class="chat-history-actions-menu hidden">
-      <button class="chat-history-actions-menu-item button" id="rename-button">
+      <button class="chat-history-actions-menu-item button" id="rename-button" data-i18n="rename">
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
           <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.779 17.779 4.36 19.918 6.5 13.5m4.279 4.279 8.364-8.643a3.027 3.027 0 0 0-2.14-5.165 3.03 3.03 0 0 0-2.14.886L6.5 13.5m4.279 4.279L6.499 13.5m2.14 2.14 6.213-6.504M12.75 7.04 17 11.28"/>
         </svg>
         Rename
       </button>
-      <button class="chat-history-actions-menu-item button" id="delete-button" style="color:#E53E3E">
+      <button class="chat-history-actions-menu-item button" id="delete-button" style="color:#E53E3E" data-i18n="delete">
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
           <path stroke="#E53E3E" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
         </svg>
@@ -709,7 +717,7 @@ function createChatHistoryItem(chat) {
     const history = [];
     clearMessagesFromChat();
     closeChatHistoryScreen();
-    switchToChat({ newChat: true });
+    switchToChat();
 
     let messages;
     // If online
@@ -729,7 +737,8 @@ function createChatHistoryItem(chat) {
       history.push({ role: message.role, content: message.content });
     });
 
-    setCurrentChat({ ...chat, history });
+    // Set current chat
+    setCurrentChatState({ ...chat, history });
   });
 
   setupChatHistoryActions(item, chat);
@@ -747,7 +756,7 @@ function setupChatHistoryActions(item, chat) {
     const isHidden = menu.classList.contains("hidden");
 
     // Close all *other* menus, not this one
-    closeAllActionMenus(menu);
+    closeAllChatHistoryItemsMenu(menu);
 
     if (isHidden) {
       menu.classList.remove("hidden");
@@ -775,6 +784,7 @@ function setupChatHistoryActions(item, chat) {
     }
   });
 
+  // Rename button handler
   item.querySelector("#rename-button").addEventListener("click", async (e) => {
     e.stopPropagation();
     menu.classList.add("hidden");
@@ -819,6 +829,7 @@ function setupChatHistoryActions(item, chat) {
     input.addEventListener("blur", save);
   });
 
+  // Delete button handler
   item.querySelector("#delete-button").addEventListener("click", (e) => {
     e.stopPropagation();
     menu.classList.add("hidden");
@@ -836,6 +847,11 @@ function setupChatHistoryActions(item, chat) {
               (c) => c.id !== chat.id
             );
             removeChatHistoryItem(chat.id);
+            // If deleted chat was current chat, reset current chat
+            if (chat.id === state.currentChat.id) {
+              clearMessagesFromChat();
+              resetCurrentChatState();
+            }
           },
         },
         {
@@ -847,7 +863,7 @@ function setupChatHistoryActions(item, chat) {
 }
 
 // Helper to close all chat history action menus
-export function closeAllActionMenus(except = null) {
+export function closeAllChatHistoryItemsMenu(except = null) {
   document.querySelectorAll(".chat-history-actions-menu").forEach((el) => {
     if (el !== except) {
       el.classList.add("hidden");
@@ -934,6 +950,10 @@ function toggleAccountPopupUI() {
   } else {
     popup.style.display = "none";
   }
+}
+
+export function showSignInAlertPopup() {
+  elements.signInAlertOverlay.style.display = "flex";
 }
 
 function closeSignInAlertPopup() {
