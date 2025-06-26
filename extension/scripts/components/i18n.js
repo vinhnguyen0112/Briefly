@@ -55,10 +55,13 @@ const translations = {
     languageChanged:
       "Language has been switched to English. User interface and responses will be in English from now on.",
 
+    newChat: "New Chat",
     chatHistory: "Chat History",
     noChats: "No chats yet.",
     rename: "Rename",
     delete: "Delete",
+
+    account: "Account",
   },
 
   vi: {
@@ -113,10 +116,13 @@ const translations = {
     languageChanged:
       "Ngôn ngữ đã được chuyển sang tiếng Việt. Giao diện và phản hồi sẽ bằng tiếng Việt từ bây giờ.",
 
+    newChat: "Cuộc Trò Chuyện Mới",
     chatHistory: "Lịch Sử Trò Chuyện",
     noChats: "Chưa có cuộc trò chuyện nào.",
     rename: "Sửa tên",
     delete: "Xóa",
+
+    account: "Tài Khoản",
   },
 };
 

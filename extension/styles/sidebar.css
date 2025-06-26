@@ -1558,6 +1558,6 @@ input:checked + .slider {
   justify-content: center;
 }
 
-.sidebar-toolbar .left-actions button {
+.sidebar-toolbar .left-actions button:hover {
   opacity: 0.8;
 }

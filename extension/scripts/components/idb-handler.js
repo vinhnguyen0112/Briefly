@@ -3,7 +3,7 @@ const DB_VERSION = 1;
 
 /**
  * Opens the IndexedDB database and sets up object stores if needed.
- * @returns {Promise} A promise that resolves with the database instance
+ * @returns {Promise} Database instance
  **/
 async function openIndexedDB() {
   return await new Promise((resolve, reject) => {
@@ -51,7 +51,7 @@ function setupObjectStores(db) {
 /**
  * Adds a new chat to the "chats" object store.
  * @param {Object} chat - The chat object to store.
- * @returns {Promise<string>} - Resolves with the ID of the new chat.
+ * @returns {Promise<string>}
  */
 async function addChat(chat) {
   const { db } = await openIndexedDB();
@@ -85,7 +85,7 @@ async function addChat(chat) {
 /**
  * Get a chat by ID
  * @param {string} id - The ID of the chat to check.
- * @returns {Promise<boolean>} - Resolves to true if the chat exists, false otherwise.
+ * @returns {Promise<boolean>}
  */
 async function getChatById(id) {
   const { db } = await openIndexedDB();
@@ -110,7 +110,7 @@ async function getChatById(id) {
 }
 
 /**
- * Adds a single message to chat.
+ * Adds a single message
  * @param {Object} message - The message object to store. Must include chat_id.
  * @returns {Promise<void>}
  */
@@ -226,10 +226,10 @@ async function overwriteChatMessages(chatId, messages) {
 }
 
 /**
- * Updates a chat in the "chats" object store.
+ * Updates a chat
  * @param {string} chatId - The ID of the chat to update.
  * @param {Object} updates - An object containing the fields to update.
- * @returns {Promise} - Resolves if the update is successful, rejects with an error otherwise.
+ * @returns {Promise}
  */
 async function updateChat(chatId, updates) {
   const { db } = await openIndexedDB();

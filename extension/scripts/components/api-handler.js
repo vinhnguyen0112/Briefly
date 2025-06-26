@@ -16,6 +16,7 @@ import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 
 // Process a user query
+// Process a user query
 export async function processUserQuery(query) {
   // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
@@ -57,78 +58,19 @@ export async function processUserQuery(query) {
 
     removeTypingIndicator(typingIndicator);
 
-    // Auth check
     const userSession = await getUserSession();
 
     if (response.success) {
-      // Only persist chats and messages for authenticated users
-      if (userSession && userSession.id) {
-        // Prepare chat info but don't persist yet
-        let chatId = state.currentChat.id;
-        let isNewChat = false;
-        if (!chatId) {
-          chatId = crypto.randomUUID();
-          const pageUrl = state.pageContent?.url || window.location.href;
-          const pageTitle = state.pageContent?.title || document.title;
+      const assistantMessage = response.message;
 
-          // Update state with new chat info (not yet persisted)
-          state.currentChat.id = chatId;
-          state.currentChat.title = pageTitle;
-          state.currentChat.pageUrl = pageUrl;
-          state.currentChat.history = [];
-          isNewChat = true;
-        }
-
-        // Save chat to DB and IDB if new chat
-        if (isNewChat) {
-          await chatHandler.createChat({
-            id: chatId,
-            page_url: state.currentChat.pageUrl,
-            title: state.currentChat.title,
-          });
-          await idbHandler.addChat({
-            id: chatId,
-            title: state.currentChat.title,
-            page_url: state.currentChat.pageUrl,
-          });
-
-          state.chatHistory.unshift({
-            id: chatId,
-            title: state.currentChat.title,
-            page_url: state.currentChat.pageUrl,
-            created_at: Date.now(),
-          });
-        }
-
-        // Save user message to DB and IDB
-        await chatHandler.addMessage(chatId, {
-          role: "user",
-          content: query,
-        });
-        await idbHandler.addMessageToChat(chatId, {
-          role: "user",
-          content: query,
-        });
-
-        // Save AI response to DB and IDB
-        await chatHandler.addMessage(chatId, {
-          role: "assistant",
-          content: response.message,
-          model: "gpt-4o-mini",
-        });
-        await idbHandler.addMessageToChat(chatId, {
-          role: "assistant",
-          content: response.message,
-        });
-      }
-
-      addMessageToChat(response.message, "assistant");
+      // Show assistant message immediately (before persistence)
+      addMessageToChat(assistantMessage, "assistant");
 
       // Update history stack
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({
         role: "assistant",
-        content: response.message,
+        content: assistantMessage,
       });
 
       if (state.currentChat.history.length > 6) {
@@ -137,14 +79,72 @@ export async function processUserQuery(query) {
         );
       }
 
-      // Increase anon query count if user is not authenticated
-      // TODO: Increase in DB and Redis when have server API
-      if (!userSession) {
+      // Persist if user is authenticated
+      if (userSession && userSession.id) {
+        try {
+          let chatId = state.currentChat.id;
+          let isNewChat = false;
+          if (!chatId) {
+            chatId = crypto.randomUUID();
+            const pageUrl = state.pageContent?.url || window.location.href;
+            const pageTitle = state.pageContent?.title || document.title;
+
+            state.currentChat.id = chatId;
+            state.currentChat.title = pageTitle;
+            state.currentChat.pageUrl = pageUrl;
+            state.currentChat.history = [];
+            isNewChat = true;
+          }
+
+          if (isNewChat) {
+            await chatHandler.createChat({
+              id: chatId,
+              page_url: state.currentChat.pageUrl,
+              title: state.currentChat.title,
+            });
+            await idbHandler.addChat({
+              id: chatId,
+              title: state.currentChat.title,
+              page_url: state.currentChat.pageUrl,
+            });
+
+            state.chatHistory.unshift({
+              id: chatId,
+              title: state.currentChat.title,
+              page_url: state.currentChat.pageUrl,
+              created_at: Date.now(),
+            });
+          }
+
+          // Save user and assistant messages
+          await chatHandler.addMessage(chatId, {
+            role: "user",
+            content: query,
+          });
+          await chatHandler.addMessage(chatId, {
+            role: "assistant",
+            content: assistantMessage,
+            model: "gpt-4o-mini",
+          });
+
+          await idbHandler.addMessageToChat(chatId, {
+            role: "user",
+            content: query,
+          });
+          await idbHandler.addMessageToChat(chatId, {
+            role: "assistant",
+            content: assistantMessage,
+          });
+        } catch (err) {
+          console.warn("Persistence failed:", err);
+          // Optionally handle persistence failure (retry/queue)
+        }
+      } else {
+        // Increase anon query count if not signed in
         await increaseAnonQueryCount();
       }
     } else {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");
-      // Reset chat to assign new chat if no prior history
       if (state.currentChat.history.length <= 0) {
         resetCurrentChatState();
       }

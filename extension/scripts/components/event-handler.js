@@ -52,6 +52,7 @@ export function setupEventListeners() {
   // CocBot title click to return to welcome screen
   elements.cocbotTitle.addEventListener("click", () => {
     elements.chatScreen.style.display = "none";
+    elements.chatHistoryScreen.style.display = "none";
     elements.contentViewerScreen.style.display = "none";
     elements.configContainer.style.display = "none";
     elements.apiKeyContainer.style.display = "none";
@@ -693,15 +694,11 @@ function createChatHistoryItem(chat) {
       <button class="chat-history-actions-menu-item button" id="rename-button" data-i18n="rename">
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
           <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.779 17.779 4.36 19.918 6.5 13.5m4.279 4.279 8.364-8.643a3.027 3.027 0 0 0-2.14-5.165 3.03 3.03 0 0 0-2.14.886L6.5 13.5m4.279 4.279L6.499 13.5m2.14 2.14 6.213-6.504M12.75 7.04 17 11.28"/>
-        </svg>
-        Rename
-      </button>
+        </svg>Rename</button>
       <button class="chat-history-actions-menu-item button" id="delete-button" style="color:#E53E3E" data-i18n="delete">
         <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
           <path stroke="#E53E3E" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
-        </svg>
-        Delete
-      </button>
+        </svg>Delete</button>
     </div>
   `;
 

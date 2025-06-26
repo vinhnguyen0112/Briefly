@@ -1,6 +1,4 @@
 // API handler for communicating with the backend server
-
-// Server configuration - update with your actual server URL
 const SERVER_URL = "http://localhost:3000";
 
 // Check server health
