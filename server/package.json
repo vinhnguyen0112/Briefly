@@ -23,7 +23,7 @@
     "morgan": "^1.10.0",
     "mysql2": "^3.14.1",
     "openai": "^4.96.0",
-    "p-limit": "^6.2.0",
+    "p-limit": "^3.1.0",
     "redis": "^4.7.0"
   },
   "devDependencies": {
