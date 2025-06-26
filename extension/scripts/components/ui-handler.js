@@ -192,15 +192,219 @@ export function switchToChat() {
 }
 
 // add message to chat
+// ...existing code...
 export function addMessageToChat(message, role) {
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
-  messageElement.innerHTML = `
+  if (role === "assistant") {
+    messageElement.innerHTML = `
     <div class="message-content">${formatMessage(message)}</div>
   `;
+    const feedbackBtn = document.createElement("button");
+    feedbackBtn.className = "feedback-icon";
+    feedbackBtn.title = "Send feedback";
+    const img = document.createElement("img");
+    img.src = chrome.runtime.getURL("icons/feedback.png");
+    img.alt = "Feedback";
+    feedbackBtn.appendChild(img);
+    feedbackBtn.onclick = () => {
+      console.log("Feedback icon clicked!");
+      showFeedbackModal();
+    };
+    messageElement.appendChild(feedbackBtn);
+  } else {
+    messageElement.innerHTML = `
+      <div class="message-content">${formatMessage(message)}</div>
+    `;
+  }
 
   elements.chatContainer.appendChild(messageElement);
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+}
+
+function showFeedbackModal() {
+  if (document.getElementById("cocbot-feedback-modal")) return;
+
+  console.log("Opening feedback modal...");
+
+  // Thêm blur cho sidebar
+  const sidebar = document.querySelector(".sidebar");
+  if (sidebar) sidebar.classList.add("cocbot-blur");
+
+  const modal = document.createElement("div");
+  modal.id = "cocbot-feedback-modal";
+  modal.innerHTML = `
+    <div class="cocbot-modal-backdrop"></div>
+    <div class="cocbot-modal-content feedback-modal">
+      <h2 class="feedback-title">Give Feedback</h2>
+      <div class="feedback-subtitle">Rating your experience with Briefly</div>
+      ${renderStars()}
+      <div class="feedback-reason-label">
+        Write your feedback <span class="optional-label">(optional)</span>
+      </div>
+      <textarea class="feedback-reason-input" placeholder="please write here"></textarea>
+      <div class="feedback-modal-actions">
+        <button class="button feedback-submit">Submit</button>
+        <button class="button feedback-cancel">Cancel</button>
+      </div>
+    </div>
+  `;
+  document.body.appendChild(modal);
+
+  // Đóng modal khi click backdrop
+  modal
+    .querySelector(".cocbot-modal-backdrop")
+    .addEventListener("click", () => {
+      modal.remove();
+      if (sidebar) sidebar.classList.remove("cocbot-blur");
+    });
+
+  // Ngăn nổi bọt khi click vào modal content
+  modal
+    .querySelector(".cocbot-modal-content")
+    .addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+  // Star rating logic
+  const ratingItems = modal.querySelectorAll(".feedback-rating-item");
+  let selectedRate = null;
+  const submitBtn = modal.querySelector(".feedback-submit");
+  submitBtn.disabled = true; // Disable submit ban đầu
+
+  ratingItems.forEach((item, idx) => {
+    item.addEventListener("mouseenter", () => {
+      ratingItems.forEach((el, i) => {
+        el.classList.toggle("hovered", i <= idx);
+        el.classList.toggle(
+          "selected",
+          selectedRate && i < selectedRate && i <= idx
+        );
+      });
+    });
+    item.addEventListener("mouseleave", () => {
+      ratingItems.forEach((el) => el.classList.remove("hovered"));
+      ratingItems.forEach((el, i) => {
+        el.classList.toggle("selected", selectedRate && i < selectedRate);
+      });
+    });
+    item.addEventListener("click", () => {
+      if (selectedRate === idx + 1) {
+        selectedRate = null;
+        ratingItems.forEach((el) => el.classList.remove("selected"));
+        submitBtn.disabled = true; // Disable khi bỏ chọn
+      } else {
+        selectedRate = idx + 1;
+        ratingItems.forEach((el, i) => {
+          el.classList.toggle("selected", i < selectedRate);
+        });
+        submitBtn.disabled = false; // Enable khi đã chọn
+      }
+    });
+  });
+
+  // Submit/cancel logic
+  submitBtn.onclick = async () => {
+    if (submitBtn.disabled) return;
+    const stars = selectedRate;
+    const comment = modal.querySelector(".feedback-reason-input").value.trim();
+
+    try {
+      const res = await fetch("http://localhost:3000/api/feedback", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ stars, comment }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast("Feedback received!");
+        modal.remove();
+        if (sidebar) sidebar.classList.remove("cocbot-blur");
+      } else {
+        alert(data.error || "fail!");
+      }
+    } catch (err) {
+      alert("server fail");
+    }
+  };
+
+  function showToast(message) {
+    const toast = document.createElement("div");
+    toast.textContent = message;
+    toast.style.position = "fixed";
+    toast.style.top = "24px";
+    toast.style.left = "50%";
+    toast.style.transform = "translateX(-50%)";
+    toast.style.background = "#222";
+    toast.style.color = "#fff";
+    toast.style.padding = "12px 24px";
+    toast.style.borderRadius = "8px";
+    toast.style.zIndex = 99999;
+    toast.style.fontSize = "1rem";
+    toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
+    toast.style.opacity = "0.92";
+    document.body.appendChild(toast);
+    setTimeout(() => toast.remove(), 2200);
+  }
+
+  const cancelBtn = modal.querySelector(".feedback-cancel");
+  cancelBtn.onclick = () => {
+    modal.remove();
+    if (sidebar) sidebar.classList.remove("cocbot-blur");
+  };
+}
+
+function renderStars() {
+  if (window.innerWidth < 386) {
+    // 3 trên, 2 dưới
+    return `
+      <div class="feedback-rating-row">
+        <div class="feedback-rating-stars-row">
+          ${[0, 1, 2]
+            .map(
+              (i) => `
+            <div class="feedback-rating-item" data-rate="${i + 1}">
+              <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
+                i + 1
+              }" class="feedback-rating-icon" />
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+        <div class="feedback-rating-stars-row">
+          ${[3, 4]
+            .map(
+              (i) => `
+            <div class="feedback-rating-item" data-rate="${i + 1}">
+              <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
+                i + 1
+              }" class="feedback-rating-icon" />
+            </div>
+          `
+            )
+            .join("")}
+        </div>
+      </div>
+    `;
+  } else {
+    // 5 sao 1 hàng
+    return `
+      <div class="feedback-rating-row">
+        ${[0, 1, 2, 3, 4]
+          .map(
+            (i) => `
+          <div class="feedback-rating-item" data-rate="${i + 1}">
+            <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
+              i + 1
+            }" class="feedback-rating-icon" />
+          </div>
+        `
+          )
+          .join("")}
+      </div>
+    `;
+  }
 }
 
 // format markdown-like text

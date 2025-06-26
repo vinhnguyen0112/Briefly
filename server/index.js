@@ -9,6 +9,7 @@ const authRoutes = require("./routes/authRoutes");
 const captionRoutes = require("./routes/captionRoutes");
 const anonRoutes = require("./routes/anonRoutes");
 const { redisCluster } = require("./helpers/redisHelper");
+const feedbackRoutes = require("./routes/feedbackRoutes");
 const dbHelper = require("./helpers/dbHelper");
 
 // Initialize Express app
@@ -32,6 +33,7 @@ redisCluster
     process.exit(1);
   });
 
+// Connect to MariaDB
 dbHelper.getConnection().then(() => {
   console.log("MariaDB connected successfully!");
 });
@@ -40,6 +42,8 @@ dbHelper.getConnection().then(() => {
 app.use("/api/auth", authRoutes);
 app.use("/api/captionize", captionRoutes);
 app.use("/api/anon", anonRoutes);
+// app.use("/api/captionize", imageCaptionRoutes);
+app.use("/api/feedback", feedbackRoutes);
 
 // Health check endpoint
 app.get("/api/health", (req, res) => {
