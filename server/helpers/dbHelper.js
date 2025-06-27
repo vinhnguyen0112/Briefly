@@ -25,6 +25,13 @@ const mysql = require("mysql2/promise");
 //       }
 // );
 
+console.log(
+  `Connecting to ${process.env.MYSQL_HOST}:${process.env.MYSQL_PORT}.
+  Username: ${process.env.MYSQL_USERNAME}.
+  Password: ${process.env.MYSQL_PASSWORD}.
+  Database: ${process.env.MYSQL_DB}`
+);
+
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,
   port: process.env.MYSQL_PORT,

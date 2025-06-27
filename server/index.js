@@ -3,12 +3,15 @@ const dotenv = require("dotenv");
 switch (process.env.NODE_ENV) {
   case "test":
     dotenv.config({ path: ".env.test" });
+    console.log("Using test env");
     break;
   case "development":
     dotenv.config({ path: ".env" });
+    console.log("Using dev env");
     break;
   case "production":
     dotenv.config({ path: ".env.production" });
+    console.log("Using prod env");
     break;
 }
 
