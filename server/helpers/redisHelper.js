@@ -3,10 +3,10 @@ const redis = require("redis");
 let redisCluster;
 
 // Switch between local host and remote cluster
-if (process.env.LOCAL_DEV === "true") {
+if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
   // Local Redis
   redisCluster = redis.createClient({
-    url: process.env.LOCAL_REDIS_URL,
+    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`,
   });
 } else {
   // Redis Cluster

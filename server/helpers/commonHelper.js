@@ -1,10 +1,7 @@
 const crypto = require("crypto");
-const normalizeUrl = require("normalize-url").default;
+const normalizeUrl = require("normalize-url");
 
-/**
- * Hashes any number of arguments into a single SHA-256 hex string.
- * Skips undefined/null values.
- */
+// Hash arguments into SHA256
 function generateHash(...args) {
   const input = args.filter((v) => v !== undefined && v !== null).join(":");
   return crypto.createHash("sha256").update(input).digest("hex");

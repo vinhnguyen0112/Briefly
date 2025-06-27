@@ -1,5 +1,16 @@
-// Load environment variables
-require("dotenv").config();
+const dotenv = require("dotenv");
+
+switch (process.env.NODE_ENV) {
+  case "test":
+    dotenv.config({ path: ".env.test" });
+    break;
+  case "development":
+    dotenv.config({ path: ".env" });
+    break;
+  case "production":
+    dotenv.config({ path: ".env.production" });
+    break;
+}
 
 const express = require("express");
 const cors = require("cors");
@@ -70,3 +81,5 @@ app.use((err, req, res, next) => {
 app.listen(PORT, () => {
   console.log(`CocBot server running on port ${PORT}`);
 });
+
+module.exports = app;

@@ -25,13 +25,7 @@ router
 // Nested message routes under /:chat_id/messages
 router
   .route("/:chat_id/messages")
-  .post(chatController.addMessage) // Add message to chat
-  .get(chatController.getMessages); // Get all messages for chat
-
-// Unused
-// router
-//   .route("/:chat_id/messages/:message_id")
-//   .get(chatController.getMessageById) // Get single message
-//   .delete(chatController.deleteMessage); // Delete message
+  .post(chatController.addMessage)
+  .get(chatController.getMessages);
 
 module.exports = router;
