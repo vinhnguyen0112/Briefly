@@ -1,5 +1,7 @@
 const config = {
-  setupFilesAfterEnv: ["<rootDir>/tests/setup-jest.js"],
+  testEnvironment: "node",
+  globalSetup: "<rootDir>/tests/jestGlobalSetup.js",
+  globalTeardown: "<rootDir>/tests/jestGlobalTeardown.js",
 };
 
 module.exports = config;

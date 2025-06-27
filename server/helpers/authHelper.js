@@ -49,18 +49,10 @@ const verifyFacebookToken = async (token) => {
 const extractFromAuthHeader = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
-    throw new Error("Missing or invalid Authorization header");
+    return null;
   }
   const token = authHeader.split(" ")[1];
-  console.log("Extracted token: ", token);
   return token;
-};
-
-// Helper function to extract from promotion header
-const extractFromPromotionHeader = (req) => {
-  const anonSessionId = req.headers["promote"];
-
-  return anonSessionId;
 };
 
 // Refresh session TTL in Redis & 'expires_at' in MariaDB
@@ -85,7 +77,6 @@ const authHelper = {
   verifyGoogleToken,
   verifyFacebookToken,
   extractFromAuthHeader,
-  extractFromPromotionHeader,
   refreshSessionTTL,
 };
 

@@ -43,24 +43,10 @@ app.use(morgan("dev")); // HTTP request logging
 // Trust proxy (for testing with Postman)
 app.set("trust proxy", true);
 
-// Connect to redis cluster
-redisCluster
-  .connect()
-  .then(() => console.log("Redis connected successfully!"))
-  .catch((err) => {
-    console.error("Failed to connect to Redis:", err);
-    process.exit(1);
-  });
-
-dbHelper.getConnection().then(() => {
-  console.log("MariaDB connected successfully!");
-});
-
-app.post("/api/test", bulkInsertChats);
-
 // Routes
 // Extract client IP and visitor ID for all routes
 app.use("/api", extractClientIp, extractVisitorId);
+app.post("/api/test", bulkInsertChats);
 app.use("/api/auth", authRoutes);
 app.use("/api/captionize", captionRoutes);
 app.use("/api/anon", anonRoutes);
@@ -79,6 +65,25 @@ app.use((err, req, res, next) => {
     error: process.env.NODE_ENV === "production" ? "Server error" : err.message,
   });
 });
+
+async function startServer() {
+  try {
+    await redisCluster.connect();
+    console.log("Redis connected successfully!");
+
+    await dbHelper.getConnection();
+    console.log("MariaDB connected successfully!");
+
+    app.listen(PORT, () => {
+      console.log(`CocBot server running on port ${PORT}`);
+    });
+  } catch (err) {
+    console.error("Startup error", err);
+    process.exit(1);
+  }
+}
+
+startServer();
 
 // Start the server
 app.listen(PORT, () => {

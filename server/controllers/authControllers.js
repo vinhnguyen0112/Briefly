@@ -4,7 +4,6 @@ const User = require("../models/user");
 const Session = require("../models/session");
 const { v4: uuidv4 } = require("uuid");
 const commonHelper = require("../helpers/commonHelper");
-const Chat = require("../models/chat");
 
 // Persist new user in db if not found
 const handleUserPersistence = async (userId, name) => {
@@ -36,9 +35,6 @@ const authenticateWithGoogle = async (req, res, next) => {
     const idToken = authHelper.extractFromAuthHeader(req);
     const { userId, name } = await authHelper.verifyGoogleToken(idToken);
 
-    // Unused for now,
-    const promotedAnonSessionId = authHelper.extractFromPromotionHeader(req);
-
     await handleUserPersistence(userId, name);
     const sessionId = await handleSessionCreation(userId);
 
@@ -54,7 +50,6 @@ const authenticateWithFacebook = async (req, res, next) => {
   try {
     const accessToken = authHelper.extractFromAuthHeader(req);
     const { userId, name } = await authHelper.verifyFacebookToken(accessToken);
-    const promotedAnonSessionId = authHelper.extractFromPromotionHeader(req);
 
     await handleUserPersistence(userId, name);
 

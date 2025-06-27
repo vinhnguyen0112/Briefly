@@ -2,12 +2,10 @@ const express = require("express");
 const router = express.Router();
 const chatController = require("../controllers/chatController");
 const {
-  validateSession,
-  attachNewAnonSession,
+  requireAuthenticatedSession,
 } = require("../middlewares/authMiddlewares");
-const chat = require("../models/chat");
 
-router.use(validateSession, attachNewAnonSession);
+router.use(requireAuthenticatedSession);
 
 // Chat routes
 router

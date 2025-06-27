@@ -1,5 +1,8 @@
 const express = require("express");
-const { validateSession } = require("../middlewares/authMiddlewares");
+const {
+  validateSession,
+  requireAuthenticatedSession,
+} = require("../middlewares/authMiddlewares");
 const {
   authenticateWithGoogle,
   authenticateWithFacebook,
@@ -8,8 +11,16 @@ const {
 
 const router = express.Router();
 
-// Check if session is valid on serverside (for testing purpose)
+// Check if session is valid on serverside
 router.post("/session-validate", validateSession, (req, res) => {
+  res.json({
+    success: true,
+    message: "Session is valid",
+  });
+});
+
+// Check if session is authenticated only
+router.post("/auth-only", requireAuthenticatedSession, (req, res) => {
   res.json({
     success: true,
     message: "Session is valid",
