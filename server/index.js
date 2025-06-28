@@ -30,6 +30,8 @@ const {
   extractVisitorId,
 } = require("./middlewares/commonMiddlewares");
 const { bulkInsertChats } = require("./controllers/testController");
+const { ERROR_CODES } = require("./errors");
+const AppError = require("./models/appError");
 
 // Initialize Express app
 const app = express();
@@ -59,10 +61,24 @@ app.get("/api/health", (req, res) => {
 
 // Error handling middleware
 app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(500).json({
+  console.error(err); // For logging purpose
+  if (err instanceof AppError) {
+    return res.status(err.status).json({
+      success: false,
+      error: {
+        code: err.code || 400,
+        message: err.message,
+      },
+    });
+  }
+
+  return res.status(500).json({
     success: false,
-    error: process.env.NODE_ENV === "production" ? "Server error" : err.message,
+    error: {
+      code: ERROR_CODES.INTERNAL_ERROR,
+      message:
+        process.env.NODE_ENV === "production" ? "Server error" : err.message,
+    },
   });
 });
 

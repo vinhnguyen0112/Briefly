@@ -56,6 +56,7 @@ async function getConnection() {
  * @param {Array} params - The parameters for the query
  * @returns {Promise} The result of the query
  */
+// TODO: Update this function to return [result] instead
 async function executeQuery(query, params = []) {
   let connection;
   try {

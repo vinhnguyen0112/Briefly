@@ -20,7 +20,7 @@ router
   .put(chatController.updateChat)
   .delete(chatController.deleteChat);
 
-// Nested message routes under /:chat_id/messages
+// Message routes
 router
   .route("/:chat_id/messages")
   .post(chatController.addMessage)

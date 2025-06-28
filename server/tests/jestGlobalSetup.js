@@ -1,6 +1,5 @@
 require("dotenv").config({ path: ".env.test" });
 
-const dbHelper = require("../helpers/dbHelper");
 const { redisHelper, redisCluster } = require("../helpers/redisHelper");
 const Session = require("../models/session");
 const User = require("../models/user");

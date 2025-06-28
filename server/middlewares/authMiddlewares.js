@@ -3,20 +3,26 @@ const { redisHelper } = require("../helpers/redisHelper");
 const Session = require("../models/session");
 const AnonSession = require("../models/anonSession");
 const { generateHash } = require("../helpers/commonHelper");
+const AppError = require("../models/appError");
+const { ERROR_CODES } = require("../errors");
 
-// Extract session ID value and session type
+/**
+ * Resolve provided session into session type and actual ID
+ * @param {String} sessionId
+ */
 async function resolveSessionId(sessionId) {
-  let actualId, type;
+  console.log("sessionId raw:", sessionId);
 
-  if (sessionId.startsWith("auth:")) {
-    type = "auth";
-    actualId = sessionId.slice("auth:".length);
-  } else if (sessionId.startsWith("anon:")) {
-    type = "anon";
-    actualId = sessionId.slice("anon:".length);
-  } else {
-    throw new Error("SESSION_HEADER_FORMAT_INVALID");
+  const match = /^(auth|anon):([a-zA-Z0-9_-]+)$/.exec(sessionId);
+
+  console.log("match result:", match);
+
+  if (!match) {
+    throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid session ID format");
   }
+
+  const type = match[1];
+  const actualId = match[2];
 
   return { type, actualId };
 }
@@ -24,12 +30,15 @@ async function resolveSessionId(sessionId) {
 // Look up session in Redis and MariaDB
 async function lookupSession(actualId, type) {
   if (type === "auth") {
+    // Look inside Redis first
     let cached = await redisHelper.getSession(actualId);
     if (cached) return cached;
 
+    // Fallback to MariaDB if not found
     const fromDb = await Session.getById(actualId);
     if (!fromDb) return null;
 
+    // Update cache
     await redisHelper.createSession(actualId, fromDb);
     return fromDb;
   } else {
@@ -46,30 +55,13 @@ async function lookupSession(actualId, type) {
 
 const validateSession = async (req, res, next) => {
   try {
-    // Extract session ID from auth header
+    // Extract session from auth header
     const sessionId = authHelper.extractFromAuthHeader(req);
     if (!sessionId) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: "MISSING_SESSION_ID",
-          message: "Missing session ID",
-        },
-      });
+      throw new AppError(ERROR_CODES.UNAUTHORIZED, "Missing session ID", 401);
     }
 
-    let parsed;
-    try {
-      parsed = await resolveSessionId(sessionId);
-    } catch (e) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: "SESSION_HEADER_FORMAT_INVALID",
-          message: "Invalid session ID format",
-        },
-      });
-    }
+    const parsed = await resolveSessionId(sessionId);
 
     let sessionData = await lookupSession(parsed.actualId, parsed.type);
 
@@ -91,29 +83,18 @@ const validateSession = async (req, res, next) => {
 
     // If user authenticated session is invalid
     if (!sessionData && parsed.type === "auth") {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: "AUTH_SESSION_INVALID",
-          message: "Authenticated session not found or invalid",
-        },
-      });
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "Authenticated session not found or invalid",
+        401
+      );
     }
 
-    // Session is valid, attach along request
     req.sessionType = parsed.type;
     req.session = sessionData;
     return next();
   } catch (err) {
-    console.error("Error in validateSession middleware:", err);
-    return res.status(500).json({
-      success: false,
-      error: {
-        code: "SESSION_VALIDATION_ERROR",
-        message: "Internal error during session validation",
-        details: err.message,
-      },
-    });
+    next(err);
   }
 };
 
@@ -122,63 +103,34 @@ const requireAuthenticatedSession = async (req, res, next) => {
   try {
     const sessionId = authHelper.extractFromAuthHeader(req);
     if (!sessionId) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: "MISSING_SESSION_ID",
-          message: "Missing session ID",
-        },
-      });
+      throw new AppError(ERROR_CODES.UNAUTHORIZED, "Missing session ID", 401);
     }
 
-    let parsed;
-    try {
-      parsed = await resolveSessionId(sessionId);
-    } catch (e) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: "SESSION_HEADER_FORMAT_INVALID",
-          message: "Invalid session ID format",
-        },
-      });
-    }
+    const parsed = await resolveSessionId(sessionId);
 
     if (parsed.type !== "auth") {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: "SESSION_NOT_AUTH",
-          message: "Only authenticated sessions are allowed",
-        },
-      });
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "Only authenticated sessions are allowed",
+        401
+      );
     }
 
     let sessionData = await lookupSession(parsed.actualId, "auth");
 
     if (!sessionData) {
-      return res.status(401).json({
-        success: false,
-        error: {
-          code: "AUTH_SESSION_INVALID",
-          message: "Authenticated session not found or invalid",
-        },
-      });
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "Authenticated session not found or invalid",
+        401
+      );
     }
 
     req.sessionType = "auth";
     req.session = sessionData;
     return next();
   } catch (err) {
-    console.error("Error in requireAuthenticatedSession middleware:", err);
-    return res.status(500).json({
-      success: false,
-      error: {
-        code: "SESSION_VALIDATION_ERROR",
-        message: "Internal error during session validation",
-        details: err.message,
-      },
-    });
+    next(err);
   }
 };
 

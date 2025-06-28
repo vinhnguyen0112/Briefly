@@ -4,12 +4,13 @@ const User = require("../models/user");
 const Session = require("../models/session");
 const { v4: uuidv4 } = require("uuid");
 const commonHelper = require("../helpers/commonHelper");
+const { ERROR_CODES } = require("../errors");
+const AppError = require("../models/appError");
 
 // Persist new user in db if not found
 const handleUserPersistence = async (userId, name) => {
   const user = await User.getById(userId);
   if (!user) {
-    console.log(`User ${userId} not found. Creating new user.`);
     if (!name) name = commonHelper.generateName();
     await User.create({ id: userId, name });
   }
@@ -21,27 +22,26 @@ const handleSessionCreation = async (userId) => {
     id: authSessionId,
     user_id: userId,
   });
-
   await redisHelper.createSession(authSessionId, { user_id: userId });
-
-  console.log("Created new auth session:", authSessionId);
   return authSessionId;
 };
 
 // Authenticate with Google
 const authenticateWithGoogle = async (req, res, next) => {
   try {
-    console.log("Request origin in Google auth request: ", req.origin);
     const idToken = authHelper.extractFromAuthHeader(req);
+    if (!idToken) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing Google ID token");
+    }
     const { userId, name } = await authHelper.verifyGoogleToken(idToken);
-
+    if (!userId) {
+      throw new AppError(ERROR_CODES.UNAUTHORIZED, "Invalid Google token", 401);
+    }
     await handleUserPersistence(userId, name);
     const sessionId = await handleSessionCreation(userId);
-
-    return res.json({ success: true, data: { id: sessionId } });
-  } catch (error) {
-    console.error("Error during Google authentication:", error);
-    return next(error);
+    res.json({ success: true, data: { id: sessionId } });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -49,16 +49,25 @@ const authenticateWithGoogle = async (req, res, next) => {
 const authenticateWithFacebook = async (req, res, next) => {
   try {
     const accessToken = authHelper.extractFromAuthHeader(req);
+    if (!accessToken) {
+      throw new AppError(
+        ERROR_CODES.INVALID_INPUT,
+        "Missing Facebook access token"
+      );
+    }
     const { userId, name } = await authHelper.verifyFacebookToken(accessToken);
-
+    if (!userId) {
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "Invalid Facebook token",
+        401
+      );
+    }
     await handleUserPersistence(userId, name);
-
     const sessionId = await handleSessionCreation(userId);
-
-    return res.json({ success: true, data: { id: sessionId } });
-  } catch (error) {
-    console.error("Error during Facebook authentication:", error);
-    return next(error);
+    res.json({ success: true, data: { id: sessionId } });
+  } catch (err) {
+    next(err);
   }
 };
 
@@ -66,27 +75,22 @@ const authenticateWithFacebook = async (req, res, next) => {
 const signOut = async (req, res, next) => {
   try {
     const { sessionType } = req;
-    const { id } = req.session;
-
-    // If auth session was not passed in request, reject
-    if (sessionType !== "auth") {
-      return res.status(400).json({
-        success: false,
-        message: "Unknown or invalid session type.",
-      });
+    const { id } = req.session || {};
+    if (sessionType !== "auth" || !id) {
+      throw new AppError(
+        ERROR_CODES.UNAUTHORIZED,
+        "Unknown or invalid session type.",
+        401
+      );
     }
-
-    // Remove from DB and Redis
     await Session.delete(id);
     await redisHelper.deleteSession(id);
-
-    return res.json({
+    res.json({
       success: true,
       message: "Session deleted",
     });
   } catch (err) {
-    console.error("Error during sign out:", err);
-    return next(err);
+    next(err);
   }
 };
 

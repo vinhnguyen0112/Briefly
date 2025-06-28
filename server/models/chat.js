@@ -28,6 +28,7 @@ class Chat {
     await dbHelper.executeQuery(query, values);
   }
 
+  // TODO: Update this func so it extract from 'result'
   async getById(id) {
     const query = "SELECT * FROM chats WHERE id = ?";
     const rows = await dbHelper.executeQuery(query, [id]);
@@ -54,6 +55,7 @@ class Chat {
     // Increase LIMIT by 1 to determine hasMore
     values.push((parseInt(limit) + 1).toString(), offset);
 
+    // TODO: Update this return statement to extract rows from 'result'
     return dbHelper.executeQuery(query, values);
   }
 
