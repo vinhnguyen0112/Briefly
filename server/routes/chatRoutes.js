@@ -11,8 +11,7 @@ router.use(requireAuthenticatedSession);
 router
   .route("/")
   .get(chatController.getChatsBy)
-  .post(chatController.createChat)
-  .delete(chatController.deleteChat);
+  .post(chatController.createChat);
 
 router
   .route("/:id")

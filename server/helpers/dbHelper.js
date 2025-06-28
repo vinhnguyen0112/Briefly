@@ -54,20 +54,19 @@ async function getConnection() {
  * Execute a query with parameters
  * @param {string} query - The SQL query to execute
  * @param {Array} params - The parameters for the query
- * @returns {Promise} The result of the query
+ * @returns {Promise<Object>} The OkPacket object or rows.
  */
-// TODO: Update this function to return [result] instead
 async function executeQuery(query, params = []) {
   let connection;
   try {
     connection = await getConnection();
 
-    console.log("Query params: ", params);
-    console.log("Executing query: ");
-    console.log(query);
+    console.log(`Executing query: ${query} with params ${[...params]}`);
 
-    const [rows] = await connection.execute(query, params);
-    return rows;
+    const [rowsOrOkPacket] = await connection.execute(query, params);
+    console.log("Query result: ", rowsOrOkPacket);
+
+    return rowsOrOkPacket;
   } catch (error) {
     console.error("Error executing query:", error.message);
     throw error;

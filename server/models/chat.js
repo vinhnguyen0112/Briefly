@@ -1,6 +1,10 @@
 const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 class Chat {
+  /**
+   * Insert a chat into database. Returns nothing
+   * @param {Object} data Chat object to insert
+   */
   async create(data) {
     data = cleanDeep(data);
     const columns = Object.keys(data).join(", ");
@@ -14,6 +18,7 @@ class Chat {
   }
 
   // Bulk insert chats
+  // For testing purpose only, ignore this
   async bulkInsert(chats) {
     if (!Array.isArray(chats) || chats.length === 0) return;
     // Assume all chats have the same keys
@@ -28,16 +33,27 @@ class Chat {
     await dbHelper.executeQuery(query, values);
   }
 
-  // TODO: Update this func so it extract from 'result'
+  /**
+   * Get a chat by ID, without the messages
+   * @param {String} id ID of the chat
+   * @returns {Promise<Object>} Chat object
+   */
   async getById(id) {
     const query = "SELECT * FROM chats WHERE id = ?";
-    const rows = await dbHelper.executeQuery(query, [id]);
+    const [rows] = await dbHelper.executeQuery(query, [id]);
     return rows[0];
   }
 
+  /**
+   * Retrieves an user's chats with pagination.
+   * Results are ordered by created_at in descending order
+   * @param {Object} conditions - Query conditions
+   * @param {String} conditions.user_id - The user ID to filter chats
+   * @param {number} conditions.offset - Pagination offset (default: 0)
+   * @param {number} conditions.limit - Maximum number of results to return (default: 20)
+   * @returns {Promise<Array>} - An array of chats
+   */
   async getBy({ user_id, offset = 0, limit = 20 }) {
-    if (!user_id) throw new Error("Missing user_id");
-
     let query = "SELECT * FROM chats";
     const conditions = [];
     const values = [];
@@ -55,10 +71,16 @@ class Chat {
     // Increase LIMIT by 1 to determine hasMore
     values.push((parseInt(limit) + 1).toString(), offset);
 
-    // TODO: Update this return statement to extract rows from 'result'
-    return dbHelper.executeQuery(query, values);
+    const [rows] = await dbHelper.executeQuery(query, values);
+    return rows;
   }
 
+  /**
+   * Update a chat
+   * @param {String} id ID of the chat
+   * @param {Object} updates Update values
+   * @returns {Promise<number>} Number of affected rows
+   */
   async update(id, updates) {
     const fields = [];
     const values = [];
@@ -71,9 +93,15 @@ class Chat {
     fields.push("updated_at = CURRENT_TIMESTAMP");
     const query = `UPDATE chats SET ${fields.join(", ")} WHERE id = ?`;
     values.push(id);
-    await dbHelper.executeQuery(query, values);
+    const { affectedRows } = await dbHelper.executeQuery(query, values);
+    return affectedRows;
   }
 
+  /**
+   * Delete a chat
+   * @param {String} id ID of the chat
+   * @returns {Promise<number>} Number of affected rows
+   */
   async delete(id) {
     const query = "DELETE FROM chats WHERE id = ?";
     await dbHelper.executeQuery(query, [id]);
@@ -90,7 +118,8 @@ class Chat {
       throw new Error("Missing user_id");
     }
 
-    await dbHelper.executeQuery(query, [value]);
+    const { affectedRows } = await dbHelper.executeQuery(query, [value]);
+    return affectedRows;
   }
 }
 
