@@ -2,6 +2,7 @@ const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 
 class Session {
+  // TODO: Document
   async create(data) {
     data = cleanDeep(data);
     const columns = Object.keys(data).join(", ");

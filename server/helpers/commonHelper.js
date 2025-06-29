@@ -1,3 +1,4 @@
+// TODO: Documentation
 const crypto = require("crypto");
 const normalizeUrl = require("normalize-url");
 

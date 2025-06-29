@@ -1,3 +1,4 @@
+// Testing purpose only, ignore this.
 const commonHelper = require("../helpers/commonHelper");
 const Chat = require("../models/chat");
 

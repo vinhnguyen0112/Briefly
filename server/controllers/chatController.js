@@ -1,3 +1,4 @@
+// TODO: Documentation
 const { ERROR_CODES } = require("../errors");
 const commonHelper = require("../helpers/commonHelper");
 const AppError = require("../models/appError");
@@ -69,7 +70,11 @@ const getChatsBy = async (req, res, next) => {
     if (isNaN(offset) || isNaN(limit) || limit <= 0 || offset < 0) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid offset or limit");
     }
-    const filter = { offset, limit: limit + 1, user_id: req.session.user_id };
+    const filter = {
+      offset: offset.toString(),
+      limit: (limit + 1).toString(),
+      user_id: req.session.user_id,
+    };
     const chats = await Chat.getBy(filter);
     let hasMore = false;
     if (chats.length > limit) {

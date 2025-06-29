@@ -1,3 +1,4 @@
+// TODO: Documentation, refactor?
 const { redisHelper } = require("../helpers/redisHelper");
 const authHelper = require("../helpers/authHelper");
 const User = require("../models/user");

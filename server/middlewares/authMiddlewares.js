@@ -6,6 +6,8 @@ const { generateHash } = require("../helpers/commonHelper");
 const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 
+// TODO: Documentation
+
 /**
  * Resolve provided session into session type and actual ID
  * @param {String} sessionId

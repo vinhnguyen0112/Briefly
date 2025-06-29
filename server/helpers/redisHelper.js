@@ -1,3 +1,4 @@
+// TODO: Documentation
 const redis = require("redis");
 
 let redisCluster;

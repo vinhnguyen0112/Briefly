@@ -1,6 +1,7 @@
 const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 
+// TODO: Documentation
 class AnonSession {
   async create(data) {
     data = cleanDeep(data);

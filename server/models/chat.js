@@ -68,8 +68,7 @@ class Chat {
     }
 
     query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
-    // Increase LIMIT by 1 to determine hasMore
-    values.push((parseInt(limit) + 1).toString(), offset);
+    values.push(limit, offset);
 
     const rows = await dbHelper.executeQuery(query, values);
     return rows;
