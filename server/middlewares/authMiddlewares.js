@@ -12,7 +12,7 @@ const { ERROR_CODES } = require("../errors");
  * @returns {{type: String, actualId: String}} The session type and actual ID.
  * @throws  If the session ID format is invalid.
  */
-async function resolveSessionId(sessionId) {
+function resolveSessionId(sessionId) {
   const match = /^(auth|anon):([a-zA-Z0-9_-]+)$/.exec(sessionId);
 
   if (!match) {
@@ -122,6 +122,7 @@ const requireAuthenticatedSession = async (req, res, next) => {
     }
 
     const parsed = resolveSessionId(sessionId);
+    console.log("Parsed: ", parsed);
 
     if (parsed.type !== "auth") {
       throw new AppError(

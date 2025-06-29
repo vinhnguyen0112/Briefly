@@ -14,13 +14,6 @@ const Message = require("../models/message");
  */
 const createChat = async (req, res, next) => {
   try {
-    if (req.sessionType !== "auth" || !req.session?.user_id) {
-      throw new AppError(
-        ERROR_CODES.UNAUTHORIZED,
-        "Only authenticated user can save chat to database",
-        401
-      );
-    }
     const { id, page_url, title } = req.body;
     if (!id || !page_url || !title) {
       throw new AppError(
@@ -78,9 +71,6 @@ const getChatById = async (req, res, next) => {
  */
 const getChatsBy = async (req, res, next) => {
   try {
-    if (req.sessionType !== "auth" || !req.session?.user_id) {
-      throw new AppError(ERROR_CODES.UNAUTHORIZED, "Invalid session type", 401);
-    }
     let { offset = 0, limit = 20 } = req.query;
     offset = parseInt(offset, 10);
     limit = parseInt(limit, 10);

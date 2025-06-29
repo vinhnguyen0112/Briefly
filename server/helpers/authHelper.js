@@ -91,8 +91,9 @@ const extractFromAuthHeader = (req) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith("Bearer ")) {
     throw new AppError(
-      ERROR_CODES.INVALID_INPUT,
-      "Missing or invalid Authorization header"
+      ERROR_CODES.UNAUTHORIZED,
+      "Missing or invalid Authorization header",
+      401
     );
   }
   return authHeader.split(" ")[1];
