@@ -40,7 +40,7 @@ class Chat {
    */
   async getById(id) {
     const query = "SELECT * FROM chats WHERE id = ?";
-    const [rows] = await dbHelper.executeQuery(query, [id]);
+    const rows = await dbHelper.executeQuery(query, [id]);
     return rows[0];
   }
 
@@ -71,7 +71,7 @@ class Chat {
     // Increase LIMIT by 1 to determine hasMore
     values.push((parseInt(limit) + 1).toString(), offset);
 
-    const [rows] = await dbHelper.executeQuery(query, values);
+    const rows = await dbHelper.executeQuery(query, values);
     return rows;
   }
 
@@ -104,7 +104,8 @@ class Chat {
    */
   async delete(id) {
     const query = "DELETE FROM chats WHERE id = ?";
-    await dbHelper.executeQuery(query, [id]);
+    const { affectedRows } = await dbHelper.executeQuery(query, [id]);
+    return affectedRows;
   }
 
   async deleteBy({ user_id }) {

@@ -32,6 +32,7 @@ const {
 const { bulkInsertChats } = require("./controllers/testController");
 const { ERROR_CODES } = require("./errors");
 const AppError = require("./models/appError");
+const normalizeUrl = require("normalize-url");
 
 // Initialize Express app
 const app = express();

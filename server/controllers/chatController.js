@@ -66,7 +66,7 @@ const getChatsBy = async (req, res, next) => {
     let { offset = 0, limit = 20 } = req.query;
     offset = parseInt(offset, 10);
     limit = parseInt(limit, 10);
-    if (isNaN(offset) || isNaN(limit) || limit <= 0 || offset <= 0) {
+    if (isNaN(offset) || isNaN(limit) || limit <= 0 || offset < 0) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid offset or limit");
     }
     const filter = { offset, limit: limit + 1, user_id: req.session.user_id };
@@ -121,6 +121,7 @@ const deleteChat = async (req, res, next) => {
   }
 };
 
+// TODO: Rename this func for clarity
 // Delete all user's chats
 const deleteChatsBy = async (req, res, next) => {
   try {

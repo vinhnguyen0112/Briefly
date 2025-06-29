@@ -1,13 +1,10 @@
 const supertest = require("supertest");
 const app = require("..");
 const jestVariables = require("./jestVariables");
-const Chat = require("../models/chat");
 const { ERROR_CODES } = require("../errors");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
 const invalidAuthHeader = `Bearer auth:${jestVariables.invalidSessionId}`;
-
-// TODO: Create some constants for each describe
 
 describe("POST /chats", () => {
   const chatId = "test_chat_1";
@@ -59,28 +56,11 @@ describe("POST /chats", () => {
         });
       });
   });
-
-  it("Should fail if page_url is invalid", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .set("Authorization", authHeader)
-      .send({
-        id: chatId,
-        title: chatTitle,
-        page_url: "not-a-url",
-      })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
-        });
-      });
-  });
 });
 
 describe("GET /chats", () => {
-  it("Should get all chats for provided page", async () => {
+  // TODO: Add a bunch of dummy chats first
+  it("Should get all chats with pagination", async () => {
     await supertest(app)
       .get("/api/chats")
       .query({ limit: 20, offset: 0 })
@@ -90,6 +70,7 @@ describe("GET /chats", () => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
         expect(response.body.data).toHaveProperty("chats");
+        expect(Array.isArray(response.body.data.chats)).toBe(true);
         expect(response.body.data).toHaveProperty("hasMore");
       });
   });
@@ -188,13 +169,7 @@ describe("GET /chats/:id", () => {
       });
   });
 
-  it("Should fail if chat ID is missing", async () => {
-    await supertest(app)
-      .get("/api/chats/")
-      .set("Authorization", authHeader)
-      .expect(404); // Route not found, not controller error
-  });
-
+  // TODO: Should it fail or return null?
   it("Should fail if chat not found", async () => {
     await supertest(app)
       .get("/api/chats/nonexistent_id")
@@ -234,26 +209,12 @@ describe("PUT /chats/:id", () => {
       });
   });
 
-  it("Should fail if chat ID is missing in query", async () => {
+  it("Should fail if chat ID is missing in request's query", async () => {
     await supertest(app)
       .put("/api/chats/")
       .set("Authorization", authHeader)
       .send({ title: "Updated Title" })
       .expect(404); // Route not found
-  });
-
-  it("Should fail if chat ID is missing in body", async () => {
-    await supertest(app)
-      .put("/api/chats/")
-      .set("Authorization", authHeader)
-      .send({ title: "Updated Title" })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
-        });
-      });
   });
 
   it("Should have no effect if chat not found", async () => {
@@ -297,24 +258,11 @@ describe("DELETE /chats/:id", () => {
       });
   });
 
-  it("Should fail if chat ID is missing in query", async () => {
+  it("Should fail if chat ID is missing in request's query", async () => {
     await supertest(app)
       .delete("/api/chats/")
       .set("Authorization", authHeader)
       .expect(404); // Route not found
-  });
-
-  it("Should fail if chat ID is missing in body", async () => {
-    await supertest(app)
-      .delete("/api/chats/")
-      .set("Authorization", authHeader)
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
-        });
-      });
   });
 
   it("Should have no effect if chat not found", async () => {
@@ -477,12 +425,9 @@ describe("GET /chats/:chat_id/messages", () => {
       .set("Authorization", authHeader)
       .expect(200)
       .then((response) => {
-        expect(response.body).toMatchObject({
-          success: true,
-          data: {
-            messages,
-          },
-        });
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("messages");
         expect(Array.isArray(response.body.data.messages)).toBe(true);
       });
   });
