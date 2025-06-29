@@ -6,18 +6,14 @@ const { generateHash } = require("../helpers/commonHelper");
 const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 
-// TODO: Documentation
-
 /**
- * Resolve provided session into session type and actual ID
- * @param {String} sessionId
+ * Parses a session ID string and extracts the session type and actual ID.
+ * @param {String} sessionId The session ID with type prefix "auth:" or "anon:"
+ * @returns {{type: String, actualId: String}} The session type and actual ID.
+ * @throws  If the session ID format is invalid.
  */
 async function resolveSessionId(sessionId) {
-  console.log("sessionId raw:", sessionId);
-
   const match = /^(auth|anon):([a-zA-Z0-9_-]+)$/.exec(sessionId);
-
-  console.log("match result:", match);
 
   if (!match) {
     throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid session ID format");
@@ -29,18 +25,21 @@ async function resolveSessionId(sessionId) {
   return { type, actualId };
 }
 
-// Look up session in Redis and MariaDB
+/**
+ * Looks up a session in Redis and falls back to MariaDB if not found.
+ * Updates the cache if found in the database.
+ * @param {string} actualId The actual session ID.
+ * @param {string} type The session type ("auth" or "anon").
+ * @returns {Promise<Object|null>} The session data or null if not found.
+ */
 async function lookupSession(actualId, type) {
   if (type === "auth") {
-    // Look inside Redis first
     let cached = await redisHelper.getSession(actualId);
     if (cached) return cached;
 
-    // Fallback to MariaDB if not found
     const fromDb = await Session.getById(actualId);
     if (!fromDb) return null;
 
-    // Update cache
     await redisHelper.createSession(actualId, fromDb);
     return fromDb;
   } else {
@@ -55,15 +54,22 @@ async function lookupSession(actualId, type) {
   }
 }
 
+/**
+ * Middleware to validate a session from the Authorization header.
+ * If the session is anonymous and invalid, assigns a new anonymous session.
+ * Sets req.sessionType and req.session.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const validateSession = async (req, res, next) => {
   try {
-    // Extract session from auth header
     const sessionId = authHelper.extractFromAuthHeader(req);
     if (!sessionId) {
       throw new AppError(ERROR_CODES.UNAUTHORIZED, "Missing session ID", 401);
     }
 
-    const parsed = await resolveSessionId(sessionId);
+    const parsed = resolveSessionId(sessionId);
 
     let sessionData = await lookupSession(parsed.actualId, parsed.type);
 
@@ -100,7 +106,14 @@ const validateSession = async (req, res, next) => {
   }
 };
 
-// Verify session ID and make sure only authenticated session is allowed
+/**
+ * Middleware to require an authenticated session.
+ * Only allows sessions of type "auth".
+ * Sets req.sessionType and req.session.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const requireAuthenticatedSession = async (req, res, next) => {
   try {
     const sessionId = authHelper.extractFromAuthHeader(req);
@@ -108,7 +121,7 @@ const requireAuthenticatedSession = async (req, res, next) => {
       throw new AppError(ERROR_CODES.UNAUTHORIZED, "Missing session ID", 401);
     }
 
-    const parsed = await resolveSessionId(sessionId);
+    const parsed = resolveSessionId(sessionId);
 
     if (parsed.type !== "auth") {
       throw new AppError(
@@ -136,6 +149,13 @@ const requireAuthenticatedSession = async (req, res, next) => {
   }
 };
 
+/**
+ * Middleware to attach metadata about a newly assigned anonymous session to the response.
+ * Adds meta.newAnonSessionAssigned and meta.newAnonSession to the response body if applicable.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const attachNewAnonSession = (req, res, next) => {
   const originalJson = res.json.bind(res);
 

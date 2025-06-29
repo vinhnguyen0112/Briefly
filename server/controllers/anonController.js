@@ -1,64 +1,70 @@
-// TODO: Documentation, refactor
 const { redisHelper } = require("../helpers/redisHelper");
 const AnonSession = require("../models/anonSession");
 const commonHelper = require("../helpers/commonHelper");
+const AppError = require("../models/appError");
+const { ERROR_CODES } = require("../errors");
 
+/**
+ * Retrieves an anonymous session from cache or database, or creates a new one if not found.
+ * @param {String} sessionId - The unique session identifier.
+ * @returns {Promise<Object>} The session data object.
+ */
 async function findOrCreateAnonSession(sessionId) {
-  // Find cached anon session
+  // Try to get session from cache
   const cached = await redisHelper.getAnonSession(sessionId);
   if (cached) {
-    console.log("Cached anon session found, returning.");
+    console.log(`Cache hit for sessionId: ${sessionId}`);
     return { id: sessionId, anon_query_count: cached.anon_query_count || 0 };
   }
 
-  // No cached anon session, check DB
-  console.log("No cached anon session found, checking DB.");
+  // Try to get session from DB
+  console.log(`Cache miss. Checking DB for sessionId: ${sessionId}`);
   let session = await AnonSession.getById(sessionId);
+
+  // If not found in DB, create new session
   if (!session) {
-    console.log("No persisted anon session in DB, creating new.");
-    // No persited anon session, create new
+    console.log(
+      `No session in DB. Creating new session for sessionId: ${sessionId}`
+    );
     await AnonSession.create({ id: sessionId, anon_query_count: 0 });
+    session = { anon_query_count: 0 };
   }
 
   const sessionData = {
-    anon_query_count: session ? session.anon_query_count : 0,
+    anon_query_count: session.anon_query_count,
   };
 
-  // Update cache (always happen whether found or not)
+  // Always update cache
   await redisHelper.createAnonSession(sessionId, sessionData);
 
   return { id: sessionId, ...sessionData };
 }
 
+/**
+ * Express handler for managing anonymous sessions.
+ * Validates request, generates session ID, and returns session data.
+ * @param {Object} req - Express request object.
+ * @param {Object} res - Express response object.
+ * @param {Function} next - Express next middleware function.
+ * @returns {void}
+ */
 const handleAnonSession = async (req, res, next) => {
   try {
-    const { visitorId } = req;
+    const { visitorId, clientIp } = req;
+
     if (!visitorId) {
-      console.log("Missing visitorId in request");
-      return res.status(400).json({
-        success: false,
-        error: { code: "MISSING_VISITOR_ID", message: "Missing visitorId" },
-      });
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Visitor Id not found");
     }
 
-    const { clientIp } = req;
     if (!clientIp) {
-      console.log("Missing client IP address");
-      return res.status(400).json({
-        success: false,
-        error: {
-          code: "MISSING_CLIENT_IP",
-          message: "Missing client IP address",
-        },
-      });
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Client IP not found");
     }
 
     const sessionId = commonHelper.generateHash(visitorId, clientIp);
-
     const data = await findOrCreateAnonSession(sessionId);
+
     return res.json({ success: true, data });
   } catch (err) {
-    console.error("Error in handleAnonSession:", err);
     next(err);
   }
 };

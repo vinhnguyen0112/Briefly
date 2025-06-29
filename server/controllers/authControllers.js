@@ -1,4 +1,3 @@
-// TODO: Documentation, refactor?
 const { redisHelper } = require("../helpers/redisHelper");
 const authHelper = require("../helpers/authHelper");
 const User = require("../models/user");
@@ -8,7 +7,13 @@ const commonHelper = require("../helpers/commonHelper");
 const { ERROR_CODES } = require("../errors");
 const AppError = require("../models/appError");
 
-// Persist new user in db if not found
+/**
+ * Ensures a user exists in the database, creating one if not found.
+ * If no name is provided, generates a random name.
+ * @param {String} userId The user's ID
+ * @param {String} [name] The user's name.
+ * @returns {Promise<void>}
+ */
 const handleUserPersistence = async (userId, name) => {
   const user = await User.getById(userId);
   if (!user) {
@@ -17,6 +22,11 @@ const handleUserPersistence = async (userId, name) => {
   }
 };
 
+/**
+ * Creates a new authenticated session for a user, stores it in database and cache.
+ * @param {String} userId The user's ID
+ * @returns {Promise<String>} The new session ID.
+ */
 const handleSessionCreation = async (userId) => {
   const authSessionId = uuidv4();
   await Session.create({
@@ -27,7 +37,14 @@ const handleSessionCreation = async (userId) => {
   return authSessionId;
 };
 
-// Authenticate with Google
+/**
+ * Express handler for authenticating a user with Google.
+ * Verifies the Google ID token, persists the user, creates a session, and returns the session ID.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ * @returns {Promise<void>}
+ */
 const authenticateWithGoogle = async (req, res, next) => {
   try {
     const idToken = authHelper.extractFromAuthHeader(req);
@@ -46,7 +63,14 @@ const authenticateWithGoogle = async (req, res, next) => {
   }
 };
 
-// Authenticate with Facebook
+/**
+ * Express handler for authenticating a user with Facebook.
+ * Verifies the Facebook access token, persists the user, creates a session, and returns the session ID.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ * @returns {Promise<void>}
+ */
 const authenticateWithFacebook = async (req, res, next) => {
   try {
     const accessToken = authHelper.extractFromAuthHeader(req);
@@ -72,7 +96,14 @@ const authenticateWithFacebook = async (req, res, next) => {
   }
 };
 
-// Sign user out
+/**
+ * Express handler for signing a user out.
+ * Deletes the session from both the database and cache.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ * @returns {Promise<void>}
+ */
 const signOut = async (req, res, next) => {
   try {
     const { sessionType } = req;

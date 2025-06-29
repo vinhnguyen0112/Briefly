@@ -1,11 +1,17 @@
-// TODO: Documentation
 const { ERROR_CODES } = require("../errors");
 const commonHelper = require("../helpers/commonHelper");
 const AppError = require("../models/appError");
 const Chat = require("../models/chat");
 const Message = require("../models/message");
 
-// Create a new chat
+/**
+ * Creates a new chat for an authenticated user.
+ * Requires sessionType "auth" and a valid user_id in the session.
+ * Normalizes the page URL and generates a page_id hash.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const createChat = async (req, res, next) => {
   try {
     if (req.sessionType !== "auth" || !req.session?.user_id) {
@@ -40,8 +46,12 @@ const createChat = async (req, res, next) => {
   }
 };
 
-// Get a chat by ID
-// TODO: Will I ever call this endpoint
+/**
+ * Retrieves a chat by its ID.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const getChatById = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -58,7 +68,14 @@ const getChatById = async (req, res, next) => {
   }
 };
 
-// Get paginated chats
+/**
+ * Retrieves paginated chats for the authenticated user.
+ * Requires sessionType "auth" and a valid user_id in the session.
+ * Supports offset and limit query parameters.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const getChatsBy = async (req, res, next) => {
   try {
     if (req.sessionType !== "auth" || !req.session?.user_id) {
@@ -87,7 +104,12 @@ const getChatsBy = async (req, res, next) => {
   }
 };
 
-// Update a chat
+/**
+ * Updates a chat by its ID.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const updateChat = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -108,7 +130,12 @@ const updateChat = async (req, res, next) => {
   }
 };
 
-// Delete a chat
+/**
+ * Deletes a chat by its ID.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const deleteChat = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -126,22 +153,36 @@ const deleteChat = async (req, res, next) => {
   }
 };
 
-// TODO: Rename this func for clarity
-// Delete all user's chats
+/**
+ * Deletes all chats for the authenticated user.
+ * Requires sessionType "auth" and a valid user_id in the session.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const deleteChatsBy = async (req, res, next) => {
   try {
     if (req.sessionType !== "auth" || !req.session?.user_id) {
       throw new AppError(ERROR_CODES.UNAUTHORIZED, "Invalid session type", 401);
     }
-    await Chat.deleteBy({ user_id: req.session.user_id });
-    res.json({ success: true, message: "Chats deleted successfully" });
+    const affectedRows = await Chat.deleteBy({ user_id: req.session.user_id });
+    res.json({
+      success: true,
+      message: "Chats deleted successfully",
+      data: { affectedRows },
+    });
   } catch (err) {
     next(err);
   }
 };
 
-// Add a message to a chat
-// TODO: Update function to return created message's Id
+/**
+ * Adds a message to a chat.
+ * Requires chat_id, role, content, and model in the request.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const addMessage = async (req, res, next) => {
   try {
     const { chat_id } = req.params;
@@ -165,7 +206,12 @@ const addMessage = async (req, res, next) => {
   }
 };
 
-// Get all messages for a chat
+/**
+ * Retrieves all messages for a chat by chat_id.
+ * @param {Object} req Express request object.
+ * @param {Object} res Express response object.
+ * @param {Function} next Express next middleware function.
+ */
 const getMessages = async (req, res, next) => {
   try {
     const { chat_id } = req.params;
