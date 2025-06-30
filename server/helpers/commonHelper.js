@@ -1,5 +1,7 @@
 const crypto = require("crypto");
 const normalizeUrl = require("normalize-url");
+const AppError = require("../models/appError");
+const { ERROR_CODES } = require("../errors");
 
 /**
  * Generates a SHA256 hash from the provided arguments.
@@ -28,10 +30,17 @@ function generateName() {
  * @returns {String} The normalized URL.
  */
 function processUrl(url) {
-  const normalizedUrl = normalizeUrl(url, {
-    removeQueryParameters: true,
-  });
-  return normalizedUrl;
+  try {
+    const normalizedUrl = normalizeUrl(url, {
+      removeQueryParameters: true,
+    });
+    return normalizedUrl;
+  } catch (err) {
+    if (err.code === "ERR_INVALID_URL") {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid URL");
+    }
+    throw new AppError(ERROR_CODES.INTERNAL_ERROR, err.message, 500);
+  }
 }
 
 const commonHelper = {

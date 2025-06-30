@@ -1,30 +1,5 @@
 const mysql = require("mysql2/promise");
 
-// Create a connection pool
-// const pool = mysql.createPool(
-//   process.env.NODE_ENV === "development"
-//     ? {
-//         host: process.env.MYSQL_HOST,
-//         port: process.env.MYSQL_PORT,
-//         user: process.env.MYSQL_USERNAME,
-//         password: process.env.MYSQL_PASSWORD,
-//         database: process.env.MYSQL_DB,
-//         waitForConnections: true,
-//         connectionLimit: 5,
-//         queueLimit: 0,
-//       }
-//     : {
-//         host: process.env.MYSQL_HOST,
-//         port: process.env.MYSQL_PORT,
-//         user: process.env.MYSQL_USERNAME,
-//         password: process.env.MYSQL_PASSWORD,
-//         database: process.env.MYSQL_DB || "test",
-//         waitForConnections: true,
-//         connectionLimit: 5,
-//         queueLimit: 0,
-//       }
-// );
-
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,
   port: process.env.MYSQL_PORT,

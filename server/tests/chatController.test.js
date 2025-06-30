@@ -40,6 +40,24 @@ describe("POST /chats", () => {
       });
   });
 
+  it("Should fail if page's url is invalid", async () => {
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: chatId,
+        title: chatTitle,
+        page_url: "invalid page url",
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
   it("Should fail if not authenticated", async () => {
     await supertest(app)
       .post("/api/chats")
@@ -59,8 +77,15 @@ describe("POST /chats", () => {
 });
 
 describe("GET /chats", () => {
-  // TODO: Add a bunch of dummy chats first
-  it("Should get all chats with pagination", async () => {
+  // Bulk insert 30 chats for testing
+  beforeAll(async () => {
+    await supertest(app)
+      .post("/api/test/bulk-insert-chats")
+      .set("Authorization", authHeader)
+      .expect(200);
+  });
+
+  it("Should get all chats of first page", async () => {
     await supertest(app)
       .get("/api/chats")
       .query({ limit: 20, offset: 0 })
@@ -71,7 +96,9 @@ describe("GET /chats", () => {
         expect(response.body).toHaveProperty("data");
         expect(response.body.data).toHaveProperty("chats");
         expect(Array.isArray(response.body.data.chats)).toBe(true);
+        expect(response.body.data.chats.length).toBeLessThanOrEqual(20);
         expect(response.body.data).toHaveProperty("hasMore");
+        expect(response.body.data.hasMore).toBe(true);
       });
   });
 

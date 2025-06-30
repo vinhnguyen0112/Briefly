@@ -23,16 +23,16 @@ const authRoutes = require("./routes/authRoutes");
 const captionRoutes = require("./routes/captionRoutes");
 const anonRoutes = require("./routes/anonRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const testRoutes = require("./routes/testRoutes");
 const { redisCluster } = require("./helpers/redisHelper");
 const dbHelper = require("./helpers/dbHelper");
 const {
   extractClientIp,
   extractVisitorId,
 } = require("./middlewares/commonMiddlewares");
-const { bulkInsertChats } = require("./controllers/testController");
 const { ERROR_CODES } = require("./errors");
 const AppError = require("./models/appError");
-const normalizeUrl = require("normalize-url");
+const commonHelper = require("./helpers/commonHelper");
 
 // Initialize Express app
 const app = express();
@@ -49,7 +49,7 @@ app.set("trust proxy", true);
 // Routes
 // Extract client IP and visitor ID for all routes
 app.use("/api", extractClientIp, extractVisitorId);
-app.post("/api/test", bulkInsertChats);
+app.use("/api/test", testRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/captionize", captionRoutes);
 app.use("/api/anon", anonRoutes);

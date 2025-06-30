@@ -4,7 +4,7 @@ const ERROR_CODES = {
   FORBIDDEN: "FORBIDDEN", // Authenticated but blocked
   NOT_FOUND: "NOT_FOUND", // Resource doesn't exist
   CONFLICT: "CONFLICT", // Duplicate resource, etc.
-  EXTERNAL_SERVICE_ERROR: "EXTERNAL_SERVICE_ERROR",
+  EXTERNAL_SERVICE_ERROR: "EXTERNAL_SERVICE_ERROR", // Services failure
   INTERNAL_ERROR: "INTERNAL_ERROR", // Fallback 500
 };
 

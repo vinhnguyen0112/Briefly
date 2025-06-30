@@ -183,7 +183,7 @@ const getAnonSession = async (sessionId) => {
  * Creates a new anonymous session in Redis.
  * @param {String} sessionId The session ID.
  * @param {Object} sessionData The session data.
- * @throws If required data is missing or Redis fails.
+ * @throws If session ID is missing or Redis fails.
  */
 const createAnonSession = async (sessionId, sessionData) => {
   if (!sessionId) {
@@ -223,7 +223,7 @@ const refreshAnonSession = async (sessionId) => {
     const key = applyPrefix(`anon:${sessionId}`);
     const exists = await redisCluster.exists(key);
     if (!exists) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, "Anon session does not exist");
+      return;
     }
     await redisCluster.expire(key, parseInt(process.env.SESSION_TTL));
     console.log(`[redisHelper] Anon session ${sessionId} refreshed`);
