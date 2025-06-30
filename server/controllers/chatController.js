@@ -126,13 +126,13 @@ const updateChat = async (req, res, next) => {
  * @param {Object} res Express response object.
  * @param {Function} next Express next middleware function.
  */
-const deleteChat = async (req, res, next) => {
+const deleteChatById = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!id) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing chat id");
     }
-    const affectedRows = await Chat.delete(id);
+    const affectedRows = await Chat.deleteById(id);
     res.json({
       success: true,
       message: "Chat deleted successfully.",
@@ -145,17 +145,15 @@ const deleteChat = async (req, res, next) => {
 
 /**
  * Deletes all chats for the authenticated user.
- * Requires sessionType "auth" and a valid user_id in the session.
  * @param {Object} req Express request object.
  * @param {Object} res Express response object.
  * @param {Function} next Express next middleware function.
  */
-const deleteChatsBy = async (req, res, next) => {
+const deleteChatsOfUser = async (req, res, next) => {
   try {
-    if (req.sessionType !== "auth" || !req.session?.user_id) {
-      throw new AppError(ERROR_CODES.UNAUTHORIZED, "Invalid session type", 401);
-    }
-    const affectedRows = await Chat.deleteBy({ user_id: req.session.user_id });
+    const affectedRows = await Chat.deleteByUserId({
+      user_id: req.session.user_id,
+    });
     res.json({
       success: true,
       message: "Chats deleted successfully",
@@ -220,8 +218,8 @@ module.exports = {
   getChatById,
   getChatsBy,
   updateChat,
-  deleteChat,
-  deleteChatsBy,
+  deleteChatById,
+  deleteChatsOfUser,
   addMessage,
   getMessages,
 };

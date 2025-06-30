@@ -7,4 +7,5 @@ module.exports = async () => {
   await User.delete(userId);
   await redisHelper.deleteSession(sessionId);
   await dbHelper.executeQuery("DELETE FROM chats");
+  await dbHelper.executeQuery("DELETE from anon_sessions");
 };

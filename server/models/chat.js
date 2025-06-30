@@ -101,26 +101,15 @@ class Chat {
    * @param {String} id ID of the chat
    * @returns {Promise<number>} Number of affected rows
    */
-  // TODO: Change func name
-  async delete(id) {
+  async deleteById(id) {
     const query = "DELETE FROM chats WHERE id = ?";
     const { affectedRows } = await dbHelper.executeQuery(query, [id]);
     return affectedRows;
   }
 
-  // TODO: Change func name or implementation
-  async deleteBy({ user_id }) {
-    let query = "DELETE FROM chats ";
-    let value;
-
-    if (user_id) {
-      query += `WHERE user_id = ?`;
-      value = user_id;
-    } else {
-      throw new Error("Missing user_id");
-    }
-
-    const { affectedRows } = await dbHelper.executeQuery(query, [value]);
+  async deleteByUserId(userId) {
+    let query = "DELETE FROM chats WHERE user_id = ?";
+    const { affectedRows } = await dbHelper.executeQuery(query, [userId]);
     return affectedRows;
   }
 }

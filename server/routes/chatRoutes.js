@@ -11,13 +11,14 @@ router.use(requireAuthenticatedSession);
 router
   .route("/")
   .get(chatController.getChatsBy)
-  .post(chatController.createChat);
+  .post(chatController.createChat)
+  .delete(chatController.deleteChatsOfUser);
 
 router
   .route("/:id")
   .get(chatController.getChatById)
   .put(chatController.updateChat)
-  .delete(chatController.deleteChat);
+  .delete(chatController.deleteChatById);
 
 // Message routes
 router

@@ -47,7 +47,7 @@ class Message {
    * @param {String} id ID of the message to delete
    * @returns {Promise<number>} Number of affected rows
    */
-  async delete(id) {
+  async deleteById(id) {
     const query = "DELETE FROM messages WHERE id = ?";
     const { affectedRows } = await dbHelper.executeQuery(query, [id]);
     return affectedRows;
