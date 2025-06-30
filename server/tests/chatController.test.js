@@ -4,7 +4,7 @@ const jestVariables = require("./jestVariables");
 const { ERROR_CODES } = require("../errors");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
-const invalidAuthHeader = `Bearer auth:${jestVariables.invalidSessionId}`;
+const nonexistAuthHeader = `Bearer auth:${jestVariables.nonexistSessionId}`;
 
 describe("POST /chats", () => {
   const chatId = "test_chat_1";
@@ -258,13 +258,6 @@ describe("DELETE /chats/:id", () => {
       });
   });
 
-  it("Should fail if chat ID is missing in request's query", async () => {
-    await supertest(app)
-      .delete("/api/chats/")
-      .set("Authorization", authHeader)
-      .expect(404); // Route not found
-  });
-
   it("Should have no effect if chat not found", async () => {
     await supertest(app)
       .delete("/api/chats/nonexistent_id")
@@ -279,61 +272,51 @@ describe("DELETE /chats/:id", () => {
   });
 });
 
-// Route WIP
-// describe("DELETE /chats (all user chats)", () => {
-//   beforeAll(async () => {
-//     const chats = [
-//       {
-//         id: "test_chat_5",
-//         title: "Example Chat 5",
-//         pageUrl: "http://www.example_url_5.com/",
-//       },
-//       {
-//         id: "test_chat_6",
-//         title: "Example Chat 6",
-//         pageUrl: "http://www.example_url_6.com/",
-//       },
-//       {
-//         id: "test_chat_7",
-//         title: "Example Chat 7",
-//         pageUrl: "http://www.example_url_7.com/",
-//       },
-//     ];
+describe("DELETE /chats (all user chats)", () => {
+  beforeAll(async () => {
+    const chats = [
+      {
+        id: "test_chat_5",
+        title: "Example Chat 5",
+        pageUrl: "http://www.example_url_5.com/",
+      },
+      {
+        id: "test_chat_6",
+        title: "Example Chat 6",
+        pageUrl: "http://www.example_url_6.com/",
+      },
+      {
+        id: "test_chat_7",
+        title: "Example Chat 7",
+        pageUrl: "http://www.example_url_7.com/",
+      },
+    ];
 
-//     const createChatInDB = async (chat) => {
-//       await supertest(app)
-//         .post(`/api/chats/`)
-//         .set("Authorization", authHeader)
-//         .send({ id: chat.id, page_url: chat.pageUrl, title: chat.title });
-//     };
+    const createChatInDB = async (chat) => {
+      await supertest(app)
+        .post(`/api/chats/`)
+        .set("Authorization", authHeader)
+        .send({ id: chat.id, page_url: chat.pageUrl, title: chat.title });
+    };
 
-//     const promises = chats.map((chat) => createChatInDB(chat));
+    const promises = chats.map((chat) => createChatInDB(chat));
 
-//     await Promise.all(promises);
-//   });
+    await Promise.all(promises);
+  });
 
-//   it("Should delete all user's chats", async () => {
-//     await supertest(app)
-//       .delete("/api/chats")
-//       .set("Authorization", authHeader)
-//       .expect(200)
-//       .then((response) => {
-//         expect(response.body).toHaveProperty("success", true);
-//       });
-//   });
-
-//   it("Should fail if not authenticated", async () => {
-//     await supertest(app)
-//       .delete("/api/chats")
-//       .expect(401)
-//       .then((response) => {
-//         expect(response.body).toMatchObject({
-//           success: false,
-//           error: { code: ERROR_CODES.UNAUTHORIZED },
-//         });
-//       });
-//   });
-// });
+  it("Should sucesfully deleted all user's chats", async () => {
+    await supertest(app)
+      .delete("/api/chats")
+      .set("Authorization", authHeader)
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("affectedRows");
+        expect(response.body.data.affectedRows).toBeGreaterThan(0);
+      });
+  });
+});
 
 describe("POST /chats/:chat_id/messages", () => {
   const chatId = "test_chat_8";

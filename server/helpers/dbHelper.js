@@ -62,7 +62,7 @@ async function executeQuery(query, params = []) {
     connection = await getConnection();
 
     console.log(`Executing query: ${query}`);
-    if (params.length > 0) console.log(`Params: ${[...params]}`);
+    if (params.length > 0) console.log(`Params: ${params}`);
 
     const [rowsOrOkPacket] = await connection.execute(query, params);
     console.log("Query result: ", rowsOrOkPacket);

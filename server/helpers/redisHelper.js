@@ -49,7 +49,6 @@ const applyPrefix = (key) => {
  * Creates a new authenticated session in Redis.
  * @param {String} sessionId The session ID.
  * @param {Object} sessionData The session data.
- * @returns {Promise<String>} The session ID.
  * @throws If required data is missing or Redis fails.
  */
 const createSession = async (sessionId, sessionData) => {
@@ -105,19 +104,16 @@ const createSession = async (sessionId, sessionData) => {
       401
     );
   }
-
-  return sessionId;
 };
 
 /**
  * Deletes an authenticated session from Redis.
  * @param {String} sessionId The session ID.
- * @returns {Promise<boolean>} True if deleted, false otherwise.
+ * @returns {Promise<void>}
  */
 const deleteSession = async (sessionId) => {
   const key = applyPrefix(`auth:${sessionId}`);
-  const delResult = await redisCluster.del(key);
-  return delResult > 0;
+  await redisCluster.del(key);
 };
 
 /**
@@ -150,7 +146,7 @@ const refreshSession = async (sessionId) => {
     const key = applyPrefix(`auth:${sessionId}`);
     const exists = await redisCluster.exists(key);
     if (!exists) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, "Session does not exist");
+      return;
     }
     await redisCluster.expire(key, parseInt(process.env.SESSION_TTL));
     console.log(`Session ${sessionId} refreshed`);
@@ -187,7 +183,6 @@ const getAnonSession = async (sessionId) => {
  * Creates a new anonymous session in Redis.
  * @param {String} sessionId The session ID.
  * @param {Object} sessionData The session data.
- * @returns {Promise<String>} The session ID.
  * @throws If required data is missing or Redis fails.
  */
 const createAnonSession = async (sessionId, sessionData) => {
@@ -215,7 +210,6 @@ const createAnonSession = async (sessionId, sessionData) => {
       401
     );
   }
-  return sessionId;
 };
 
 /**
@@ -246,12 +240,10 @@ const refreshAnonSession = async (sessionId) => {
 /**
  * Deletes an anonymous session from Redis.
  * @param {String} sessionId The session ID.
- * @returns {Promise<boolean>} True if deleted, false otherwise.
  */
 const deleteAnonSession = async (sessionId) => {
   const key = applyPrefix(`anon:${sessionId}`);
-  const delResult = await redisCluster.del(key);
-  return delResult > 0;
+  await redisCluster.del(key);
 };
 
 /**

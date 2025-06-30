@@ -151,9 +151,7 @@ const deleteChatById = async (req, res, next) => {
  */
 const deleteChatsOfUser = async (req, res, next) => {
   try {
-    const affectedRows = await Chat.deleteByUserId({
-      user_id: req.session.user_id,
-    });
+    const affectedRows = await Chat.deleteByUserId(req.session.user_id);
     res.json({
       success: true,
       message: "Chats deleted successfully",

@@ -16,16 +16,16 @@ describe("redisHelper", () => {
     anon_query_count: 3,
   };
 
-  beforeAll(async () => {
-    if (redisCluster.connect) await redisCluster.connect();
+  beforeAll(() => {
+    redisCluster.connect();
   });
 
-  afterAll(async () => {
-    if (redisCluster.quit) await redisCluster.quit();
+  afterAll(() => {
+    redisCluster.quit();
   });
 
   describe("createSession & getSession", () => {
-    it("should create and retrieve an authenticated session", async () => {
+    it("Should create and retrieve an authenticated session", async () => {
       await redisHelper.createSession(testAuthSessionId, testAuthData);
       const session = await redisHelper.getSession(testAuthSessionId);
       expect(session).toBeTruthy();
@@ -39,31 +39,35 @@ describe("redisHelper", () => {
       expect(typeof session.ttl).toBe("number");
     });
 
-    it("should throw if sessionId is missing", async () => {
+    it("Should fail if session ID is missing", async () => {
       await expect(
         redisHelper.createSession(null, testAuthData)
-      ).rejects.toThrow(AppError);
+      ).rejects.toMatchObject({ code: ERROR_CODES.INVALID_INPUT });
     });
 
-    it("should throw if user_id is missing", async () => {
+    it("Should fail is user_id is missing", async () => {
       await expect(
-        redisHelper.createSession("bad-session", {})
-      ).rejects.toThrow(AppError);
+        redisHelper.createSession("bad-session", {
+          ...testAuthData,
+          user_id: null,
+        })
+      ).rejects.toMatchObject({ code: ERROR_CODES.INVALID_INPUT });
     });
   });
 
   describe("refreshSession", () => {
-    it("should refresh the TTL of an existing session", async () => {
+    // TODO: Add a session with low TTL first
+    it("Should refresh the TTL of an existing session", async () => {
       await redisHelper.createSession(testAuthSessionId, testAuthData);
       await expect(
         redisHelper.refreshSession(testAuthSessionId)
       ).resolves.toBeUndefined();
     });
 
-    it("should throw if session does not exist", async () => {
+    it("Should have no effect if session doesn't exist", async () => {
       await expect(
         redisHelper.refreshSession("nonexistent-session")
-      ).rejects.toThrow(AppError);
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -119,7 +123,7 @@ describe("redisHelper", () => {
   });
 
   describe("getAnySession", () => {
-    it("should retrieve a session by prefixed key", async () => {
+    it("Should retrieve a session by prefixed key", async () => {
       await redisHelper.createSession(testAuthSessionId, testAuthData);
       const key = process.env.REDIS_PREFIX
         ? `${process.env.REDIS_PREFIX}:auth:${testAuthSessionId}`
