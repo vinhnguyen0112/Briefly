@@ -231,6 +231,19 @@ const getAnySession = async (prefixedKey) => {
     : null;
 };
 
+/**
+ * Gets the TTL in seconds for a session key from Redis.
+ * @param {String} sessionId The actual session ID (without prefix)
+ * @param {"auth"|"anon"} type Session type
+ * @param {String} [type]
+ * @returns {Promise<number|null>} TTL in seconds or null if no key exists
+ */
+const getSessionTTL = async (sessionId, type) => {
+  const redisKey = applyPrefix(`${type}:${sessionId}`);
+  const ttl = await redisCluster.ttl(redisKey);
+  return ttl >= 0 ? ttl : null;
+};
+
 const redisHelper = {
   createSession,
   getSession,
@@ -241,6 +254,7 @@ const redisHelper = {
   refreshAnonSession,
   deleteAnonSession,
   getAnySession,
+  getSessionTTL,
 };
 
 module.exports = {

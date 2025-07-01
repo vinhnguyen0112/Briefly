@@ -28,8 +28,8 @@ function resolveSessionId(sessionId) {
 /**
  * Looks up a session in Redis and falls back to MariaDB if not found.
  * Updates the cache if found in the database.
- * @param {string} actualId The actual session ID.
- * @param {string} type The session type ("auth" or "anon").
+ * @param {String} actualId The actual session ID.
+ * @param {String} type The session type ("auth" or "anon").
  * @returns {Promise<Object|null>} The session data or null if not found.
  */
 async function lookupSession(actualId, type) {
@@ -55,6 +55,39 @@ async function lookupSession(actualId, type) {
 }
 
 /**
+ * Checks whether a session needs to be refreshed. If needed, refresh it in both MariaDB and Redis
+ * @param {String} id The actual session ID (without prefix)
+ * @param {"auth"|"anon"} type Session type
+ * @param {Object} sessionData The session data object (from Redis or MariaDB)
+ * @returns {Promise<void>}
+ */
+async function refreshSessionIfNeeded(id, type, sessionData) {
+  try {
+    // Strip off expires_at
+    const { expires_at, ...cleanedSessionData } = sessionData;
+    const REFRESH_THRESHOLD = 86400; // 1 day
+
+    let redisTtl = await redisHelper.getSessionTTL(id, type);
+
+    if (redisTtl !== null && redisTtl < REFRESH_THRESHOLD) {
+      const now = new Date();
+      const newExpiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+      if (type === "auth") {
+        await redisHelper.createSession(id, cleanedSessionData);
+        await Session.update(id, { expires_at: newExpiresAt });
+      } else {
+        await redisHelper.createAnonSession(id, cleanedSessionData);
+        await AnonSession.update(id, { expires_at: newExpiresAt });
+      }
+    }
+  } catch (err) {
+    console.error("Error refreshing session TTL:", err);
+    // Failed to refresh is non-critical, continue the flow if failed
+  }
+}
+
+/**
  * Middleware to validate a session from the Authorization header.
  * If the session is anonymous and invalid, assigns a new anonymous session.
  * Sets req.sessionType and req.session.
@@ -73,7 +106,12 @@ const validateSession = async (req, res, next) => {
 
     let sessionData = await lookupSession(parsed.actualId, parsed.type);
 
-    // If anonymous session is invalid, assign user a new one
+    // Refresh if needed
+    if (sessionData) {
+      await refreshSessionIfNeeded(parsed.actualId, parsed.type, sessionData);
+    }
+
+    // Invalid anonymous session, assign new
     if (!sessionData && parsed.type === "anon") {
       const { clientIp, visitorId } = req;
       const anonSessionId = generateHash(visitorId, clientIp);
@@ -89,7 +127,7 @@ const validateSession = async (req, res, next) => {
       return next();
     }
 
-    // If user authenticated session is invalid
+    // Invalid authenticated session, throws
     if (!sessionData && parsed.type === "auth") {
       throw new AppError(
         ERROR_CODES.UNAUTHORIZED,
@@ -122,7 +160,6 @@ const requireAuthenticatedSession = async (req, res, next) => {
     }
 
     const parsed = resolveSessionId(sessionId);
-    console.log("Parsed: ", parsed);
 
     if (parsed.type !== "auth") {
       throw new AppError(
@@ -133,6 +170,10 @@ const requireAuthenticatedSession = async (req, res, next) => {
     }
 
     let sessionData = await lookupSession(parsed.actualId, "auth");
+
+    if (sessionData) {
+      await refreshSessionIfNeeded(parsed.actualId, "auth", sessionData);
+    }
 
     if (!sessionData || !sessionData.user_id) {
       throw new AppError(

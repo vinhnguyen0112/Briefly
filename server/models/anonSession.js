@@ -4,6 +4,7 @@ class AnonSession {
   /**
    * Insert an anonymous session into the database.
    * @param {Object} sessionData The session data object
+   * @param {number} [sessionData.id]
    * @param {number} [sessionData.anon_query_count]
    */
   async create(sessionData) {
@@ -34,7 +35,8 @@ class AnonSession {
    * Update an anonymous session in the database.
    * @param {String} id ID of the anonymous session to update
    * @param {Object} updates Update values object
-   * @param {number} [sessionData.anon_query_count]
+   * @param {number} [updates.anon_query_count]
+   * @param {number} [updates.expires_at]
    * @returns {Promise<number>} Number of affected rows
    */
   async update(id, updates) {

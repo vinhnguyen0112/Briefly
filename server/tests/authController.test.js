@@ -4,6 +4,7 @@ const { ERROR_CODES } = require("../errors");
 const Session = require("../models/session");
 const { redisHelper, redisCluster } = require("../helpers/redisHelper");
 const app = require("../app");
+const AnonSession = require("../models/anonSession");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
 const anonHeader = `Bearer anon:${jestVariables.sessionId}`;
@@ -67,6 +68,49 @@ describe("POST /session-validate", () => {
         });
       });
   });
+
+  // TODO: Add a test case to test cache update if Redis absent but MariaDB has
+
+  // TODO: Add a test case to test session refresh logic
+  it("Should refresh session TTL in Redis and MariaDB if near expiry", async () => {
+    const sessionId = "test-refresh-anon-session";
+    const sessionKey = `${process.env.REDIS_PREFIX}:anon:${sessionId}`;
+
+    // create in MariaDB
+    await AnonSession.create({
+      id: sessionId,
+      anon_query_count: 0,
+    });
+
+    // create in Redis with a *short* TTL
+    await redisHelper.createAnonSession(sessionId, {
+      anon_query_count: 0,
+    });
+
+    await redisCluster.expire(sessionKey, 10); // set TTL to 10 seconds to simulate near expiry
+
+    // confirm short TTL
+    let ttlBefore = await redisCluster.ttl(sessionKey);
+    expect(ttlBefore).toBeLessThan(11);
+
+    // call validate endpoint to trigger refresh
+    await supertest(app)
+      .post("/api/auth/session-validate")
+      .set("Authorization", `Bearer anon:${sessionId}`)
+      .expect(200);
+
+    // check Redis TTL after refresh
+    let ttlAfter = await redisCluster.ttl(sessionKey);
+    expect(ttlAfter).toBeGreaterThanOrEqual(
+      parseInt(process.env.SESSION_TTL) - 10000 // 10 secs offset
+    ); // should be near 7 days
+
+    // check MariaDB expires_at after refresh
+    const sessionInDb = await AnonSession.getById(sessionId);
+    expect(new Date(sessionInDb.expires_at).getTime()).toBeGreaterThan(
+      Date.now() + 6 * 24 * 60 * 60 * 1000
+    ); // at least 6 days from now
+  });
 });
 
 describe("POST /auth-only", () => {
@@ -116,6 +160,49 @@ describe("POST /auth-only", () => {
           error: { code: ERROR_CODES.UNAUTHORIZED },
         });
       });
+  });
+
+  // TODO: Add a test case to test cache update if Redis absent but MariaDB has
+
+  // TODO: Add a test case to test session refresh logic
+  it("Should refresh session TTL in Redis and MariaDB if near expiry", async () => {
+    const sessionId = "test-refresh-auth-session";
+    const sessionKey = `${process.env.REDIS_PREFIX}:auth:${sessionId}`;
+
+    // create in MariaDB
+    await Session.create({
+      id: sessionId,
+      user_id: jestVariables.userId,
+    });
+
+    // create in Redis with a *short* TTL
+    await redisHelper.createSession(sessionId, {
+      user_id: jestVariables.userId,
+    });
+
+    await redisCluster.expire(sessionKey, 10); // set TTL to 10 seconds to simulate near expiry
+
+    // confirm short TTL
+    let ttlBefore = await redisCluster.ttl(sessionKey);
+    expect(ttlBefore).toBeLessThan(11);
+
+    // call validate endpoint to trigger refresh
+    await supertest(app)
+      .post("/api/auth/auth-only")
+      .set("Authorization", `Bearer auth:${sessionId}`)
+      .expect(200);
+
+    // check Redis TTL after refresh
+    let ttlAfter = await redisCluster.ttl(sessionKey);
+    expect(ttlAfter).toBeGreaterThanOrEqual(
+      parseInt(process.env.SESSION_TTL) - 10000 // 10 secs offset
+    ); // should be near 7 days
+
+    // check MariaDB expires_at after refresh
+    const sessionInDb = await Session.getById(sessionId);
+    expect(new Date(sessionInDb.expires_at).getTime()).toBeGreaterThan(
+      Date.now() + 6 * 24 * 60 * 60 * 1000
+    ); // at least 6 days from now
   });
 });
 

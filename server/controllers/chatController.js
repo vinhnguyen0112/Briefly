@@ -109,7 +109,6 @@ const updateChat = async (req, res, next) => {
     if (!req.body || Object.keys(req.body).length === 0) {
       res.json({ success: true, message: "Chat updated successfully." });
     }
-    // TODO: Dangerous to pass in req.body, filter first
     const affectedRows = await Chat.update(id, req.body);
     res.json({
       success: true,

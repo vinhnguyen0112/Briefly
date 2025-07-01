@@ -37,6 +37,7 @@ class Session {
    * @param {Object} updates Update values object
    * @param {String} [updates.id]
    * @param {String} [updates.user_id]
+   * @param {String} [updates.expires_at]
    * @returns {Promise<number>} Number of affected rows
    */
   async update(id, updates) {

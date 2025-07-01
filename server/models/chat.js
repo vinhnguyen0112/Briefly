@@ -90,7 +90,6 @@ class Chat {
    * @param {String} [updates.title]
    * @returns {Promise<number>} Number of affected rows
    */
-  // TODO: Update all function to early return if no update obj
   async update(id, updates) {
     if (!updates || Object.keys(updates).length <= 0) return;
 
