@@ -26,10 +26,24 @@ describe("redisHelper", () => {
   });
 
   afterEach(async () => {
-    // clean up all test keys after each test
-    const keys = await redisCluster.keys("*");
-    if (keys.length > 0) {
-      await redisCluster.del(keys);
+    try {
+      // for each master node in the cluster
+      for (const node of redisCluster.masters) {
+        const keys = [];
+        const iter = node.scanIterator({
+          MATCH: "*",
+        });
+
+        for await (const key of iter) {
+          keys.push(key);
+        }
+
+        if (keys.length > 0) {
+          await node.del(keys);
+        }
+      }
+    } catch (err) {
+      console.error("Error cleaning Redis keys after test:", err);
     }
   });
 

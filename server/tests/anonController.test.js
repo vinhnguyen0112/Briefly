@@ -1,6 +1,15 @@
 const supertest = require("supertest");
-const app = require("..");
 const { ERROR_CODES } = require("../errors");
+const app = require("../app");
+const { redisCluster } = require("../helpers/redisHelper");
+
+beforeAll(async () => {
+  await redisCluster.connect();
+});
+
+afterAll(async () => {
+  await redisCluster.quit();
+});
 
 describe("POST /anon", () => {
   it("Should sucessfully create an anonymous session if provided all parameter", async () => {

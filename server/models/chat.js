@@ -4,6 +4,11 @@ class Chat {
   /**
    * Insert a chat into database. Returns nothing
    * @param {Object} data Chat object to insert
+   * @param {String} [data.id]
+   * @param {String} [data.user_id]
+   * @param {String} [data.page_url]
+   * @param {String} [data.page_id]
+   * @param {String} [data.title]
    */
   async create(data) {
     data = cleanDeep(data);
@@ -80,8 +85,12 @@ class Chat {
    * Update a chat
    * @param {String} id ID of the chat
    * @param {Object} updates Update values
+   * @param {String} [updates.page_url]
+   * @param {String} [updates.page_id]
+   * @param {String} [updates.title]
    * @returns {Promise<number>} Number of affected rows
    */
+  // TODO: Update all function to early return if no update obj
   async update(id, updates) {
     const fields = [];
     const values = [];

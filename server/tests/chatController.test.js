@@ -1,10 +1,20 @@
 const supertest = require("supertest");
-const app = require("..");
 const jestVariables = require("./jestVariables");
 const { ERROR_CODES } = require("../errors");
+const app = require("../app");
+const { redisCluster } = require("../helpers/redisHelper");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
+const anonHeader = `Bearer anon:${jestVariables.sessionId}`;
 const nonexistAuthHeader = `Bearer auth:${jestVariables.nonexistSessionId}`;
+
+beforeAll(async () => {
+  await redisCluster.connect();
+});
+
+afterAll(async () => {
+  await redisCluster.quit();
+});
 
 describe("POST /chats", () => {
   const chatId = "test_chat_1";
@@ -82,6 +92,7 @@ describe("GET /chats", () => {
     await supertest(app)
       .post("/api/test/bulk-insert-chats")
       .set("Authorization", authHeader)
+      .send({})
       .expect(200);
   });
 

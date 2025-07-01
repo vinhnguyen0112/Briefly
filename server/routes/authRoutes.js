@@ -19,7 +19,7 @@ router.post("/session-validate", validateSession, (req, res) => {
   });
 });
 
-// Check if session is authenticated only
+// Check if session is authenticated, for testing purpose
 router.post("/auth-only", requireAuthenticatedSession, (req, res) => {
   res.json({
     success: true,
@@ -32,5 +32,5 @@ router.post("/google/callback", authenticateWithGoogle);
 router.post("/facebook/callback", authenticateWithFacebook);
 
 // Sign out
-router.post("/signout", validateSession, signOut);
+router.post("/signout", requireAuthenticatedSession, signOut);
 module.exports = router;

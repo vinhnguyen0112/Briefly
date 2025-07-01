@@ -1,4 +1,4 @@
-require("dotenv").config({ path: ".env.test" });
+require("dotenv").config({ path: ".env.production" });
 
 const { redisHelper, redisCluster } = require("../helpers/redisHelper");
 const Session = require("../models/session");
@@ -19,4 +19,5 @@ module.exports = async () => {
   });
 
   await redisHelper.createSession(sessionId, { user_id: userId });
+  await redisCluster.quit();
 };

@@ -25,12 +25,12 @@ const createChat = async (req, res, next) => {
     if (!normalizedPageUrl) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
     }
-    const page_id = commonHelper.generateHash(normalizedPageUrl);
+    const pageId = commonHelper.generateHash(normalizedPageUrl);
     await Chat.create({
       id,
       user_id: req.session.user_id,
       page_url: normalizedPageUrl,
-      page_id,
+      page_id: pageId,
       title,
     });
     res.json({ success: true, data: { id } });
@@ -109,6 +109,7 @@ const updateChat = async (req, res, next) => {
     if (!req.body || Object.keys(req.body).length === 0) {
       res.json({ success: true, message: "Chat updated successfully." });
     }
+    // TODO: Dangerous to pass in req.body, filter first
     const affectedRows = await Chat.update(id, req.body);
     res.json({
       success: true,

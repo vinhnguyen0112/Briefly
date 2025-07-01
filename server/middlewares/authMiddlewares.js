@@ -134,7 +134,7 @@ const requireAuthenticatedSession = async (req, res, next) => {
 
     let sessionData = await lookupSession(parsed.actualId, "auth");
 
-    if (!sessionData) {
+    if (!sessionData || !sessionData.user_id) {
       throw new AppError(
         ERROR_CODES.UNAUTHORIZED,
         "Authenticated session not found or invalid",

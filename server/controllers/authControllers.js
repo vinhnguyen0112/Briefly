@@ -106,20 +106,13 @@ const authenticateWithFacebook = async (req, res, next) => {
  */
 const signOut = async (req, res, next) => {
   try {
-    const { sessionType } = req;
-    const { id } = req.session || {};
-    if (sessionType !== "auth" || !id) {
-      throw new AppError(
-        ERROR_CODES.UNAUTHORIZED,
-        "Unknown or invalid session type.",
-        401
-      );
-    }
-    await Session.delete(id);
+    const { id } = req.session;
+    const affectedRows = await Session.delete(id);
     await redisHelper.deleteSession(id);
     res.json({
       success: true,
       message: "Session deleted",
+      data: { affectedRows },
     });
   } catch (err) {
     next(err);

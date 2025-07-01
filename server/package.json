@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "cross-env NODE_ENV=test jest",
+    "test": "cross-env NODE_ENV=production jest",
     "dev": "cross-env NODE_ENV=development nodemon index.js",
     "prod": "cross-env NODE_ENV=production node index.js"
   },
@@ -28,7 +28,8 @@
     "normalize-url": "^6.1.0",
     "openai": "^4.96.0",
     "p-limit": "^3.1.0",
-    "redis": "^4.7.0"
+    "redis": "^4.7.0",
+    "yup": "^1.6.1"
   },
   "devDependencies": {
     "jest": "^30.0.3",

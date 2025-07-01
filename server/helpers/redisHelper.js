@@ -2,38 +2,15 @@ const redis = require("redis");
 const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 
-let redisCluster;
-
-// Switch between local host and remote cluster
-if (process.env.NODE_ENV === "development" || process.env.NODE_ENV === "test") {
-  redisCluster = redis.createClient({
-    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT || 6379}`,
-  });
-} else {
-  redisCluster = redis.createCluster({
-    rootNodes: [
-      {
-        url: `redis://${process.env.REDIS_HOST_1}:${
-          process.env.REDIS_PORT || 6379
-        }`,
-      },
-      {
-        url: `redis://${process.env.REDIS_HOST_2}:${
-          process.env.REDIS_PORT || 6379
-        }`,
-      },
-      {
-        url: `redis://${process.env.REDIS_HOST_3}:${
-          process.env.REDIS_PORT || 6379
-        }`,
-      },
-    ],
-    defaults: {
-      username: process.env.REDIS_USERNAME,
-      password: process.env.REDIS_PASSWORD,
-    },
-  });
-}
+const redisCluster = redis.createCluster({
+  rootNodes: process.env.REDIS_HOST.split(",").map((host) => ({
+    url: `redis://${host}:${process.env.REDIS_PORT}`,
+  })),
+  defaults: {
+    username: process.env.REDIS_USERNAME,
+    password: process.env.REDIS_PASSWORD,
+  },
+});
 
 /**
  * Applies a prefix to a Redis key.
@@ -49,9 +26,14 @@ const applyPrefix = (key) => {
  * Creates a new authenticated session in Redis.
  * @param {String} sessionId The session ID.
  * @param {Object} sessionData The session data.
+ * @param {string} [sessionData.user_id]
+ * @param {number} [sessionData.query_count]
+ * @param {number} [sessionData.token_count]
+ * @param {number} [sessionData.maximum_response_length]
+ * @param {string} [sessionData.response_style]
  * @throws If required data is missing or Redis fails.
  */
-const createSession = async (sessionId, sessionData) => {
+const createSession = async (sessionId, sessionData = {}) => {
   if (!sessionId) {
     throw new AppError(
       ERROR_CODES.INVALID_INPUT,
@@ -226,7 +208,7 @@ const refreshAnonSession = async (sessionId) => {
       return;
     }
     await redisCluster.expire(key, parseInt(process.env.SESSION_TTL));
-    console.log(`[redisHelper] Anon session ${sessionId} refreshed`);
+    console.log(`Anon session ${sessionId} refreshed`);
   } catch (error) {
     if (error instanceof AppError) throw error;
     throw new AppError(
