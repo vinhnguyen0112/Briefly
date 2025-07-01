@@ -31,9 +31,9 @@ const applyPrefix = (key) => {
  * @param {number} [sessionData.token_count]
  * @param {number} [sessionData.maximum_response_length]
  * @param {string} [sessionData.response_style]
- * @throws If required data is missing or Redis fails.
+ * @throws If required data is missing
  */
-const createSession = async (sessionId, sessionData = {}) => {
+const createSession = async (sessionId, sessionData) => {
   if (!sessionId) {
     throw new AppError(
       ERROR_CODES.INVALID_INPUT,
@@ -48,6 +48,7 @@ const createSession = async (sessionId, sessionData = {}) => {
   }
 
   let sessionTTL;
+  // TODO: Test this?
   if (sessionData.expires_at) {
     const expiresAtMs = new Date(sessionData.expires_at).getTime();
     const nowMs = Date.now();
@@ -66,7 +67,7 @@ const createSession = async (sessionId, sessionData = {}) => {
   }
 
   const key = applyPrefix(`auth:${sessionId}`);
-  const setResult = await redisCluster.set(
+  await redisCluster.set(
     key,
     JSON.stringify({
       id: sessionId,
@@ -78,20 +79,11 @@ const createSession = async (sessionId, sessionData = {}) => {
     }),
     { EX: sessionTTL }
   );
-
-  if (setResult !== "OK") {
-    throw new AppError(
-      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-      "Failed to create session in Redis",
-      401
-    );
-  }
 };
 
 /**
  * Deletes an authenticated session from Redis.
  * @param {String} sessionId The session ID.
- * @returns {Promise<void>}
  */
 const deleteSession = async (sessionId) => {
   const key = applyPrefix(`auth:${sessionId}`);
@@ -120,7 +112,6 @@ const getSession = async (sessionId) => {
 /**
  * Refreshes the TTL of an authenticated session in Redis.
  * @param {String} sessionId The session ID.
- * @returns {Promise<void>}
  * @throws If the session does not exist or Redis fails.
  */
 const refreshSession = async (sessionId) => {
@@ -165,6 +156,7 @@ const getAnonSession = async (sessionId) => {
  * Creates a new anonymous session in Redis.
  * @param {String} sessionId The session ID.
  * @param {Object} sessionData The session data.
+ * @param {number} [sessionData.anon_query_count]
  * @throws If session ID is missing or Redis fails.
  */
 const createAnonSession = async (sessionId, sessionData) => {
@@ -175,7 +167,7 @@ const createAnonSession = async (sessionId, sessionData) => {
     );
   }
   const key = applyPrefix(`anon:${sessionId}`);
-  const setResult = await redisCluster.set(
+  await redisCluster.set(
     key,
     JSON.stringify({
       id: sessionId,
@@ -185,20 +177,13 @@ const createAnonSession = async (sessionId, sessionData) => {
       EX: parseInt(process.env.SESSION_TTL),
     }
   );
-  if (setResult !== "OK") {
-    throw new AppError(
-      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-      "Failed to create anon session in Redis",
-      401
-    );
-  }
 };
 
 /**
  * Refreshes the TTL of an anonymous session in Redis.
  * @param {String} sessionId The session ID.
  * @returns {Promise<void>}
- * @throws If the session does not exist or Redis fails.
+ * @throws If the session does not exist
  */
 const refreshAnonSession = async (sessionId) => {
   try {

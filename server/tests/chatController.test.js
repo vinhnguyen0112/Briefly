@@ -193,7 +193,8 @@ describe("GET /chats/:id", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle });
+      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
+      .expect(200);
   });
 
   it("Should get a chat by ID", async () => {
@@ -232,7 +233,8 @@ describe("PUT /chats/:id", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle });
+      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
+      .expect(200);
   });
 
   it("Should update a chat", async () => {
@@ -280,7 +282,8 @@ describe("DELETE /chats/:id", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle });
+      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
+      .expect(200);
   });
 
   it("Should delete a chat", async () => {
@@ -334,7 +337,8 @@ describe("DELETE /chats (all user chats)", () => {
       await supertest(app)
         .post(`/api/chats/`)
         .set("Authorization", authHeader)
-        .send({ id: chat.id, page_url: chat.pageUrl, title: chat.title });
+        .send({ id: chat.id, page_url: chat.pageUrl, title: chat.title })
+        .expect(200);
     };
 
     const promises = chats.map((chat) => createChatInDB(chat));
@@ -366,7 +370,8 @@ describe("POST /chats/:chat_id/messages", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle });
+      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
+      .expect(200);
   });
 
   it("Should add a message to a chat", async () => {
@@ -408,7 +413,8 @@ describe("GET /chats/:chat_id/messages", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle });
+      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
+      .expect(200);
 
     // Add messages to chat
     const messages = [
@@ -433,13 +439,15 @@ describe("GET /chats/:chat_id/messages", () => {
       await supertest(app)
         .post(`/api/chats/${chatId}/messages`)
         .set("Authorization", authHeader)
-        .send({ role: chat.role, content: chat.content, model: chat.model });
+        .send({ role: chat.role, content: chat.content, model: chat.model })
+        .expect(200);
     };
 
     const promises = messages.map((msg) => addMessagesToChatInDB(msg));
 
     await Promise.all(promises);
   });
+
   it("Should get all messages for a chat", async () => {
     await supertest(app)
       .get(`/api/chats/${chatId}/messages`)

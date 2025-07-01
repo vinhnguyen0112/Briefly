@@ -27,6 +27,7 @@ const verifyGoogleToken = async (token) => {
 
     return { userId: payload["sub"], name: payload["name"] || "" };
   } catch (error) {
+    if (error instanceof AppError) throw error;
     throw new AppError(
       ERROR_CODES.EXTERNAL_SERVICE_ERROR,
       "Failed to verify Google token",

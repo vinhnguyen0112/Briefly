@@ -1,13 +1,15 @@
-const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 
 class Session {
   /**
    * Insert a session into the database
    * @param {Object} sessionData Session's data object
+   * @param {String} [sessionData.id]
+   * @param {String} [sessionData.user_id]
    */
   async create(sessionData) {
-    sessionData = cleanDeep(sessionData);
+    if (!sessionData || Object.keys(sessionData).length <= 0) return;
+
     const columns = Object.keys(sessionData).join(", ");
     const placeholders = Object.keys(sessionData)
       .map(() => "?")
@@ -33,9 +35,13 @@ class Session {
    * Update a session in the database
    * @param {String} id ID of the session to update
    * @param {Object} updates Update values object
+   * @param {String} [updates.id]
+   * @param {String} [updates.user_id]
    * @returns {Promise<number>} Number of affected rows
    */
   async update(id, updates) {
+    if (!updates || Object.keys(updates).length <= 0) return 0;
+
     const fields = [];
     const values = [];
     for (const [key, value] of Object.entries(updates)) {

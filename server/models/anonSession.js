@@ -1,13 +1,14 @@
-const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 
 class AnonSession {
   /**
    * Insert an anonymous session into the database.
    * @param {Object} sessionData The session data object
+   * @param {number} [sessionData.anon_query_count]
    */
   async create(sessionData) {
-    sessionData = cleanDeep(sessionData);
+    if (!sessionData || Object.keys(sessionData).length <= 0) return;
+
     const columns = Object.keys(sessionData).join(", ");
     const placeholders = Object.keys(sessionData)
       .map(() => "?")
@@ -33,9 +34,12 @@ class AnonSession {
    * Update an anonymous session in the database.
    * @param {String} id ID of the anonymous session to update
    * @param {Object} updates Update values object
+   * @param {number} [sessionData.anon_query_count]
    * @returns {Promise<number>} Number of affected rows
    */
   async update(id, updates) {
+    if (!updates || Object.keys(updates).length <= 0) return 0;
+
     const fields = [];
     const values = [];
     for (const [key, value] of Object.entries(updates)) {

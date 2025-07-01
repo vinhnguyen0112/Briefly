@@ -4,6 +4,12 @@ const chatController = require("../controllers/chatController");
 const {
   requireAuthenticatedSession,
 } = require("../middlewares/authMiddlewares");
+const { validateAndSanitizeBody } = require("../middlewares/commonMiddlewares");
+const {
+  createChatSchema,
+  updateChatSchema,
+  createMessageSchema,
+} = require("../schemas/yupSchemas");
 
 router.use(requireAuthenticatedSession);
 
@@ -11,19 +17,22 @@ router.use(requireAuthenticatedSession);
 router
   .route("/")
   .get(chatController.getChatsBy)
-  .post(chatController.createChat)
+  .post(validateAndSanitizeBody(createChatSchema), chatController.createChat)
   .delete(chatController.deleteChatsOfUser);
 
 router
   .route("/:id")
   .get(chatController.getChatById)
-  .put(chatController.updateChat)
+  .put(validateAndSanitizeBody(updateChatSchema), chatController.updateChat)
   .delete(chatController.deleteChatById);
 
 // Message routes
 router
   .route("/:chat_id/messages")
-  .post(chatController.addMessage)
-  .get(chatController.getMessages);
+  .get(chatController.getMessages)
+  .post(
+    validateAndSanitizeBody(createMessageSchema),
+    chatController.addMessage
+  );
 
 module.exports = router;

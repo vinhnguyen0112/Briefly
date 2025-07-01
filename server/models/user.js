@@ -6,6 +6,8 @@ class User {
    * @param {Object} userData User data object
    */
   async create(userData) {
+    if (!userData || Object.keys(userData).length <= 0) return;
+
     const { id, name } = userData;
     const query = `
       INSERT INTO users (id, name) VALUES (?, ?)
@@ -31,6 +33,8 @@ class User {
    * @returns {Promise<number>} Number of affected rows
    */
   async update(id, updates) {
+    if (!updates || Object.keys(updates).length <= 0) return 0;
+
     const fields = [];
     const values = [];
     for (const [key, value] of Object.entries(updates)) {

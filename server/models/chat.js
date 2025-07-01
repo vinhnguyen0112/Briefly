@@ -1,22 +1,22 @@
-const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 class Chat {
   /**
    * Insert a chat into database. Returns nothing
-   * @param {Object} data Chat object to insert
-   * @param {String} [data.id]
-   * @param {String} [data.user_id]
-   * @param {String} [data.page_url]
-   * @param {String} [data.page_id]
-   * @param {String} [data.title]
+   * @param {Object} chatData Chat data object to insert
+   * @param {String} [chatData.id]
+   * @param {String} [chatData.user_id]
+   * @param {String} [chatData.page_url]
+   * @param {String} [chatData.page_id]
+   * @param {String} [chatData.title]
    */
-  async create(data) {
-    data = cleanDeep(data);
-    const columns = Object.keys(data).join(", ");
-    const placeholders = Object.keys(data)
+  async create(chatData) {
+    if (!chatData || Object.keys(chatData).length <= 0) return;
+
+    const columns = Object.keys(chatData).join(", ");
+    const placeholders = Object.keys(chatData)
       .map(() => "?")
       .join(", ");
-    const values = Object.values(data);
+    const values = Object.values(chatData);
 
     const query = `INSERT INTO chats (${columns}) VALUES (${placeholders})`;
     await dbHelper.executeQuery(query, values);
@@ -92,6 +92,8 @@ class Chat {
    */
   // TODO: Update all function to early return if no update obj
   async update(id, updates) {
+    if (!updates || Object.keys(updates).length <= 0) return;
+
     const fields = [];
     const values = [];
     for (const [key, value] of Object.entries(updates)) {

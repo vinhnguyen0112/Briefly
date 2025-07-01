@@ -1,19 +1,23 @@
-const cleanDeep = require("clean-deep");
 const dbHelper = require("../helpers/dbHelper");
 
 class Message {
   /**
    * Insert a message into a chat
-   * @param {Object} data Message object
-   * @returns {Promise<number>} Chat's ID
+   * @param {Object} messageData Message data object
+   * @param {String} [messageData.chat_id]
+   * @param {String} [messageData.role]
+   * @param {String} [messageData.content]
+   * @param {String} [messageData.model]
+   * @returns {Promise<number>} Created chat's ID
    */
-  async create(data) {
-    data = cleanDeep(data);
-    const columns = Object.keys(data).join(", ");
-    const placeholders = Object.keys(data)
+  async create(messageData) {
+    if (!messageData || Object.keys(messageData).length <= 0) return;
+
+    const columns = Object.keys(messageData).join(", ");
+    const placeholders = Object.keys(messageData)
       .map(() => "?")
       .join(", ");
-    const values = Object.values(data);
+    const values = Object.values(messageData);
 
     const query = `INSERT INTO messages (${columns}) VALUES (${placeholders})`;
     const result = await dbHelper.executeQuery(query, values);
