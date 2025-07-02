@@ -4,13 +4,12 @@ const User = require("../models/user");
 const jestVariables = require("./jestVariables");
 
 /**
- * Delete all keys under the specified prefix in Redis Cluster
+ * Delete all keys prefixed with provided 'prefix'
+ * @param {String} prefix
  */
-async function deleteKeysWithPrefix(prefix) {
+async function clearTestRedis(prefix) {
   try {
-    if (!redisCluster.isOpen) {
-      await redisCluster.connect();
-    }
+    await redisCluster.connect();
 
     const masters = redisCluster.masters;
     if (!masters) {
@@ -39,19 +38,25 @@ async function deleteKeysWithPrefix(prefix) {
     console.log(`All keys under prefix "${prefix}" deleted successfully.`);
   } catch (err) {
     console.error("Error deleting keys with prefix:", err);
+  } finally {
+    await redisCluster.quit();
+  }
+}
+
+/**
+ * Delete everything from test database after tests are finished
+ */
+async function clearTestDatabase() {
+  try {
+    await dbHelper.executeQuery("DELETE FROM users");
+    await dbHelper.executeQuery("DELETE FROM chats");
+    await dbHelper.executeQuery("DELETE FROM anon_sessions");
+  } catch (err) {
+    console.error("Error deleting test database: ", err);
   }
 }
 
 module.exports = async () => {
-  await redisCluster.connect();
-
-  // Delete from MariaDB
-  await dbHelper.executeQuery("DELETE FROM users");
-  await dbHelper.executeQuery("DELETE FROM chats");
-  await dbHelper.executeQuery("DELETE FROM anon_sessions");
-
-  // Delete from Redis
-  await deleteKeysWithPrefix(process.env.REDIS_PREFIX);
-
-  await redisCluster.quit();
+  await clearTestDatabase();
+  await clearTestRedis(process.env.REDIS_PREFIX);
 };

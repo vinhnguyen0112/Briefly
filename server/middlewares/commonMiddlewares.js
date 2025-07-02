@@ -6,9 +6,9 @@ const { ERROR_CODES } = require("../errors");
 /**
  * Express middleware to extract the client's IP address.
  * Sets req.clientIp to the detected IP.
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function.
+ * @param {Object} req -
+ * @param {Object} res -
+ * @param {Function} next -
  */
 function extractClientIp(req, res, next) {
   let ip = req.ip || "";
@@ -20,9 +20,9 @@ function extractClientIp(req, res, next) {
 /**
  * Express middleware to extract the visitor ID from the request headers.
  * Sets req.visitorId to the value of the "visitor" header.
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function.
+ * @param {Object} req -
+ * @param {Object} res -
+ * @param {Function} next -
  */
 function extractVisitorId(req, res, next) {
   const visitorId = req.headers["visitor"];

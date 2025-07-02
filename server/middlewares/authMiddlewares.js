@@ -109,9 +109,9 @@ async function refreshSessionIfNeeded(id, type, sessionData) {
  * Middleware to validate a session from the Authorization header.
  * If the session is anonymous and invalid, assigns a new anonymous session.
  * Sets req.sessionType and req.session.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const validateSession = async (req, res, next) => {
   try {
@@ -164,9 +164,9 @@ const validateSession = async (req, res, next) => {
  * Middleware to require an authenticated session.
  * Only allows sessions of type "auth".
  * Sets req.sessionType and req.session.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const requireAuthenticatedSession = async (req, res, next) => {
   try {
@@ -210,9 +210,9 @@ const requireAuthenticatedSession = async (req, res, next) => {
 /**
  * Middleware to attach metadata about a newly assigned anonymous session to the response.
  * Adds meta.newAnonSessionAssigned and meta.newAnonSession to the response body if applicable.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const attachNewAnonSession = (req, res, next) => {
   const originalJson = res.json.bind(res);

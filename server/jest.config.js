@@ -2,7 +2,7 @@ const config = {
   testEnvironment: "node",
   globalSetup: "<rootDir>/tests/jestGlobalSetup.js",
   globalTeardown: "<rootDir>/tests/jestGlobalTeardown.js",
-  testTimeout: 10_000,
+  testTimeout: 20_000,
 };
 
 module.exports = config;

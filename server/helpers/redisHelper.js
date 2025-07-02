@@ -56,8 +56,8 @@ function buildSessionPayload(sessionData, type) {
 }
 
 /**
- * Computes TTL based on expires_at or fallback default.
- * Handles invalid expires_at gracefully.
+ * Computes TTL based on expires_at.
+ * Fallback to default value if expires_at is missing or invalid
  * @param {Object} sessionData
  * @returns {number}
  */
@@ -77,7 +77,7 @@ function computeTTL(sessionData) {
       }
     } else {
       console.warn(
-        `Invalid expires_at (${sessionData.expires_at}), using default TTL`
+        `Invalid expires_at value (${sessionData.expires_at}), using default TTL`
       );
     }
   }
@@ -90,7 +90,7 @@ function computeTTL(sessionData) {
 
 /**
  * Creates a session (auth or anon) in Redis.
- * @param {Object} sessionData The session's data
+ * @param {Object} sessionData The session data
  * @param {Object} [sessionData.id]
  * @param {Object} [sessionData.user_id]
  * @param {Object} [sessionData.anon_query_count]
@@ -98,7 +98,7 @@ function computeTTL(sessionData) {
  * @param {Object} [sessionData.token_count]
  * @param {Object} [sessionData.maximum_response_length]
  * @param {Object} [sessionData.response_style]
- * @param {"auth"|"anon"} type Type of the session, must be 'auth' or 'anon'
+ * @param {"auth"|"anon"} type Session type
  * @throws if sessionData is invalid or type is unknown
  */
 async function createSession(sessionData, type) {

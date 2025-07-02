@@ -8,9 +8,9 @@ const Message = require("../models/message");
  * Creates a new chat for an authenticated user.
  * Requires sessionType "auth" and a valid user_id in the session.
  * Normalizes the page URL and generates a page_id hash.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const createChat = async (req, res, next) => {
   try {
@@ -41,9 +41,9 @@ const createChat = async (req, res, next) => {
 
 /**
  * Retrieves a chat by its ID.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const getChatById = async (req, res, next) => {
   try {
@@ -65,11 +65,11 @@ const getChatById = async (req, res, next) => {
  * Retrieves paginated chats for the authenticated user.
  * Requires sessionType "auth" and a valid user_id in the session.
  * Supports offset and limit query parameters.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
-const getChatsBy = async (req, res, next) => {
+const getPaginatedChats = async (req, res, next) => {
   try {
     let { offset = 0, limit = 20 } = req.query;
     offset = parseInt(offset, 10);
@@ -95,10 +95,10 @@ const getChatsBy = async (req, res, next) => {
 };
 
 /**
- * Updates a chat by its ID.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * Updates a chat
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const updateChat = async (req, res, next) => {
   try {
@@ -107,7 +107,7 @@ const updateChat = async (req, res, next) => {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing chat id");
     }
     if (!req.body || Object.keys(req.body).length === 0) {
-      res.json({ success: true, message: "Chat updated successfully." });
+      res.json({ success: true, message: "Nothing to update" });
     }
     const affectedRows = await Chat.update(id, req.body);
     res.json({
@@ -122,9 +122,9 @@ const updateChat = async (req, res, next) => {
 
 /**
  * Deletes a chat by its ID.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const deleteChatById = async (req, res, next) => {
   try {
@@ -144,10 +144,10 @@ const deleteChatById = async (req, res, next) => {
 };
 
 /**
- * Deletes all chats for the authenticated user.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * Deletes all chats of an user
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const deleteChatsOfUser = async (req, res, next) => {
   try {
@@ -165,9 +165,9 @@ const deleteChatsOfUser = async (req, res, next) => {
 /**
  * Adds a message to a chat.
  * Requires chat_id, role, content, and model in the request.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const addMessage = async (req, res, next) => {
   try {
@@ -194,9 +194,9 @@ const addMessage = async (req, res, next) => {
 
 /**
  * Retrieves all messages for a chat by chat_id.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  */
 const getMessages = async (req, res, next) => {
   try {
@@ -214,7 +214,7 @@ const getMessages = async (req, res, next) => {
 module.exports = {
   createChat,
   getChatById,
-  getChatsBy,
+  getPaginatedChats,
   updateChat,
   deleteChatById,
   deleteChatsOfUser,

@@ -84,7 +84,7 @@ const verifyFacebookToken = async (token) => {
 
 /**
  * Extracts a Bearer token from the Authorization header of a request.
- * @param {Object} req Express request object.
+ * @param {Object} req
  * @returns {String} The extracted token.
  * @throws If the header is missing or malformed.
  */
@@ -121,11 +121,7 @@ const refreshSessionTTL = async (sessionType, sessionId) => {
       await redisHelper.refreshSession(sessionId, "anon");
       await AnonSession.update(sessionId, { expires_at: expiresAt });
     } else {
-      throw new AppError(
-        ERROR_CODES.INVALID_INPUT,
-        "Unknown session type",
-        400
-      );
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Unknown session type");
     }
   } catch (error) {
     if (error instanceof AppError) throw error;

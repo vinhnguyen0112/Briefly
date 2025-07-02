@@ -49,9 +49,9 @@ async function findOrCreateAnonSession(sessionId) {
 /**
  * Express handler for managing anonymous sessions.
  * Validates request, generates session ID, and returns session data.
- * @param {Object} req - Express request object.
- * @param {Object} res - Express response object.
- * @param {Function} next - Express next middleware function.
+ * @param {Object} req -
+ * @param {Object} res -
+ * @param {Function} next -
  * @returns {void}
  */
 const handleAnonSession = async (req, res, next) => {

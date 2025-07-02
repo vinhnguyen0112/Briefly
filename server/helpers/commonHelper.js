@@ -28,6 +28,7 @@ function generateName() {
  * Normalizes a URL using "normalize-url" package.
  * @param {String} url The URL to normalize.
  * @returns {String} The normalized URL.
+ * @throws if provided invalid url
  */
 function processUrl(url) {
   try {

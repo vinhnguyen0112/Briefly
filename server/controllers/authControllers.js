@@ -43,9 +43,9 @@ const handleSessionCreation = async (userId) => {
 /**
  * Express handler for authenticating a user with Google.
  * Verifies the Google ID token, persists the user, creates a session, and returns the session ID.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  * @returns {Promise<void>}
  */
 const authenticateWithGoogle = async (req, res, next) => {
@@ -69,9 +69,9 @@ const authenticateWithGoogle = async (req, res, next) => {
 /**
  * Express handler for authenticating a user with Facebook.
  * Verifies the Facebook access token, persists the user, creates a session, and returns the session ID.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  * @returns {Promise<void>}
  */
 const authenticateWithFacebook = async (req, res, next) => {
@@ -101,10 +101,10 @@ const authenticateWithFacebook = async (req, res, next) => {
 
 /**
  * Express handler for signing a user out.
- * Deletes the session from both the database and cache.
- * @param {Object} req Express request object.
- * @param {Object} res Express response object.
- * @param {Function} next Express next middleware function.
+ * Deletes the session from both the database and cache
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
  * @returns {Promise<void>}
  */
 const signOut = async (req, res, next) => {

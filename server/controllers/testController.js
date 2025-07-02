@@ -1,16 +1,6 @@
 // Testing purpose only, ignore this.
-const { ERROR_CODES } = require("../errors");
 const commonHelper = require("../helpers/commonHelper");
-const AppError = require("../models/appError");
 const Chat = require("../models/chat");
-const message = require("../models/message");
-
-/**
- * Format date to MySQL timestamp (YYYY-MM-DD HH:MM:SS).
- */
-function formatMySQLTimestamp(date) {
-  return date.toISOString().slice(0, 19).replace("T", " ");
-}
 
 /**
  * Bulk insert test chats for pagination testing.

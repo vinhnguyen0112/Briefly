@@ -5,6 +5,7 @@ const Session = require("../models/session");
 const { redisHelper, redisCluster } = require("../helpers/redisHelper");
 const app = require("../app");
 const AnonSession = require("../models/anonSession");
+const { v4: uuidv4 } = require("uuid");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
 const anonHeader = `Bearer anon:${jestVariables.sessionId}`;
@@ -70,7 +71,7 @@ describe("POST /session-validate", () => {
   });
 
   it("Should update cache if session is found in MariaDB but not Redis", async () => {
-    const sessionId = "test-update-cache-auth-session-1";
+    const sessionId = uuidv4();
 
     // Create a session in MariaDB
     await Session.create({ id: sessionId, user_id: jestVariables.userId });
@@ -83,11 +84,19 @@ describe("POST /session-validate", () => {
       .set("Authorization", `Bearer auth:${sessionId}`)
       .expect(200);
 
-    expect(await redisHelper.getSession(sessionId, "auth")).toBeTruthy();
+    const cachedSession = await redisHelper.getSession(sessionId, "auth");
+    const dbSession = await Session.getById(sessionId);
+    expect(cachedSession).toBeTruthy();
+
+    // Cached session and database session should have similar expiry time
+    const expiresAtMs = new Date(dbSession.expires_at).getTime();
+    const redisExpiryMs = Date.now() + cachedSession.ttl * 1000;
+    const diff = Math.abs(redisExpiryMs - expiresAtMs);
+    expect(diff).toBeLessThanOrEqual(2000); // 2 secs clock drift
   });
 
   it("Should refresh session TTL in Redis and MariaDB if near expiry", async () => {
-    const sessionId = "test-refresh-anon-session";
+    const sessionId = uuidv4();
     const sessionKey = `${process.env.REDIS_PREFIX}:anon:${sessionId}`;
 
     // Create a session in MariaDB
@@ -177,7 +186,7 @@ describe("POST /auth-only", () => {
   });
 
   it("Should update cache if session is found in MariaDB but not Redis", async () => {
-    const sessionId = "test-update-cache-auth-session-2";
+    const sessionId = uuidv4();
 
     // Create a session in MariaDB
     await Session.create({ id: sessionId, user_id: jestVariables.userId });
@@ -190,11 +199,19 @@ describe("POST /auth-only", () => {
       .set("Authorization", `Bearer auth:${sessionId}`)
       .expect(200);
 
-    expect(await redisHelper.getSession(sessionId, "auth")).toBeTruthy();
+    const cachedSession = await redisHelper.getSession(sessionId, "auth");
+    const dbSession = await Session.getById(sessionId);
+    expect(cachedSession).toBeTruthy();
+
+    // Cached session and database session should have similar expiry time
+    const expiresAtMs = new Date(dbSession.expires_at).getTime();
+    const redisExpiryMs = Date.now() + cachedSession.ttl * 1000;
+    const diff = Math.abs(redisExpiryMs - expiresAtMs);
+    expect(diff).toBeLessThanOrEqual(2000); // 2 secs clock drift
   });
 
   it("Should refresh session TTL in Redis and MariaDB if near expiry", async () => {
-    const sessionId = "test-refresh-auth-session";
+    const sessionId = uuidv4();
     const sessionKey = `${process.env.REDIS_PREFIX}:auth:${sessionId}`;
 
     // Create a session in MariaDB
@@ -237,7 +254,7 @@ describe("POST /auth-only", () => {
 
 describe("POST /signout", () => {
   // Create a session to test sign out
-  const sessionId = "test-sign-out-auth-session";
+  const sessionId = uuidv4();
   beforeAll(async () => {
     await Session.create({
       id: sessionId,

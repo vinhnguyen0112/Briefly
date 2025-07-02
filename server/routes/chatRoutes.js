@@ -16,7 +16,7 @@ router.use(requireAuthenticatedSession);
 // Chat routes
 router
   .route("/")
-  .get(chatController.getChatsBy)
+  .get(chatController.getPaginatedChats)
   .post(validateAndSanitizeBody(createChatSchema), chatController.createChat)
   .delete(chatController.deleteChatsOfUser);
 
