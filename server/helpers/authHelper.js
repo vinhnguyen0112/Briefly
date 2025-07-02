@@ -115,10 +115,10 @@ const refreshSessionTTL = async (sessionType, sessionId) => {
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 
     if (sessionType === "auth") {
-      await redisHelper.refreshSession(sessionId);
+      await redisHelper.refreshSession(sessionId, "auth");
       await Session.update(sessionId, { expires_at: expiresAt });
     } else if (sessionType === "anon") {
-      await redisHelper.refreshAnonSession(sessionId);
+      await redisHelper.refreshSession(sessionId, "anon");
       await AnonSession.update(sessionId, { expires_at: expiresAt });
     } else {
       throw new AppError(

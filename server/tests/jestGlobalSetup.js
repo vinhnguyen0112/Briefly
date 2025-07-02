@@ -1,4 +1,4 @@
-require("dotenv").config({ path: ".env.production" });
+require("dotenv").config({ path: ".env.test" });
 
 const { redisHelper, redisCluster } = require("../helpers/redisHelper");
 const Session = require("../models/session");
@@ -8,16 +8,16 @@ const { userId, name, sessionId } = require("./jestVariables");
 module.exports = async () => {
   await redisCluster.connect();
 
+  // Create a global user and authenticated session for test cases
   await User.create({
     id: userId,
     name: name,
   });
-
   await Session.create({
     id: sessionId,
     user_id: userId,
   });
+  await redisHelper.createSession({ id: sessionId, user_id: userId }, "auth");
 
-  await redisHelper.createSession(sessionId, { user_id: userId });
   await redisCluster.quit();
 };

@@ -11,7 +11,7 @@ const { ERROR_CODES } = require("../errors");
  */
 async function findOrCreateAnonSession(sessionId) {
   // Try to get session from cache
-  const cached = await redisHelper.getAnonSession(sessionId);
+  const cached = await redisHelper.getSession(sessionId, "anon");
   if (cached) {
     console.log(`Cache hit for sessionId: ${sessionId}`);
     return { id: sessionId, anon_query_count: cached.anon_query_count || 0 };
@@ -35,7 +35,13 @@ async function findOrCreateAnonSession(sessionId) {
   };
 
   // Always update cache
-  await redisHelper.createAnonSession(sessionId, sessionData);
+  await redisHelper.createSession(
+    {
+      id: sessionId,
+      ...sessionData,
+    },
+    "anon"
+  );
 
   return { id: sessionId, ...sessionData };
 }

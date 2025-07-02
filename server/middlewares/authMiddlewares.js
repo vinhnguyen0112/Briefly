@@ -34,22 +34,40 @@ function resolveSessionId(sessionId) {
  */
 async function lookupSession(actualId, type) {
   if (type === "auth") {
-    let cached = await redisHelper.getSession(actualId);
+    // Try to get in Redis
+    let cached = await redisHelper.getSession(actualId, "auth");
     if (cached) return cached;
 
+    // Try to get from MariaDB
     const fromDb = await Session.getById(actualId);
     if (!fromDb) return null;
 
-    await redisHelper.createSession(actualId, fromDb);
+    // Update cache
+    await redisHelper.createSession(
+      {
+        id: actualId,
+        ...fromDb,
+      },
+      "auth"
+    );
     return fromDb;
   } else {
-    let cached = await redisHelper.getAnonSession(actualId);
+    // Try to get in Redis
+    let cached = await redisHelper.getSession(actualId, "anon");
     if (cached) return cached;
 
+    // Try to get from MariaDB
     const fromDb = await AnonSession.getById(actualId);
     if (!fromDb) return null;
 
-    await redisHelper.createAnonSession(actualId, fromDb);
+    // Update cache
+    await redisHelper.createSession(
+      {
+        id: actualId,
+        ...fromDb,
+      },
+      "anon"
+    );
     return fromDb;
   }
 }
@@ -74,10 +92,10 @@ async function refreshSessionIfNeeded(id, type, sessionData) {
       const newExpiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
       if (type === "auth") {
-        await redisHelper.createSession(id, cleanedSessionData);
+        await redisHelper.createSession({ id, ...cleanedSessionData }, "auth");
         await Session.update(id, { expires_at: newExpiresAt });
       } else {
-        await redisHelper.createAnonSession(id, cleanedSessionData);
+        await redisHelper.createSession({ id, ...cleanedSessionData }, "anon");
         await AnonSession.update(id, { expires_at: newExpiresAt });
       }
     }
@@ -117,9 +135,7 @@ const validateSession = async (req, res, next) => {
       const anonSessionId = generateHash(visitorId, clientIp);
 
       await AnonSession.create({ id: anonSessionId, anon_query_count: 0 });
-      await redisHelper.createAnonSession(anonSessionId, {
-        anon_query_count: 0,
-      });
+      await redisHelper.createSession({ id: anonSessionId }, "anon");
 
       req.sessionType = "anon";
       req.session = { id: anonSessionId, anon_query_count: 0 };

@@ -2,6 +2,7 @@ const redis = require("redis");
 const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 
+// Redis cluster initialization
 const redisCluster = redis.createCluster({
   rootNodes: process.env.REDIS_HOST.split(",").map((host) => ({
     url: `redis://${host}:${process.env.REDIS_PORT}`,
@@ -23,237 +24,166 @@ const applyPrefix = (key) => {
 };
 
 /**
- * Creates a new authenticated session in Redis.
- * @param {String} sessionId The session ID.
- * @param {Object} sessionData The session data.
- * @param {string} [sessionData.user_id]
- * @param {number} [sessionData.query_count]
- * @param {number} [sessionData.token_count]
- * @param {number} [sessionData.maximum_response_length]
- * @param {string} [sessionData.response_style]
- * @throws If required data is missing
+ * Builds the JSON payload for session storage depending on session type.
+ * @param {Object} sessionData
+ * @param {"auth"|"anon"} type
+ * @returns {Object}
  */
-const createSession = async (sessionId, sessionData) => {
-  if (!sessionId) {
-    throw new AppError(
-      ERROR_CODES.INVALID_INPUT,
-      "Missing session ID for session"
-    );
-  }
-  if (!sessionData.user_id) {
-    throw new AppError(
-      ERROR_CODES.INVALID_INPUT,
-      "Missing user ID for session"
-    );
-  }
-
-  let sessionTTL;
-  // TODO: Test this?
-  if (sessionData.expires_at) {
-    const expiresAtMs = new Date(sessionData.expires_at).getTime();
-    const nowMs = Date.now();
-    sessionTTL = Math.ceil((expiresAtMs - nowMs) / 1000);
-    if (sessionTTL <= 0) {
+function buildSessionPayload(sessionData, type) {
+  if (type === "auth") {
+    if (!sessionData.user_id) {
       throw new AppError(
         ERROR_CODES.INVALID_INPUT,
-        `Session has already expired at: (${sessionData.expires_at})`
+        "Missing user_id for authenticated session"
       );
     }
-    console.log("Computed custom TTL for session:", sessionTTL);
-  }
-
-  if (!sessionTTL || isNaN(sessionTTL)) {
-    sessionTTL = parseInt(process.env.SESSION_TTL, 10);
-  }
-
-  const key = applyPrefix(`auth:${sessionId}`);
-  await redisCluster.set(
-    key,
-    JSON.stringify({
-      id: sessionId,
+    return {
+      id: sessionData.id,
       user_id: sessionData.user_id,
       query_count: sessionData.query_count ?? 0,
       token_count: sessionData.token_count ?? 0,
       maximum_response_length: sessionData.maximum_response_length || 150,
       response_style: sessionData.response_style || 1,
-    }),
-    { EX: sessionTTL }
-  );
-};
+    };
+  } else if (type === "anon") {
+    return {
+      id: sessionData.id,
+      anon_query_count: sessionData.anon_query_count ?? 0,
+    };
+  } else {
+    throw new AppError(ERROR_CODES.INVALID_INPUT, "Unknown session type");
+  }
+}
 
 /**
- * Deletes an authenticated session from Redis.
- * @param {String} sessionId The session ID.
+ * Computes TTL based on expires_at or fallback default.
+ * Handles invalid expires_at gracefully.
+ * @param {Object} sessionData
+ * @returns {number}
  */
-const deleteSession = async (sessionId) => {
-  const key = applyPrefix(`auth:${sessionId}`);
-  await redisCluster.del(key);
-};
+function computeTTL(sessionData) {
+  let sessionTTL;
+  if (sessionData.expires_at) {
+    const expiresAt = new Date(sessionData.expires_at);
+    if (!isNaN(expiresAt.getTime())) {
+      const expiresAtMs = expiresAt.getTime();
+      const nowMs = Date.now();
+      sessionTTL = Math.ceil((expiresAtMs - nowMs) / 1000);
+      if (sessionTTL <= 0) {
+        throw new AppError(
+          ERROR_CODES.INVALID_INPUT,
+          `Session has already expired at: (${sessionData.expires_at})`
+        );
+      }
+    } else {
+      console.warn(
+        `Invalid expires_at (${sessionData.expires_at}), using default TTL`
+      );
+    }
+  }
+
+  if (!sessionTTL || isNaN(sessionTTL)) {
+    sessionTTL = parseInt(process.env.SESSION_TTL, 10);
+  }
+  return sessionTTL;
+}
 
 /**
- * Retrieves an authenticated session from Redis, including TTL.
- * @param {String} sessionId The session ID.
- * @returns {Promise<Object|null>} The session data with TTL, or null if not found.
+ * Creates a session (auth or anon) in Redis.
+ * @param {Object} sessionData The session's data
+ * @param {Object} [sessionData.id]
+ * @param {Object} [sessionData.user_id]
+ * @param {Object} [sessionData.anon_query_count]
+ * @param {Object} [sessionData.query_count]
+ * @param {Object} [sessionData.token_count]
+ * @param {Object} [sessionData.maximum_response_length]
+ * @param {Object} [sessionData.response_style]
+ * @param {"auth"|"anon"} type Type of the session, must be 'auth' or 'anon'
+ * @throws if sessionData is invalid or type is unknown
  */
-const getSession = async (sessionId) => {
-  const key = applyPrefix(`auth:${sessionId}`);
+async function createSession(sessionData, type) {
+  if (!sessionData.id) {
+    throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing session ID");
+  }
+
+  if (type !== "anon" && type !== "auth") {
+    throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid session type");
+  }
+
+  const ttl = computeTTL(sessionData);
+  const key = applyPrefix(`${type}:${sessionData.id}`);
+  const payload = buildSessionPayload(sessionData, type);
+
+  await redisCluster.set(key, JSON.stringify(payload), { EX: ttl });
+}
+
+/**
+ * Retrieves a session from Redis including TTL.
+ * @param {String} sessionId
+ * @param {"auth"|"anon"} type
+ * @returns {Promise<Object|null>} parsed sessionData with ttl
+ */
+async function getSession(sessionId, type) {
+  const key = applyPrefix(`${type}:${sessionId}`);
   const [data, ttl] = await Promise.all([
     redisCluster.get(key),
     redisCluster.ttl(key),
   ]);
-  return data
-    ? {
-        ...JSON.parse(data),
-        ttl,
-      }
-    : null;
-};
+
+  return data ? { ...JSON.parse(data), ttl } : null;
+}
 
 /**
- * Refreshes the TTL of an authenticated session in Redis.
- * @param {String} sessionId The session ID.
- * @throws If the session does not exist or Redis fails.
+ * Refreshes the TTL of a session in Redis
+ * @param {String} sessionId
+ * @param {"auth"|"anon"} type
  */
-const refreshSession = async (sessionId) => {
+async function refreshSession(sessionId, type) {
   try {
-    const key = applyPrefix(`auth:${sessionId}`);
+    const key = applyPrefix(`${type}:${sessionId}`);
     const exists = await redisCluster.exists(key);
     if (!exists) {
       return;
     }
-    await redisCluster.expire(key, parseInt(process.env.SESSION_TTL));
-    console.log(`Session ${sessionId} refreshed`);
-  } catch (error) {
-    if (error instanceof AppError) throw error;
+    await redisCluster.expire(key, parseInt(process.env.SESSION_TTL, 10));
+    console.log(`Session ${sessionId} (type: ${type}) refreshed`);
+  } catch (err) {
+    if (err instanceof AppError) throw err;
     throw new AppError(
       ERROR_CODES.EXTERNAL_SERVICE_ERROR,
       "Failed to refresh session TTL",
       401
     );
   }
-};
+}
 
 /**
- * Retrieves an anonymous session from Redis, including TTL.
- * @param {String} sessionId - The session ID.
- * @returns {Promise<Object|null>} The session data with TTL, or null if not found.
+ * Deletes a session from Redis
+ * @param {String} sessionId
+ * @param {"auth"|"anon"} type
  */
-const getAnonSession = async (sessionId) => {
-  const key = applyPrefix(`anon:${sessionId}`);
-  const [data, ttl] = await Promise.all([
-    redisCluster.get(key),
-    redisCluster.ttl(key),
-  ]);
-  return data
-    ? {
-        ...JSON.parse(data),
-        ttl,
-      }
-    : null;
-};
-
-/**
- * Creates a new anonymous session in Redis.
- * @param {String} sessionId The session ID.
- * @param {Object} sessionData The session data.
- * @param {number} [sessionData.anon_query_count]
- * @throws If session ID is missing or Redis fails.
- */
-const createAnonSession = async (sessionId, sessionData) => {
-  if (!sessionId) {
-    throw new AppError(
-      ERROR_CODES.INVALID_INPUT,
-      "Missing session ID for anon session"
-    );
-  }
-  const key = applyPrefix(`anon:${sessionId}`);
-  await redisCluster.set(
-    key,
-    JSON.stringify({
-      id: sessionId,
-      anon_query_count: sessionData.anon_query_count ?? 0,
-    }),
-    {
-      EX: parseInt(process.env.SESSION_TTL),
-    }
-  );
-};
-
-/**
- * Refreshes the TTL of an anonymous session in Redis.
- * @param {String} sessionId The session ID.
- * @returns {Promise<void>}
- * @throws If the session does not exist
- */
-const refreshAnonSession = async (sessionId) => {
-  try {
-    const key = applyPrefix(`anon:${sessionId}`);
-    const exists = await redisCluster.exists(key);
-    if (!exists) {
-      return;
-    }
-    await redisCluster.expire(key, parseInt(process.env.SESSION_TTL));
-    console.log(`Anon session ${sessionId} refreshed`);
-  } catch (error) {
-    if (error instanceof AppError) throw error;
-    throw new AppError(
-      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-      "Failed to refresh anon session TTL",
-      401
-    );
-  }
-};
-
-/**
- * Deletes an anonymous session from Redis.
- * @param {String} sessionId The session ID.
- */
-const deleteAnonSession = async (sessionId) => {
-  const key = applyPrefix(`anon:${sessionId}`);
+async function deleteSession(sessionId, type) {
+  const key = applyPrefix(`${type}:${sessionId}`);
   await redisCluster.del(key);
-};
+}
 
 /**
- * Retrieves any session from Redis by its full prefixed key, including TTL.
- * @param {String} prefixedKey The full prefixed Redis key.
- * @returns {Promise<Object|null>} The session data with TTL, or null if not found.
+ * Gets TTL for a given session
+ * @param {String} sessionId
+ * @param {"auth"|"anon"} type
+ * @returns {Promise<number|null>}
  */
-const getAnySession = async (prefixedKey) => {
-  const [data, ttl] = await Promise.all([
-    redisCluster.get(prefixedKey),
-    redisCluster.ttl(prefixedKey),
-  ]);
-  return data
-    ? {
-        data: JSON.parse(data),
-        ttl,
-      }
-    : null;
-};
-
-/**
- * Gets the TTL in seconds for a session key from Redis.
- * @param {String} sessionId The actual session ID (without prefix)
- * @param {"auth"|"anon"} type Session type
- * @param {String} [type]
- * @returns {Promise<number|null>} TTL in seconds or null if no key exists
- */
-const getSessionTTL = async (sessionId, type) => {
-  const redisKey = applyPrefix(`${type}:${sessionId}`);
-  const ttl = await redisCluster.ttl(redisKey);
+async function getSessionTTL(sessionId, type) {
+  const key = applyPrefix(`${type}:${sessionId}`);
+  const ttl = await redisCluster.ttl(key);
   return ttl >= 0 ? ttl : null;
-};
+}
 
 const redisHelper = {
   createSession,
   getSession,
   refreshSession,
   deleteSession,
-  getAnonSession,
-  createAnonSession,
-  refreshAnonSession,
-  deleteAnonSession,
-  getAnySession,
   getSessionTTL,
 };
 

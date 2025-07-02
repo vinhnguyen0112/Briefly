@@ -173,7 +173,7 @@ const addMessage = async (req, res, next) => {
   try {
     const { chat_id } = req.params;
     const { role, content, model } = req.body;
-    if (!chat_id || !role || !content || !model) {
+    if (!chat_id || !role || !content) {
       throw new AppError(
         ERROR_CODES.INVALID_INPUT,
         "Missing required fields: chat_id, role, or content"

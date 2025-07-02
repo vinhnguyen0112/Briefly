@@ -33,7 +33,10 @@ const handleSessionCreation = async (userId) => {
     id: authSessionId,
     user_id: userId,
   });
-  await redisHelper.createSession(authSessionId, { user_id: userId });
+  await redisHelper.createSession(
+    { id: authSessionId, user_id: userId },
+    "auth"
+  );
   return authSessionId;
 };
 
@@ -108,7 +111,7 @@ const signOut = async (req, res, next) => {
   try {
     const { id } = req.session;
     const affectedRows = await Session.delete(id);
-    await redisHelper.deleteSession(id);
+    await redisHelper.deleteSession(id, "auth");
     res.json({
       success: true,
       message: "Session deleted",
