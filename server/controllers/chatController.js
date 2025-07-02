@@ -82,7 +82,7 @@ const getPaginatedChats = async (req, res, next) => {
       limit: (limit + 1).toString(),
       user_id: req.session.user_id,
     };
-    const chats = await Chat.getBy(filter);
+    const chats = await Chat.getPaginated(filter);
     let hasMore = false;
     if (chats.length > limit) {
       hasMore = true;
@@ -172,14 +172,14 @@ const deleteChatsOfUser = async (req, res, next) => {
 const addMessage = async (req, res, next) => {
   try {
     const { chat_id } = req.params;
-    const { role, content, model } = req.body;
+    const { role, content } = req.body;
     if (!chat_id || !role || !content) {
       throw new AppError(
         ERROR_CODES.INVALID_INPUT,
         "Missing required fields: chat_id, role, or content"
       );
     }
-    const id = await Message.create({ chat_id, role, content, model });
+    const id = await Message.create({ chat_id, ...req.body });
     res.json({
       success: true,
       message: "Chat added successfully",

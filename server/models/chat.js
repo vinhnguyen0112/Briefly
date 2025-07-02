@@ -60,7 +60,7 @@ class Chat {
    * @param {number} conditions.limit - Maximum number of results to return (default: 20)
    * @returns {Promise<Array>} - An array of chats
    */
-  async getBy({ user_id, offset = 0, limit = 20 }) {
+  async getPaginated({ user_id, offset = 0, limit = 20 }) {
     let query = "SELECT * FROM chats";
     const conditions = [];
     const values = [];

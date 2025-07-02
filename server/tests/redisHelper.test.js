@@ -2,8 +2,6 @@ const { redisHelper, redisCluster } = require("../helpers/redisHelper");
 const { ERROR_CODES } = require("../errors");
 const { v4: uuidv4 } = require("uuid");
 describe("redisHelper", () => {
-  const testAuthSessionId = "redis-helper-test-auth-session";
-  const testAnonSessionId = "redis-helper-test-anon-session";
   const userId = uuidv4();
   const testAuthSessionData = {
     user_id: userId,
@@ -25,41 +23,45 @@ describe("redisHelper", () => {
     await redisCluster.quit();
   });
 
-  afterEach(async () => {
-    try {
-      // for each master node in the cluster
-      for (const node of redisCluster.masters) {
-        const keys = [];
-        const iter = node.scanIterator({
-          MATCH: "*",
-        });
+  // afterEach(async () => {
+  //   try {
+  //     // for each master node in the cluster
+  //     for (const node of redisCluster.masters) {
+  //       const keys = [];
+  //       const iter = node.scanIterator({
+  //         MATCH: "*",
+  //       });
 
-        for await (const key of iter) {
-          keys.push(key);
-        }
+  //       for await (const key of iter) {
+  //         keys.push(key);
+  //       }
 
-        if (keys.length > 0) {
-          await node.del(keys);
-        }
-      }
-    } catch (err) {
-      console.error("Error cleaning Redis keys after test:", err);
-    }
-  });
+  //       if (keys.length > 0) {
+  //         await node.del(keys);
+  //       }
+  //     }
+  //   } catch (err) {
+  //     console.error("Error cleaning Redis keys after test:", err);
+  //   }
+  // });
 
   describe("createSession & getSession", () => {
-    beforeEach(async () => {
-      await redisHelper.createSession(
-        {
-          id: testAuthSessionId,
-          ...testAuthSessionData,
-        },
-        "auth"
-      );
+    const authSessionId = uuidv4();
+
+    it("Should create an authenticated session", async () => {
+      await expect(
+        redisHelper.createSession(
+          {
+            id: authSessionId,
+            ...testAuthSessionData,
+          },
+          "auth"
+        )
+      ).resolves.toBeUndefined();
     });
 
     it("Should retrieve an authenticated session", async () => {
-      const session = await redisHelper.getSession(testAuthSessionId, "auth");
+      const session = await redisHelper.getSession(authSessionId, "auth");
       expect(session).toBeTruthy();
       expect(session.user_id).toBe(userId);
     });
@@ -79,7 +81,7 @@ describe("redisHelper", () => {
       await expect(
         redisHelper.createSession(
           {
-            id: "no_user_id_session",
+            id: uuidv4(),
             ...testAuthSessionData,
             user_id: null,
           },
@@ -92,7 +94,7 @@ describe("redisHelper", () => {
       await expect(
         redisHelper.createSession(
           {
-            id: "unknown_session_type_session",
+            id: uuidv4(),
             ...testAuthSessionData,
             user_id: null,
           },
@@ -101,10 +103,10 @@ describe("redisHelper", () => {
       ).rejects.toMatchObject({ code: ERROR_CODES.INVALID_INPUT });
     });
 
-    it("Should fail if doesn't provide session type", async () => {
+    it("Should fail if missing session type", async () => {
       await expect(
         redisHelper.createSession({
-          id: "unknown_session_type_session",
+          id: uuidv4(),
           ...testAuthSessionData,
           user_id: null,
         })
@@ -113,25 +115,25 @@ describe("redisHelper", () => {
   });
 
   describe("refreshSession", () => {
-    const key = `${process.env.REDIS_PREFIX}:auth:${testAuthSessionId}`;
+    const authSessionId = uuidv4();
+    const key = `${process.env.REDIS_PREFIX}:auth:${authSessionId}`;
 
-    beforeEach(async () => {
+    beforeAll(async () => {
       await redisHelper.createSession(
         {
-          id: testAuthSessionId,
+          id: authSessionId,
           ...testAuthSessionData,
         },
         "auth"
       );
-      // Set session's TTL to 5 seconds
-      await redisCluster.expire(key, 5);
+      await redisCluster.expire(key, 10); // Set TTL to 10 seconds
     });
 
     it("Should refresh TTL of the authenticated session", async () => {
       const ttlBefore = await redisCluster.ttl(key);
-      expect(ttlBefore).toBeLessThanOrEqual(5);
+      expect(ttlBefore).toBeLessThanOrEqual(10);
 
-      await redisHelper.refreshSession(testAuthSessionId, "auth");
+      await redisHelper.refreshSession(authSessionId, "auth");
 
       const ttlAfter = await redisCluster.ttl(key);
 
@@ -148,16 +150,18 @@ describe("redisHelper", () => {
   });
 
   describe("deleteSession", () => {
-    beforeEach(async () => {
+    const authSessionId = uuidv4();
+
+    beforeAll(async () => {
       await redisHelper.createSession(
-        { id: testAuthSessionId, ...testAuthSessionData },
+        { id: authSessionId, ...testAuthSessionData },
         "auth"
       );
     });
 
     it("Should delete the session", async () => {
-      await redisHelper.deleteSession(testAuthSessionId, "auth");
-      const session = await redisHelper.getSession(testAuthSessionId, "auth");
+      await redisHelper.deleteSession(authSessionId, "auth");
+      const session = await redisHelper.getSession(authSessionId, "auth");
       expect(session).toBeNull();
     });
 
@@ -169,17 +173,23 @@ describe("redisHelper", () => {
   });
 
   describe("createAnonSession & getAnonSession", () => {
-    beforeEach(async () => {
-      await redisHelper.createSession(
-        { id: testAnonSessionId, ...testAnonSessionData },
-        "anon"
-      );
+    const anonSessionId = uuidv4();
+
+    it("Should create an anonymous session", async () => {
+      await expect(
+        redisHelper.createSession(
+          { id: anonSessionId, ...testAnonSessionData },
+          "anon"
+        )
+      ).resolves.toBeUndefined();
     });
 
     it("Should retrieve the anonymous session", async () => {
-      const session = await redisHelper.getSession(testAnonSessionId, "anon");
+      const session = await redisHelper.getSession(anonSessionId, "anon");
       expect(session).toBeTruthy();
-      expect(session.anon_query_count).toBe(3);
+      expect(session.anon_query_count).toEqual(
+        testAnonSessionData.anon_query_count
+      );
     });
 
     it("Should throw if session ID is missing", async () => {
@@ -190,23 +200,24 @@ describe("redisHelper", () => {
   });
 
   describe("refreshAnonSession", () => {
-    const key = `${process.env.REDIS_PREFIX}:anon:${testAnonSessionId}`;
+    const anonSessionId = uuidv4();
+    const key = `${process.env.REDIS_PREFIX}:anon:${anonSessionId}`;
 
-    beforeEach(async () => {
+    beforeAll(async () => {
       await redisHelper.createSession(
-        { id: testAnonSessionId, ...testAnonSessionData },
+        { id: anonSessionId, ...testAnonSessionData },
         "anon"
       );
 
-      // Set session's TTL to 5 seconds
-      await redisCluster.expire(key, 5);
+      // Set TTL to 10 seconds
+      await redisCluster.expire(key, 10);
     });
 
     it("Should refresh TTL of the anonymous session", async () => {
       const ttlBefore = await redisCluster.ttl(key);
-      expect(ttlBefore).toBeLessThanOrEqual(5);
+      expect(ttlBefore).toBeLessThanOrEqual(10);
 
-      await redisHelper.refreshSession(testAnonSessionId, "anon");
+      await redisHelper.refreshSession(anonSessionId, "anon");
 
       const ttlAfter = await redisCluster.ttl(key);
 
@@ -223,10 +234,11 @@ describe("redisHelper", () => {
   });
 
   describe("deleteAnonSession", () => {
-    beforeEach(async () => {
+    const anonSessionId = uuidv4();
+    beforeAll(async () => {
       await redisHelper.createSession(
         {
-          id: testAnonSessionId,
+          id: anonSessionId,
           ...testAnonSessionData,
         },
         "anon"
@@ -234,8 +246,8 @@ describe("redisHelper", () => {
     });
 
     it("Should delete an anonymous session successfully", async () => {
-      redisHelper.deleteSession(testAnonSessionId, "anon");
-      const session = await redisHelper.getSession(testAnonSessionId, "anon");
+      redisHelper.deleteSession(anonSessionId, "anon");
+      const session = await redisHelper.getSession(anonSessionId, "anon");
       expect(session).toBeNull();
     });
 

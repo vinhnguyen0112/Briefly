@@ -13,7 +13,7 @@ const updateChatSchema = object({
 const createMessageSchema = object({
   role: string().required(),
   content: string().required(),
-  model: string(),
+  model: string().nullable(),
 });
 
 module.exports = { createChatSchema, updateChatSchema, createMessageSchema };

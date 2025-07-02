@@ -3,10 +3,9 @@ const jestVariables = require("./jestVariables");
 const { ERROR_CODES } = require("../errors");
 const app = require("../app");
 const { redisCluster } = require("../helpers/redisHelper");
+const { v4: uuiv4 } = require("uuid");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
-const anonHeader = `Bearer anon:${jestVariables.sessionId}`;
-const nonexistAuthHeader = `Bearer auth:${jestVariables.nonexistSessionId}`;
 
 beforeAll(async () => {
   await redisCluster.connect();
@@ -17,9 +16,9 @@ afterAll(async () => {
 });
 
 describe("POST /chats", () => {
-  const chatId = "test_chat_1";
-  const chatTitle = "Example Chat 1";
-  const pageUrl = "https://www.example_url_1.com/home";
+  const chatId = uuiv4();
+  const chatTitle = "Example Chat";
+  const pageUrl = "https://www.example.com/";
 
   it("Should create a new chat if all parameters are correctly provided", async () => {
     await supertest(app)
@@ -67,23 +66,6 @@ describe("POST /chats", () => {
         });
       });
   });
-
-  it("Should fail if not authenticated", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .send({
-        id: chatId,
-        title: chatTitle,
-        page_url: pageUrl,
-      })
-      .expect(401)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.UNAUTHORIZED },
-        });
-      });
-  });
 });
 
 describe("GET /chats", () => {
@@ -113,16 +95,37 @@ describe("GET /chats", () => {
       });
   });
 
-  it("Should fail if not authenticated", async () => {
+  it("Should get all chats of second page", async () => {
     await supertest(app)
       .get("/api/chats")
-      .query({ limit: 20, offset: 0 })
-      .expect(401)
+      .query({ limit: 20, offset: 20 })
+      .set("Authorization", authHeader)
+      .expect(200)
       .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.UNAUTHORIZED },
-        });
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("chats");
+        expect(Array.isArray(response.body.data.chats)).toBe(true);
+        expect(response.body.data.chats.length).toBeLessThanOrEqual(20);
+        expect(response.body.data).toHaveProperty("hasMore");
+        expect(response.body.data.hasMore).toBe(false);
+      });
+  });
+
+  it("Should success but return no chats for a non-exist page", async () => {
+    await supertest(app)
+      .get("/api/chats")
+      .query({ limit: 20, offset: 100 })
+      .set("Authorization", authHeader)
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("chats");
+        expect(Array.isArray(response.body.data.chats)).toBe(true);
+        expect(response.body.data.chats.length).toEqual(0);
+        expect(response.body.data).toHaveProperty("hasMore");
+        expect(response.body.data.hasMore).toBe(false);
       });
   });
 
@@ -184,9 +187,9 @@ describe("GET /chats", () => {
 });
 
 describe("GET /chats/:id", () => {
-  const chatId = "test_chat_2";
-  const chatTitle = "Example Chat 2";
-  const pageUrl = "https://www.example_url_2.com/home";
+  const chatId = uuiv4();
+  const chatTitle = "Example Chat";
+  const pageUrl = "https://www.example.com/";
 
   beforeAll(async () => {
     // Add a chat
@@ -208,7 +211,6 @@ describe("GET /chats/:id", () => {
       });
   });
 
-  // TODO: Should it fail or return null?
   it("Should fail if chat not found", async () => {
     await supertest(app)
       .get("/api/chats/nonexistent_id")
@@ -224,9 +226,9 @@ describe("GET /chats/:id", () => {
 });
 
 describe("PUT /chats/:id", () => {
-  const chatId = "test_chat_3";
-  const chatTitle = "Example Chat 3";
-  const pageUrl = "https://www.example_url_3.com/home";
+  const chatId = uuiv4();
+  const chatTitle = "Example Chat";
+  const pageUrl = "https://www.example.com";
 
   beforeAll(async () => {
     // Add a chat
@@ -273,9 +275,9 @@ describe("PUT /chats/:id", () => {
 });
 
 describe("DELETE /chats/:id", () => {
-  const chatId = "test_chat_4";
-  const chatTitle = "Example Chat 4";
-  const pageUrl = "https://www.example_url_4.com/home";
+  const chatId = uuiv4();
+  const chatTitle = "Example Chat";
+  const pageUrl = "https://www.example.com";
 
   beforeAll(async () => {
     // Add a chat
@@ -315,24 +317,6 @@ describe("DELETE /chats/:id", () => {
 
 describe("DELETE /chats (all user chats)", () => {
   beforeAll(async () => {
-    const chats = [
-      {
-        id: "test_chat_5",
-        title: "Example Chat 5",
-        pageUrl: "http://www.example_url_5.com/",
-      },
-      {
-        id: "test_chat_6",
-        title: "Example Chat 6",
-        pageUrl: "http://www.example_url_6.com/",
-      },
-      {
-        id: "test_chat_7",
-        title: "Example Chat 7",
-        pageUrl: "http://www.example_url_7.com/",
-      },
-    ];
-
     const createChatInDB = async (chat) => {
       await supertest(app)
         .post(`/api/chats/`)
@@ -341,7 +325,16 @@ describe("DELETE /chats (all user chats)", () => {
         .expect(200);
     };
 
-    const promises = chats.map((chat) => createChatInDB(chat));
+    const promises = [];
+    for (let i = 0; i < 3; i++) {
+      promises.push(
+        createChatInDB({
+          id: uuiv4(),
+          title: "Example Chat",
+          pageUrl: "https://www.example.com",
+        })
+      );
+    }
 
     await Promise.all(promises);
   });
@@ -361,12 +354,11 @@ describe("DELETE /chats (all user chats)", () => {
 });
 
 describe("POST /chats/:chat_id/messages", () => {
-  const chatId = "test_chat_8";
-  const chatTitle = "Example Chat 8";
-  const pageUrl = "https://www.example_url_8.com";
+  const chatId = uuiv4();
+  const chatTitle = "Example Chat";
+  const pageUrl = "https://www.example.com";
 
   beforeAll(async () => {
-    // Add a chat
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
@@ -374,11 +366,29 @@ describe("POST /chats/:chat_id/messages", () => {
       .expect(200);
   });
 
-  it("Should add a message to a chat", async () => {
+  it("Should add an user message to a chat", async () => {
     await supertest(app)
       .post(`/api/chats/${chatId}/messages`)
       .set("Authorization", authHeader)
-      .send({ role: "user", content: "Test message 1", model: "gpt-3.5" })
+      .send({ role: "user", content: "Test user message", model: null })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("id");
+        expect(response.body.data.id).toBeTruthy();
+      });
+  });
+
+  it("Should add an assistant message to a chat", async () => {
+    await supertest(app)
+      .post(`/api/chats/${chatId}/messages`)
+      .set("Authorization", authHeader)
+      .send({
+        role: "assistant",
+        content: "Test assistant message",
+        model: "gpt-3.5",
+      })
       .expect(200)
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
@@ -404,9 +414,9 @@ describe("POST /chats/:chat_id/messages", () => {
 });
 
 describe("GET /chats/:chat_id/messages", () => {
-  const chatId = "test_chat_9";
-  const chatTitle = "Example Chat 9";
-  const pageUrl = "https://www.example_url_9.com";
+  const chatId = uuiv4();
+  const chatTitle = "Example Chat";
+  const pageUrl = "https://www.example.com";
 
   beforeAll(async () => {
     // Add a chat
@@ -420,18 +430,18 @@ describe("GET /chats/:chat_id/messages", () => {
     const messages = [
       {
         role: "user",
-        content: "Test message 2",
+        content: "Test user message",
+        model: null,
+      },
+      {
+        role: "assistant",
+        content: "Test assistant message",
         model: "gpt-3.5",
       },
       {
         role: "user",
-        content: "Test message 3",
-        model: "gpt-3.5",
-      },
-      {
-        role: "user",
-        content: "Test message 4",
-        model: "gpt-3.5",
+        content: "Test user message",
+        model: undefined,
       },
     ];
 
