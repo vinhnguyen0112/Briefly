@@ -40,7 +40,7 @@ dbHelper.getConnection().then(() => {
 
 // Routes
 app.use("/api/auth", authRoutes);
-app.use("/api/captionize", captionRoutes);
+// app.use("/api/captionize", captionRoutes);
 app.use("/api/anon", anonRoutes);
 // app.use("/api/captionize", imageCaptionRoutes);
 app.use("/api/feedback", feedbackRoutes);
