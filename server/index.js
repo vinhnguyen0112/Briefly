@@ -8,14 +8,14 @@ require("dotenv").config({
 });
 
 const app = require("./app");
-const { redisCluster } = require("./helpers/redisHelper");
+const { redisHelper } = require("./helpers/redisHelper");
 const dbHelper = require("./helpers/dbHelper");
 
 const PORT = process.env.PORT || 3000;
 
 async function startServer() {
   try {
-    await redisCluster.connect();
+    await redisHelper.client.connect();
     console.log("Redis connected successfully!");
 
     await dbHelper.getConnection();
@@ -30,8 +30,10 @@ async function startServer() {
   }
 }
 
-if (process.env.NODE_ENV !== "test") {
-  startServer();
-}
+startServer();
+
+// if (process.env.NODE_ENV !== "test") {
+//   startServer();
+// }
 
 module.exports = { startServer };

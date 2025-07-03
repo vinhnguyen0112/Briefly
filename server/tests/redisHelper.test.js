@@ -1,4 +1,4 @@
-const { redisHelper, redisCluster } = require("../helpers/redisHelper");
+const { redisHelper } = require("../helpers/redisHelper");
 const { ERROR_CODES } = require("../errors");
 const { v4: uuidv4 } = require("uuid");
 describe("redisHelper", () => {
@@ -16,17 +16,17 @@ describe("redisHelper", () => {
   };
 
   beforeAll(async () => {
-    await redisCluster.connect();
+    await redisHelper.client.connect();
   });
 
   afterAll(async () => {
-    await redisCluster.quit();
+    await redisHelper.client.quit();
   });
 
   // afterEach(async () => {
   //   try {
   //     // for each master node in the cluster
-  //     for (const node of redisCluster.masters) {
+  //     for (const node of redisHelper.client.masters) {
   //       const keys = [];
   //       const iter = node.scanIterator({
   //         MATCH: "*",
@@ -126,16 +126,16 @@ describe("redisHelper", () => {
         },
         "auth"
       );
-      await redisCluster.expire(key, 10); // Set TTL to 10 seconds
+      await redisHelper.client.expire(key, 10); // Set TTL to 10 seconds
     });
 
     it("Should refresh TTL of the authenticated session", async () => {
-      const ttlBefore = await redisCluster.ttl(key);
+      const ttlBefore = await redisHelper.client.ttl(key);
       expect(ttlBefore).toBeLessThanOrEqual(10);
 
       await redisHelper.refreshSession(authSessionId, "auth");
 
-      const ttlAfter = await redisCluster.ttl(key);
+      const ttlAfter = await redisHelper.client.ttl(key);
 
       expect(ttlAfter).toBeGreaterThan(
         parseInt(process.env.SESSION_TTL) - 1000
@@ -210,16 +210,16 @@ describe("redisHelper", () => {
       );
 
       // Set TTL to 10 seconds
-      await redisCluster.expire(key, 10);
+      await redisHelper.client.expire(key, 10);
     });
 
     it("Should refresh TTL of the anonymous session", async () => {
-      const ttlBefore = await redisCluster.ttl(key);
+      const ttlBefore = await redisHelper.client.ttl(key);
       expect(ttlBefore).toBeLessThanOrEqual(10);
 
       await redisHelper.refreshSession(anonSessionId, "anon");
 
-      const ttlAfter = await redisCluster.ttl(key);
+      const ttlAfter = await redisHelper.client.ttl(key);
 
       expect(ttlAfter).toBeGreaterThan(
         parseInt(process.env.SESSION_TTL) - 1000

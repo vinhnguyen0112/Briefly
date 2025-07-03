@@ -1,45 +1,38 @@
 const dbHelper = require("../helpers/dbHelper");
-const { redisCluster } = require("../helpers/redisHelper");
-const User = require("../models/user");
-const jestVariables = require("./jestVariables");
+const { redisHelper } = require("../helpers/redisHelper");
 
 /**
  * Delete all keys prefixed with provided 'prefix'
+ * Works with single-node Redis client
  * @param {String} prefix
  */
 async function clearTestRedis(prefix) {
   try {
-    await redisCluster.connect();
+    await redisHelper.client.connect();
 
-    const masters = redisCluster.masters;
-    if (!masters) {
-      throw new Error("No masters found in Redis cluster");
-    }
+    let cursor = 0;
+    do {
+      const result = await redisHelper.client.scan(cursor, {
+        MATCH: `${prefix}:*`,
+        COUNT: 100,
+      });
 
-    for (const node of masters) {
-      let cursor = 0;
-      do {
-        const result = await node.client.scan(cursor, {
-          MATCH: `${prefix}:*`,
-          COUNT: 100,
-        });
-        cursor = Number(result.cursor);
-        const keys = result.keys;
+      cursor = Number(result.cursor);
+      const keys = result.keys;
 
-        if (keys.length > 0) {
-          for (const key of keys) {
-            await node.client.del(key);
-            console.log(`Deleted key: ${key}`);
-          }
+      if (keys.length > 0) {
+        for (const key of keys) {
+          await redisHelper.client.del(key);
+          console.log(`Deleted key: ${key}`);
         }
-      } while (cursor !== 0);
-    }
+      }
+    } while (cursor !== 0);
 
     console.log(`All keys under prefix "${prefix}" deleted successfully.`);
   } catch (err) {
     console.error("Error deleting keys with prefix:", err);
   } finally {
-    await redisCluster.quit();
+    await redisHelper.client.quit();
   }
 }
 

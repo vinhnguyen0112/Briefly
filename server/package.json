@@ -4,7 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "cross-env NODE_ENV=test jest --verbose",
-    "dev": "cross-env NODE_ENV=development nodemon index.js",
+    "dev": "cross-env NODE_ENV=test nodemon index.js",
     "prod": "cross-env NODE_ENV=production node index.js"
   },
   "keywords": [],
@@ -22,6 +22,7 @@
     "express-session": "^1.18.1",
     "google-auth-library": "^9.15.1",
     "ioredis": "^5.6.1",
+    "js-yaml": "^4.1.0",
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "mysql2": "^3.14.1",
@@ -29,6 +30,8 @@
     "openai": "^4.96.0",
     "p-limit": "^3.1.0",
     "redis": "^4.7.0",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
     "yup": "^1.6.1"
   },
   "devDependencies": {

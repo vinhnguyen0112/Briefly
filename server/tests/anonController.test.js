@@ -1,14 +1,14 @@
 const supertest = require("supertest");
 const { ERROR_CODES } = require("../errors");
 const app = require("../app");
-const { redisCluster } = require("../helpers/redisHelper");
+const { redisHelper } = require("../helpers/redisHelper");
 
 beforeAll(async () => {
-  await redisCluster.connect();
+  await redisHelper.client.connect();
 });
 
 afterAll(async () => {
-  await redisCluster.quit();
+  await redisHelper.client.quit();
 });
 
 describe("POST /anon", () => {

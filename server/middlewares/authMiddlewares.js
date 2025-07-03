@@ -16,7 +16,11 @@ function resolveSessionId(sessionId) {
   const match = /^(auth|anon):([a-zA-Z0-9_-]+)$/.exec(sessionId);
 
   if (!match) {
-    throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid session ID format");
+    throw new AppError(
+      ERROR_CODES.UNAUTHORIZED,
+      "Invalid session ID format",
+      401
+    );
   }
 
   const type = match[1];
@@ -123,7 +127,7 @@ const validateSession = async (req, res, next) => {
     const parsed = resolveSessionId(sessionId);
 
     let sessionData = await lookupSession(parsed.actualId, parsed.type);
-
+    console.log("Session data found:", sessionData);
     // Refresh if needed
     if (sessionData) {
       await refreshSessionIfNeeded(parsed.actualId, parsed.type, sessionData);

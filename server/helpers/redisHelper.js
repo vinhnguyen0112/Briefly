@@ -2,16 +2,29 @@ const redis = require("redis");
 const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 
-// Redis cluster initialization
-const redisCluster = redis.createCluster({
-  rootNodes: process.env.REDIS_HOST.split(",").map((host) => ({
-    url: `redis://${host}:${process.env.REDIS_PORT}`,
-  })),
-  defaults: {
-    username: process.env.REDIS_USERNAME,
-    password: process.env.REDIS_PASSWORD,
-  },
-});
+// Redis initialization
+let client;
+if (process.env.NODE_ENV === "test") {
+  // Single-node Redis for testing
+  client = redis.createClient({
+    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+  });
+
+  client.on("error", (err) => console.error("Redis Client Error", err));
+} else {
+  // client Redis for dev/prod
+  client = redis.createclient({
+    rootNodes: process.env.REDIS_HOST.split(",").map((host) => ({
+      url: `redis://${host}:${process.env.REDIS_PORT}`,
+    })),
+    defaults: {
+      username: process.env.REDIS_USERNAME,
+      password: process.env.REDIS_PASSWORD,
+    },
+  });
+
+  client.on("error", (err) => console.error("Redis client Error", err));
+}
 
 /**
  * Applies a prefix to a Redis key.
@@ -114,7 +127,7 @@ async function createSession(sessionData, type) {
   const key = applyPrefix(`${type}:${sessionData.id}`);
   const payload = buildSessionPayload(sessionData, type);
 
-  await redisCluster.set(key, JSON.stringify(payload), { EX: ttl });
+  await client.set(key, JSON.stringify(payload), { EX: ttl });
 }
 
 /**
@@ -125,10 +138,7 @@ async function createSession(sessionData, type) {
  */
 async function getSession(sessionId, type) {
   const key = applyPrefix(`${type}:${sessionId}`);
-  const [data, ttl] = await Promise.all([
-    redisCluster.get(key),
-    redisCluster.ttl(key),
-  ]);
+  const [data, ttl] = await Promise.all([client.get(key), client.ttl(key)]);
 
   return data ? { ...JSON.parse(data), ttl } : null;
 }
@@ -141,11 +151,11 @@ async function getSession(sessionId, type) {
 async function refreshSession(sessionId, type) {
   try {
     const key = applyPrefix(`${type}:${sessionId}`);
-    const exists = await redisCluster.exists(key);
+    const exists = await client.exists(key);
     if (!exists) {
       return;
     }
-    await redisCluster.expire(key, parseInt(process.env.SESSION_TTL, 10));
+    await client.expire(key, parseInt(process.env.SESSION_TTL, 10));
     console.log(`Session ${sessionId} (type: ${type}) refreshed`);
   } catch (err) {
     if (err instanceof AppError) throw err;
@@ -164,7 +174,7 @@ async function refreshSession(sessionId, type) {
  */
 async function deleteSession(sessionId, type) {
   const key = applyPrefix(`${type}:${sessionId}`);
-  await redisCluster.del(key);
+  await client.del(key);
 }
 
 /**
@@ -175,11 +185,12 @@ async function deleteSession(sessionId, type) {
  */
 async function getSessionTTL(sessionId, type) {
   const key = applyPrefix(`${type}:${sessionId}`);
-  const ttl = await redisCluster.ttl(key);
+  const ttl = await client.ttl(key);
   return ttl >= 0 ? ttl : null;
 }
 
 const redisHelper = {
+  client,
   createSession,
   getSession,
   refreshSession,
@@ -188,6 +199,6 @@ const redisHelper = {
 };
 
 module.exports = {
-  redisCluster,
+  client,
   redisHelper,
 };

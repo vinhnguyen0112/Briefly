@@ -1,0 +1,708 @@
+openapi: 3.0.0
+info:
+  title: Capstone API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000/api
+    description: Development server
+paths:
+  /anon:
+    post:
+      summary: Get or create anonymous session
+      description: >
+        Returns an anonymous session, or creates a new one if not found.
+        Requires the `visitor` header
+      tags:
+        - Anon
+      parameters:
+        - name: visitor
+          in: header
+          required: true
+          description: Unique visitor ID to identify the anonymous user.
+          schema:
+            type: string
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              description: No body required; visitorId is extracted from headers.
+      responses:
+        "200":
+          description: Anonymous session found or created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                      anon_query_count:
+                        type: integer
+        "400":
+          description: Missing visitorId or client IP
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/session-validate:
+    post:
+      summary: Validate session
+      description: Checks if the session is valid on the server side. Requires an Authorization Bearer token in the header.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session is valid
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        "401":
+          description: Malformed, invalid or missing session ID
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/auth-only:
+    post:
+      summary: Authenticated session only
+      description: Checks if the session in Authorization header is authenticated (Dedicated endpoints to run tests).
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session is valid and authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        "401":
+          description: Malformed, non-existent, missing or not an authenticated session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/google/callback:
+    post:
+      summary: Authenticate with Google
+      description: Authenticates a user using a Google ID token.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Authorization:
+                  type: string
+                  description: Bearer Google ID token in the Authorization header
+      responses:
+        "200":
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+        "400":
+          description: Invalid input or missing Google ID token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid Google token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/facebook/callback:
+    post:
+      summary: Authenticate with Facebook
+      description: Authenticates a user using a Facebook access token.
+      tags:
+        - Auth
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                Authorization:
+                  type: string
+                  description: Bearer Facebook access token in the Authorization header
+      responses:
+        "200":
+          description: Successfully authenticated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+        "400":
+          description: Invalid input or missing Facebook access token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid Facebook token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /auth/signout:
+    post:
+      summary: Sign out
+      description: Signs out the authenticated user and deletes the session.
+      tags:
+        - Auth
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Session deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      affectedRows:
+                        type: number
+        "401":
+          description: Malformed, invalid,  missing session or not an authenticated
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chats:
+    get:
+      summary: Get paginated chats
+      description: Retrieves paginated chats for the authenticated user.
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+          description: Offset for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+          description: Limit for pagination
+      responses:
+        "200":
+          description: List of chats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      chats:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Chat"
+                      hasMore:
+                        type: boolean
+        "400":
+          description: Invalid offset or limit
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create a new chat
+      description: Creates a new chat for the authenticated user.
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateChatRequest"
+      responses:
+        "200":
+          description: Chat created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+        "400":
+          description: Missing required fields or invalid page URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete all chats of the authenticated user
+      description: Deletes all chats for the authenticated user.
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      responses:
+        "200":
+          description: Chats deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      affectedRows:
+                        type: number
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chats/{id}:
+    get:
+      summary: Get chat by ID
+      description: Retrieves a chat by its ID.
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Chat ID
+      responses:
+        "200":
+          description: Chat found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    $ref: "#/components/schemas/Chat"
+        "400":
+          description: Missing chat id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Chat not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update a chat
+      description: Updates a chat by its ID.
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Chat ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateChatRequest"
+      responses:
+        "200":
+          description: Chat updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      affectedRows:
+                        type: number
+        "400":
+          description: Missing chat id or invalid update data
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete a chat by ID
+      description: Deletes a chat by its ID.
+      tags:
+        - Chat
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Chat ID
+      responses:
+        "200":
+          description: Chat deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      affectedRows:
+                        type: number
+        "400":
+          description: Missing chat id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /chats/{chat_id}/messages:
+    get:
+      summary: Get all messages for a chat
+      description: Retrieves all messages for a chat by chat_id.
+      tags:
+        - Message
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: chat_id
+          required: true
+          schema:
+            type: string
+          description: Chat ID
+      responses:
+        "200":
+          description: List of messages
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      messages:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Message"
+        "400":
+          description: Missing chat_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Add a message to a chat
+      description: Adds a message to a chat. Requires chat_id, role, content, and model in the request.
+      tags:
+        - Message
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: chat_id
+          required: true
+          schema:
+            type: string
+          description: Chat ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateMessageRequest"
+      responses:
+        "200":
+          description: Message added successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+        "400":
+          description: Missing required fields (chat_id, role, or content)
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /test/bulk-insert-chats:
+    post:
+      summary: Bulk insert test chats
+      description: >
+        Bulk insert test chats for pagination testing.  
+        Requires an authenticated session.  
+        Only for testing purposes; not for production use.
+      tags:
+        - Test
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                count:
+                  type: integer
+                  default: 30
+                  description: Number of test chats to insert
+      responses:
+        "200":
+          description: Chats inserted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: custom
+  schemas:
+    Chat:
+      type: object
+      properties:
+        id:
+          type: string
+        user_id:
+          type: string
+        page_url:
+          type: string
+        page_id:
+          type: string
+        title:
+          type: string
+    Message:
+      type: object
+      properties:
+        id:
+          type: string
+        chat_id:
+          type: string
+        role:
+          type: string
+        content:
+          type: string
+        model:
+          type: string
+    CreateChatRequest:
+      type: object
+      required:
+        - id
+        - page_url
+        - title
+      properties:
+        id:
+          type: string
+        page_url:
+          type: string
+        title:
+          type: string
+    UpdateChatRequest:
+      type: object
+      properties:
+        page_url:
+          type: string
+        title:
+          type: string
+    CreateMessageRequest:
+      type: object
+      required:
+        - role
+        - content
+        - model
+      properties:
+        role:
+          type: string
+        content:
+          type: string
+        model:
+          type: string
+    ErrorResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        error:
+          type: object
+          properties:
+            code:
+              type: string
+            message:
+              type: string

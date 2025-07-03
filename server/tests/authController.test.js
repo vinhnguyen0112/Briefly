@@ -2,7 +2,7 @@ const supertest = require("supertest");
 const jestVariables = require("./jestVariables");
 const { ERROR_CODES } = require("../errors");
 const Session = require("../models/session");
-const { redisHelper, redisCluster } = require("../helpers/redisHelper");
+const { redisHelper } = require("../helpers/redisHelper");
 const app = require("../app");
 const AnonSession = require("../models/anonSession");
 const { v4: uuidv4 } = require("uuid");
@@ -13,11 +13,11 @@ const nonexistAuthHeader = `Bearer auth:${jestVariables.invalidSessionId}`;
 const malformedAuthHeader = `Bearer auth::${jestVariables.sessionId}`;
 
 beforeAll(async () => {
-  await redisCluster.connect();
+  await redisHelper.client.connect();
 });
 
 afterAll(async () => {
-  await redisCluster.quit();
+  await redisHelper.client.quit();
 });
 
 describe("POST /session-validate", () => {
@@ -109,10 +109,10 @@ describe("POST /session-validate", () => {
     await redisHelper.createSession({ id: sessionId }, "anon");
 
     // Set TTL to expires in 10 secs
-    await redisCluster.expire(sessionKey, 10);
+    await redisHelper.client.expire(sessionKey, 10);
 
     // Confirm short TTL
-    let ttlBefore = await redisCluster.ttl(sessionKey);
+    let ttlBefore = await redisHelper.client.ttl(sessionKey);
     expect(ttlBefore).toBeLessThan(11);
 
     await supertest(app)
@@ -121,7 +121,7 @@ describe("POST /session-validate", () => {
       .expect(200);
 
     // Check TTL after refresh
-    let ttlAfter = await redisCluster.ttl(sessionKey);
+    let ttlAfter = await redisHelper.client.ttl(sessionKey);
     // Should be close to defautl session's TTL (7 days)
     expect(ttlAfter).toBeGreaterThanOrEqual(
       parseInt(process.env.SESSION_TTL) - 10000
@@ -225,10 +225,10 @@ describe("POST /auth-only", () => {
       { id: sessionId, user_id: jestVariables },
       "auth"
     );
-    await redisCluster.expire(sessionKey, 10); // set TTL to 10 seconds to simulate near expiry
+    await redisHelper.client.expire(sessionKey, 10); // set TTL to 10 seconds to simulate near expiry
 
     // Confirm short TTL
-    let ttlBefore = await redisCluster.ttl(sessionKey);
+    let ttlBefore = await redisHelper.client.ttl(sessionKey);
     expect(ttlBefore).toBeLessThan(11);
 
     await supertest(app)
@@ -237,7 +237,7 @@ describe("POST /auth-only", () => {
       .expect(200);
 
     // Check TTL after refresh
-    let ttlAfter = await redisCluster.ttl(sessionKey);
+    let ttlAfter = await redisHelper.client.ttl(sessionKey);
     // Should be near default session's TTL (7 days)
     expect(ttlAfter).toBeGreaterThanOrEqual(
       parseInt(process.env.SESSION_TTL) - 10000 // 10 secs offset

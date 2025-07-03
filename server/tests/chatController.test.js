@@ -2,17 +2,17 @@ const supertest = require("supertest");
 const jestVariables = require("./jestVariables");
 const { ERROR_CODES } = require("../errors");
 const app = require("../app");
-const { redisCluster } = require("../helpers/redisHelper");
+const { redisHelper } = require("../helpers/redisHelper");
 const { v4: uuiv4 } = require("uuid");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
 
 beforeAll(async () => {
-  await redisCluster.connect();
+  await redisHelper.client.connect();
 });
 
 afterAll(async () => {
-  await redisCluster.quit();
+  await redisHelper.client.quit();
 });
 
 describe("POST /chats", () => {

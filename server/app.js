@@ -1,6 +1,9 @@
 const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
+const fs = require("fs");
+const yaml = require("js-yaml");
+const swaggerUi = require("swagger-ui-express");
 
 const authRoutes = require("./routes/authRoutes");
 const captionRoutes = require("./routes/captionRoutes");
@@ -20,6 +23,10 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 app.set("trust proxy", true);
+
+// swagger
+const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // routes
 app.use("/api", extractClientIp, extractVisitorId);
