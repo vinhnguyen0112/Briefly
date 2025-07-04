@@ -3,55 +3,54 @@ let pLimit = require("p-limit");
 pLimit = pLimit.default || pLimit;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-console.log("Using OpenAI API Key:", process.env.OPENAI_API_KEY);
-
 const CONCURRENCY = 5;
 
-const generateCaptions = async (sources) => {
-  // Ensure pLimit is loaded before proceeding
-  if (!pLimit) {
-    throw new Error("pLimit module is not loaded yet.");
-  }
-
+const generateCaptions = async (sources, content) => {
+  if (!pLimit) throw new Error("pLimit module is not loaded yet.");
   const limit = pLimit(CONCURRENCY);
 
   const tasks = sources.map((src, idx) =>
     limit(async () => {
       try {
-        // Build img captioning prompt with single img
-        const userContent = [
+        const messages = [
           {
-            type: "text",
-            text: "Generate a concise caption in English for this image (no surrounding quotes).",
+            role: "system",
+            content:
+              "You are a helpful assistant that generates short detail captions for images, using the article provided to infer names, events, or context.",
           },
-          { type: "image_url", image_url: { url: src, detail: "auto" } },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: content.slice(0, 100000),
+              },
+              {
+                type: "text",
+                text: "Based on the article above, generate a short detail caption (no quotation marks) for the image below. Use the article to identify people, events, or context relevant to the image.",
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: src,
+                  detail: "low",
+                },
+              },
+            ],
+          },
         ];
 
         const response = await openai.chat.completions.create({
           model: "gpt-4o-mini",
-          messages: [
-            {
-              role: "system",
-              content:
-                "You are an assistant generating single-line captions without extra quotes.",
-            },
-            { role: "user", content: userContent },
-          ],
+          messages,
+          temperature: 0.5,
+          // max_tokens: 100,
         });
 
-        console.log(`→ [${idx}] Response OK`);
+        const raw = response.choices?.[0]?.message?.content?.trim() || "";
+        const clean = raw.replace(/^['"]+|['"]+$/g, "").split(/\r?\n/)[0];
 
-        // Response cleaning
-        let raw = response.choices[0].message.content.trim();
-
-        raw = raw.split(/\r?\n/)[0];
-
-        const clean = raw
-          .replace(/^['"]+/, "")
-          .replace(/['"]+$/, "")
-          .trim();
-
-        // Returning captions + token usages
+        console.log(`→ [${idx}] Caption OK`);
         return {
           caption: clean,
           usage: response.usage || {
@@ -61,7 +60,7 @@ const generateCaptions = async (sources) => {
           },
         };
       } catch (err) {
-        console.error(`→ [${idx}] Error captioning image:`, err.message);
+        console.error(`→ [${idx}] Caption error:`, err.message);
         return {
           caption: null,
           usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
@@ -70,10 +69,8 @@ const generateCaptions = async (sources) => {
     })
   );
 
-  // Run all tasks in parallel (with limit)
   const results = await Promise.all(tasks);
 
-  // Separate captions and sum usages
   const captions = results.map((r) => r.caption);
   const usage = results.reduce(
     (acc, r) => ({

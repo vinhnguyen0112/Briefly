@@ -21,6 +21,8 @@ import {
   switchToChat,
   handleContentMessage,
   clearMessagesFromChat,
+  updateFeedbackIconsForAssistantMessages,
+  removeFeedbackIconsForAssistantMessages,
 } from "./ui-handler.js";
 import {
   requestPageContent,
@@ -455,6 +457,7 @@ function setupAuthenticationButtons() {
           closeAccountPopupUI();
           closeSignInAlertPopup();
           console.log("User authenticated via Google");
+          updateFeedbackIconsForAssistantMessages();
         }
       });
     });
@@ -469,6 +472,7 @@ function setupAuthenticationButtons() {
           closeAccountPopupUI();
           closeSignInAlertPopup();
           console.log("User authenticated via Facebook");
+          updateFeedbackIconsForAssistantMessages();
         }
       });
     });
@@ -482,6 +486,7 @@ function setupAuthenticationButtons() {
         closeAccountPopupUI();
 
         console.log("User signed out");
+        removeFeedbackIconsForAssistantMessages();
       }
     });
   });

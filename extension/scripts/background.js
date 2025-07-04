@@ -36,46 +36,65 @@ let popupContent = null;
 let activeExtraction = null;
 
 // When user clicks our icon
-chrome.action.onClicked.addListener((tab) => {
+chrome.action.onClicked.addListener(async (tab) => {
   console.log("Extension icon clicked on tab:", tab.id);
 
-  // Prevent multiple rapid clicks -- fuck them users
   if (isProcessingClick) {
     console.log("Already processing a click, ignoring");
     return;
   }
 
   isProcessingClick = true;
-
-  // no popup is set
   chrome.action.setPopup({ popup: "" });
 
-  // Can't mess with Chrome pages - show popup instead
+  // Restricted pages
   if (
     tab.url.startsWith("chrome://") ||
     tab.url.startsWith("chrome-extension://") ||
     tab.url.startsWith("https://chrome.google.com/webstore/")
   ) {
     console.log("Restricted page, showing popup instead");
-
     chrome.action.setPopup({
       popup: "popup.html",
       tabId: tab.id,
     });
+    chrome.action.openPopup();
+    isProcessingClick = false;
+    return;
+  }
 
+  // Check lang attribute
+  try {
+    const results = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: () => document.documentElement.lang,
+    });
+    const lang = results && results[0] && results[0].result;
+    if (lang !== "en" && lang !== "vi") {
+      chrome.storage.local.set({ popupReason: "unsupported_lang" }, () => {
+        chrome.action.setPopup({
+          popup: "popup-unsupported-lang.html",
+          tabId: tab.id,
+        });
+        chrome.action.openPopup();
+        isProcessingClick = false;
+      });
+      return;
+    }
+  } catch (e) {
+    chrome.action.setPopup({
+      popup: "popup.html",
+      tabId: tab.id,
+    });
     chrome.action.openPopup();
     isProcessingClick = false;
     return;
   }
 
   console.log("Toggling sidebar");
-
-  // Try to message content script if it's already there
   chrome.tabs.sendMessage(tab.id, { action: "toggle_sidebar" }, (response) => {
     if (chrome.runtime.lastError) {
       console.log("Content script not yet injected, injecting now");
-
-      // Need to inject scripts first
       chrome.scripting
         .executeScript({
           target: { tabId: tab.id },
@@ -89,7 +108,6 @@ chrome.action.onClicked.addListener((tab) => {
           });
         })
         .then(() => {
-          // Now try again
           console.log("All scripts injected, sending toggle message");
           setTimeout(() => {
             chrome.tabs
@@ -102,13 +120,10 @@ chrome.action.onClicked.addListener((tab) => {
         })
         .catch((error) => {
           console.error("Error injecting content script:", error);
-
-          // Show error in popup
           chrome.action.setPopup({
             popup: "popup.html",
             tabId: tab.id,
           });
-
           chrome.action.openPopup();
           isProcessingClick = false;
         });
@@ -653,7 +668,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.action === "process_images") {
     resetProcessedImages();
-    handleCaptionImages(message.images)
+    handleCaptionImages(message.images, message.content)
       .then((captions) => {
         chrome.tabs.sendMessage(sender.tab.id, {
           action: "caption_results",
@@ -663,7 +678,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((error) => {
         console.error("Failed to handle captions", error);
       });
-
     return true;
   }
 });
