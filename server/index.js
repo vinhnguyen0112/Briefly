@@ -10,6 +10,8 @@ require("dotenv").config({
 const app = require("./app");
 const { redisHelper } = require("./helpers/redisHelper");
 const dbHelper = require("./helpers/dbHelper");
+const { validate } = require("uuid");
+const chat = require("./models/chat");
 
 const PORT = process.env.PORT || 3000;
 
@@ -31,9 +33,5 @@ async function startServer() {
 }
 
 startServer();
-
-// if (process.env.NODE_ENV !== "test") {
-//   startServer();
-// }
 
 module.exports = { startServer };

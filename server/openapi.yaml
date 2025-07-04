@@ -8,10 +8,11 @@ servers:
 paths:
   /anon:
     post:
-      summary: Get or create anonymous session
+      summary: Retrieve or create an anonymous session.
       description: >
         Returns an anonymous session, or creates a new one if not found.
         Requires the `visitor` header
+        Anonymous session's ID is hash combination of visitor ID (client fingerprint) and client IP address.
       tags:
         - Anon
       parameters:
@@ -61,7 +62,9 @@ paths:
   /auth/session-validate:
     post:
       summary: Validate session
-      description: Checks if the session is valid on the server side. Requires an Authorization Bearer token in the header.
+      description: >
+        Checks if the session is valid by verifying if it exists in cache or database.
+        Requires an Authorization Bearer token in the header.
       tags:
         - Auth
       security:
@@ -115,19 +118,13 @@ paths:
   /auth/google/callback:
     post:
       summary: Authenticate with Google
-      description: Authenticates a user using a Google ID token.
+      description: >
+        Authenticates a user using a Google ID token.
+        The ID token should be provided in the Authorization header as a Bearer token.
       tags:
         - Auth
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                Authorization:
-                  type: string
-                  description: Bearer Google ID token in the Authorization header
+      security:
+        - googleAuth:: []
       responses:
         "200":
           description: Successfully authenticated
@@ -159,19 +156,13 @@ paths:
   /auth/facebook/callback:
     post:
       summary: Authenticate with Facebook
-      description: Authenticates a user using a Facebook access token.
+      description: >
+        Authenticates a user using a Facebook access token.
+        The token should be provided in the Authorization header as a Bearer token.
       tags:
         - Auth
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                Authorization:
-                  type: string
-                  description: Bearer Facebook access token in the Authorization header
+      security:
+        - facebookAuth: []
       responses:
         "200":
           description: Successfully authenticated
@@ -395,7 +386,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
     put:
-      summary: Update a chat
+      summary: Update a chat by ID
       description: Updates a chat by its ID.
       tags:
         - Chat
@@ -533,7 +524,7 @@ paths:
                 $ref: "#/components/schemas/ErrorResponse"
     post:
       summary: Add a message to a chat
-      description: Adds a message to a chat. Requires chat_id, role, content, and model in the request.
+      description: Adds a message to a chat. Requires chat_id, role ('user' or 'assistant'), content, and model (optional) in the request.
       tags:
         - Message
       security:
@@ -683,7 +674,7 @@ paths:
       summary: Generate AI-powered image captions
       description: >
         Generates captions for one or more images using OpenAI, based on the provided content context.
-        Requires an array of image URLs and a content string.
+        Requires an array of image URLs and context for the images.
       tags:
         - Captionize
       requestBody:
@@ -749,6 +740,14 @@ components:
       type: http
       scheme: bearer
       bearerFormat: custom
+    googleAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+    facebookAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
   schemas:
     Chat:
       type: object

@@ -152,6 +152,60 @@ describe("POST /chats", () => {
       });
   });
 
+  it("Should fail if id is null", async () => {
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: null,
+        title: chatTitle,
+        page_url: pageUrl,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if id is empty", async () => {
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: "",
+        title: chatTitle,
+        page_url: pageUrl,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if id is not an uuid", async () => {
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: "not-an-uuid",
+        title: chatTitle,
+        page_url: pageUrl,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
   it("Should fail if page's url is an invalid url", async () => {
     const chatId = uuiv4();
     await supertest(app)

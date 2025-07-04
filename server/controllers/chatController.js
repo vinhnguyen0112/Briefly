@@ -3,6 +3,7 @@ const commonHelper = require("../helpers/commonHelper");
 const AppError = require("../models/appError");
 const Chat = require("../models/chat");
 const Message = require("../models/message");
+const { validate } = require("uuid");
 
 /**
  * Creates a new chat for an authenticated user.
@@ -22,6 +23,10 @@ const createChat = async (req, res, next) => {
         message: "Nothing to insert",
         data: { affectedRows: 0 },
       });
+    }
+
+    if (!validate(id)) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid chat ID");
     }
 
     const normalizedPageUrl = commonHelper.processUrl(page_url);

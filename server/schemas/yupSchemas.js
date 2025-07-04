@@ -7,7 +7,6 @@ const createChatSchema = object({
 
 const updateChatSchema = object({
   title: string().strict(),
-  page_url: string().strict(),
 });
 
 const createMessageSchema = object({

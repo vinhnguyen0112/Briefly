@@ -127,7 +127,7 @@ const validateSession = async (req, res, next) => {
     const parsed = resolveSessionId(sessionId);
 
     let sessionData = await lookupSession(parsed.actualId, parsed.type);
-    console.log("Session data found:", sessionData);
+
     // Refresh if needed
     if (sessionData) {
       await refreshSessionIfNeeded(parsed.actualId, parsed.type, sessionData);
