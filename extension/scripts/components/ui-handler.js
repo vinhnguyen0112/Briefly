@@ -717,6 +717,7 @@ export function injectChatHistoryElements(isAuth) {
 export function removeFeedbackIconsForAssistantMessages() {
   const messages = document.querySelectorAll(".chat-message.assistant-message");
   messages.forEach((msg) => {
+    // TODO: Same height with message component, consider fixing
     const feedbackBtn = msg.querySelector(".feedback-icon");
     if (feedbackBtn) feedbackBtn.remove();
   });

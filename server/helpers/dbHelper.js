@@ -44,7 +44,7 @@ async function executeQuery(query, params = []) {
 
     return rowsOrOkPacket;
   } catch (error) {
-    console.error("Error executing query:", error.message);
+    console.error("Error executing query:", error);
     throw error;
   } finally {
     if (connection) connection.release();

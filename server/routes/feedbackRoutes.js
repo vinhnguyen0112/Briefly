@@ -1,8 +1,17 @@
 const express = require("express");
 const router = express.Router();
 const { submitFeedback } = require("../controllers/feedbackController");
-const { validateSession } = require("../middlewares/authMiddlewares");
+const {
+  requireAuthenticatedSession,
+} = require("../middlewares/authMiddlewares");
+const { validateAndSanitizeBody } = require("../middlewares/commonMiddlewares");
+const { createFeedbackSchema } = require("../schemas/yupSchemas");
 
-router.post("/", validateSession, submitFeedback);
+router.post(
+  "/",
+  requireAuthenticatedSession,
+  validateAndSanitizeBody(createFeedbackSchema),
+  submitFeedback
+);
 
 module.exports = router;

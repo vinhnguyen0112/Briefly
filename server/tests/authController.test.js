@@ -48,11 +48,11 @@ describe("POST /session-validate", () => {
     await supertest(app)
       .post("/api/auth/session-validate")
       .set("Authorization", malformedAuthHeader)
-      .expect(400)
+      .expect(401)
       .then((response) => {
         expect(response.body).toMatchObject({
           success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
+          error: { code: ERROR_CODES.UNAUTHORIZED },
         });
       });
   });
@@ -164,11 +164,11 @@ describe("POST /auth-only", () => {
     await supertest(app)
       .post("/api/auth/auth-only")
       .set("Authorization", malformedAuthHeader)
-      .expect(400)
+      .expect(401)
       .then((response) => {
         expect(response.body).toMatchObject({
           success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
+          error: { code: ERROR_CODES.UNAUTHORIZED },
         });
       });
   });

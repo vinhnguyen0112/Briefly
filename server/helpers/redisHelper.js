@@ -13,7 +13,7 @@ if (process.env.NODE_ENV === "test") {
   client.on("error", (err) => console.error("Redis Client Error", err));
 } else {
   // client Redis for dev/prod
-  client = redis.createclient({
+  client = redis.createCluster({
     rootNodes: process.env.REDIS_HOST.split(",").map((host) => ({
       url: `redis://${host}:${process.env.REDIS_PORT}`,
     })),

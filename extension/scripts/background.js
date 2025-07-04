@@ -63,14 +63,18 @@ chrome.action.onClicked.addListener(async (tab) => {
     return;
   }
 
-  // Check lang attribute
+  // Inject script to check document's language
   try {
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id },
-      func: () => document.documentElement.lang,
+      func: () => {
+        const lang = document.documentElement.lang;
+        console.log("Current document lang:", lang);
+        return lang;
+      },
     });
     const lang = results && results[0] && results[0].result;
-    if (lang !== "en" && lang !== "vi") {
+    if (!lang || (!lang.startsWith("en") && !lang.startsWith("vi"))) {
       chrome.storage.local.set({ popupReason: "unsupported_lang" }, () => {
         chrome.action.setPopup({
           popup: "popup-unsupported-lang.html",
