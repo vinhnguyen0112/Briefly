@@ -313,7 +313,7 @@ paths:
                       id:
                         type: string
         "400":
-          description: Missing required fields or invalid page URL
+          description: Missing required fields or invalid page URL or SQL errors
           content:
             application/json:
               schema:
@@ -569,7 +569,7 @@ paths:
                       id:
                         type: string
         "400":
-          description: Missing required fields (chat_id, role, or content)
+          description: Missing or invalid required fields (chat_id, role, or content) or SQL errors
           content:
             application/json:
               schema:

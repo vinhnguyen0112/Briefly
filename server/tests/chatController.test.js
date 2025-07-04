@@ -667,6 +667,38 @@ describe("POST /chats/:chat_id/messages", () => {
       });
   });
 
+  it("Should fail if role is not 'user' or 'assistant'", async () => {
+    await supertest(app)
+      .post(`/api/chats/${chatId}/messages`)
+      .set("Authorization", authHeader)
+      .send({ role: "owner", content: "Test user message" })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.DATA_TRUNCATED },
+        });
+      });
+  });
+
+  it("Should fail if 'model' is too long", async () => {
+    await supertest(app)
+      .post(`/api/chats/${chatId}/messages`)
+      .set("Authorization", authHeader)
+      .send({
+        role: "assistant",
+        content: "Test assistant message",
+        model: "gpt-3.5".padEnd(257, "a"),
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.TOO_LONG },
+        });
+      });
+  });
+
   it("Should fail if chatId doesn't exist", async () => {
     await supertest(app)
       .post(`/api/chats/nonexist-chat-id/messages`)

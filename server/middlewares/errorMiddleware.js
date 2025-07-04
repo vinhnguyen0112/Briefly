@@ -66,6 +66,14 @@ const globalErrorHandler = (err, req, res, next) => {
           message: "Data too long.",
         },
       });
+    } else if (err.code === "WARN_DATA_TRUNCATED") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: ERROR_CODES.DATA_TRUNCATED,
+          message: "Data truncated.",
+        },
+      });
     }
   }
 

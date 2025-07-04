@@ -12,6 +12,7 @@ const ERROR_CODES = {
   ROW_IS_REFERENCED: "ROW_IS_REFERENCED", // MySQL row is referenced error
   OUT_OF_RANGE: "OUT_OF_RANGE", // MySQL data out of range warning
   TOO_LONG: "TOO_LONG", // MySQL data too long warning
+  DATA_TRUNCATED: "DATA_TRUNCATED", // MySQL data truncated warning
 };
 
 module.exports = { ERROR_CODES };
