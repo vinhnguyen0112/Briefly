@@ -1,12 +1,20 @@
 const OpenAI = require("openai");
 let pLimit = require("p-limit");
 pLimit = pLimit.default || pLimit;
+const AppError = require("../models/appError");
+const { ERROR_CODES } = require("../errors");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const CONCURRENCY = 5;
 
-const generateCaptions = async (sources, content) => {
-  if (!pLimit) throw new Error("pLimit module is not loaded yet.");
+/**
+ * Generates captions for an array of image sources using OpenAI.
+ * @param {String[]} sources Array of image sources (can be URLs or base64 strings).
+ * @param {String} context Contextual article/content for captioning.
+ * @returns {Promise<{ captions: String[], usage: Object }>}
+ * @throws on OpenAI or input errors.
+ */
+const generateCaptions = async (sources, context) => {
   const limit = pLimit(CONCURRENCY);
 
   const tasks = sources.map((src, idx) =>
@@ -23,7 +31,7 @@ const generateCaptions = async (sources, content) => {
             content: [
               {
                 type: "text",
-                text: content.slice(0, 100000),
+                text: context.slice(0, 100000),
               },
               {
                 type: "text",
@@ -44,13 +52,11 @@ const generateCaptions = async (sources, content) => {
           model: "gpt-4o-mini",
           messages,
           temperature: 0.5,
-          // max_tokens: 100,
         });
 
         const raw = response.choices?.[0]?.message?.content?.trim() || "";
         const clean = raw.replace(/^['"]+|['"]+$/g, "").split(/\r?\n/)[0];
 
-        console.log(`→ [${idx}] Caption OK`);
         return {
           caption: clean,
           usage: response.usage || {
@@ -60,7 +66,7 @@ const generateCaptions = async (sources, content) => {
           },
         };
       } catch (err) {
-        console.error(`→ [${idx}] Caption error:`, err.message);
+        console.error(`Caption error for image ${idx}:`, err);
         return {
           caption: null,
           usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
@@ -69,19 +75,27 @@ const generateCaptions = async (sources, content) => {
     })
   );
 
-  const results = await Promise.all(tasks);
+  try {
+    const results = await Promise.all(tasks);
 
-  const captions = results.map((r) => r.caption);
-  const usage = results.reduce(
-    (acc, r) => ({
-      prompt_tokens: acc.prompt_tokens + r.usage.prompt_tokens,
-      completion_tokens: acc.completion_tokens + r.usage.completion_tokens,
-      total_tokens: acc.total_tokens + r.usage.total_tokens,
-    }),
-    { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
-  );
+    const captions = results.map((r) => r.caption);
+    const usage = results.reduce(
+      (acc, r) => ({
+        prompt_tokens: acc.prompt_tokens + r.usage.prompt_tokens,
+        completion_tokens: acc.completion_tokens + r.usage.completion_tokens,
+        total_tokens: acc.total_tokens + r.usage.total_tokens,
+      }),
+      { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+    );
 
-  return { captions, usage };
+    return { captions, usage };
+  } catch (err) {
+    throw new AppError(
+      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+      "Failed to generate captions using OpenAI",
+      401
+    );
+  }
 };
 
 module.exports = { generateCaptions };

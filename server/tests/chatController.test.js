@@ -4,6 +4,7 @@ const { ERROR_CODES } = require("../errors");
 const app = require("../app");
 const { redisHelper } = require("../helpers/redisHelper");
 const { v4: uuiv4 } = require("uuid");
+const Chat = require("../models/chat");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
 
@@ -35,11 +36,11 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if missing required fields", async () => {
+  it("Should fail if missing 'title'", async () => {
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
-      .send({ id: chatId })
+      .send({ id: chatId, page_url: pageUrl })
       .expect(400)
       .then((response) => {
         expect(response.body).toMatchObject({
@@ -49,7 +50,57 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if page's url is invalid", async () => {
+  it("Should fail if missing 'page_url'", async () => {
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({ id: chatId, title: chatTitle })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if id is not a string", async () => {
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: 123,
+        title: chatTitle,
+        page_url: pageUrl,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if title is not a string", async () => {
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: chatId,
+        title: 123,
+        page_url: pageUrl,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if page's url is an invalid url", async () => {
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
@@ -57,6 +108,24 @@ describe("POST /chats", () => {
         id: chatId,
         title: chatTitle,
         page_url: "invalid page url",
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if page's url is not a string", async () => {
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: chatId,
+        title: chatTitle,
+        page_url: 123456,
       })
       .expect(400)
       .then((response) => {
@@ -239,15 +308,97 @@ describe("PUT /chats/:id", () => {
       .expect(200);
   });
 
-  it("Should update a chat", async () => {
+  it("Should update a chat's title", async () => {
+    const updatedTitle = "Updated title";
     await supertest(app)
       .put(`/api/chats/${chatId}`)
       .set("Authorization", authHeader)
-      .send({ title: "Updated Title" })
+      .send({ title: updatedTitle })
       .expect(200)
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body.data).toMatchObject({ affectedRows: 1 });
+      });
+
+    const chat = await Chat.getById(chatId);
+    expect(chat).toHaveProperty("title", updatedTitle);
+  });
+
+  it("Should update a chat's page_url", async () => {
+    const updatedPageUrl = "https://www.updated.com";
+    await supertest(app)
+      .put(`/api/chats/${chatId}`)
+      .set("Authorization", authHeader)
+      .send({ page_url: updatedPageUrl })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.data).toMatchObject({ affectedRows: 1 });
+      });
+
+    const chat = await Chat.getById(chatId);
+    expect(chat).toHaveProperty("page_url", updatedPageUrl);
+  });
+
+  it("Should update both chat's title and page_url", async () => {
+    const updatedTitle = "Updated both title and page_url";
+    const updatedPageUrl = "https://www.updated-both.com";
+    await supertest(app)
+      .put(`/api/chats/${chatId}`)
+      .set("Authorization", authHeader)
+      .send({
+        title: updatedTitle,
+        page_url: updatedPageUrl,
+      })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.data).toMatchObject({ affectedRows: 1 });
+      });
+
+    const chat = await Chat.getById(chatId);
+    expect(chat).toHaveProperty("title", updatedTitle);
+    expect(chat).toHaveProperty("page_url", updatedPageUrl);
+  });
+
+  it("Should fail if title is not a string", async () => {
+    await supertest(app)
+      .put(`/api/chats/${chatId}`)
+      .set("Authorization", authHeader)
+      .send({ title: 123456 })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should have no effect if request body is empty", async () => {
+    await supertest(app)
+      .put(`/api/chats/${chatId}`)
+      .set("Authorization", authHeader)
+      .send({})
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("affectedRows", 0);
+      });
+  });
+
+  it("Should fail if page_url is not a string", async () => {
+    await supertest(app)
+      .put(`/api/chats/${chatId}`)
+      .set("Authorization", authHeader)
+      .send({ page_url: 123456 })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
       });
   });
 
@@ -398,11 +549,53 @@ describe("POST /chats/:chat_id/messages", () => {
       });
   });
 
-  it("Should fail if missing required fields", async () => {
+  it("Should fail if missing 'content' fields", async () => {
     await supertest(app)
       .post(`/api/chats/${chatId}/messages`)
       .set("Authorization", authHeader)
       .send({ role: "user" })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if missing 'role' fields", async () => {
+    await supertest(app)
+      .post(`/api/chats/${chatId}/messages`)
+      .set("Authorization", authHeader)
+      .send({ content: "Test user message" })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if role is not a string", async () => {
+    await supertest(app)
+      .post(`/api/chats/${chatId}/messages`)
+      .set("Authorization", authHeader)
+      .send({ role: 123, content: "Test user message" })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if content is not a string", async () => {
+    await supertest(app)
+      .post(`/api/chats/${chatId}/messages`)
+      .set("Authorization", authHeader)
+      .send({ role: "user", content: 123 })
       .expect(400)
       .then((response) => {
         expect(response.body).toMatchObject({

@@ -3,11 +3,19 @@ const jestVariables = require("./jestVariables");
 const app = require("../app");
 const { ERROR_CODES } = require("../errors");
 const { v4: uuidv4 } = require("uuid");
-const message = require("../models/message");
+const { redisHelper } = require("../helpers/redisHelper");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
 const sampleChatId = uuidv4();
 let sampleMessageId;
+
+beforeAll(async () => {
+  await redisHelper.client.connect();
+});
+
+afterAll(async () => {
+  await redisHelper.client.quit();
+});
 
 // Insert a sample message to test
 beforeAll(async () => {
@@ -53,8 +61,9 @@ describe("POST /api/feedback", () => {
       .expect(200)
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
-        expect(response.body).toHaveProperty("id");
-        expect(response.body.id).toBeTruthy();
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("id");
+        expect(response.body.data.id).toBeTruthy();
       });
   });
 
@@ -66,8 +75,9 @@ describe("POST /api/feedback", () => {
       .expect(200)
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
-        expect(response.body).toHaveProperty("id");
-        expect(response.body.id).toBeTruthy();
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("id");
+        expect(response.body.data.id).toBeTruthy();
       });
   });
 

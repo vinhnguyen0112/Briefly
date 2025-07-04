@@ -1,27 +1,41 @@
-const { object, string } = require("yup");
+const { object, string, array, number } = require("yup");
 const createChatSchema = object({
-  id: string().required(),
-  title: string().required(),
-  page_url: string().required(),
+  id: string().strict().required(),
+  title: string().strict().required(),
+  page_url: string().strict().required(),
 });
 
 const updateChatSchema = object({
-  title: string(),
-  page_url: string(),
+  title: string().strict(),
+  page_url: string().strict(),
 });
 
 const createMessageSchema = object({
-  role: string().required(),
-  content: string().required(),
-  model: string().nullable(),
+  role: string().strict().required(),
+  content: string().strict().required(),
+  model: string().strict().nullable(),
 });
 
 const createFeedbackSchema = object({
-  stars: string()
-    .required()
-    .matches(/^[1-5]$/, "Stars must be a number between 1 and 5"),
+  stars: number()
+    .required("Stars rating is required")
+    .integer("Stars must be an integer between 1 and 5")
+    .min(1, "Stars must be at least 1")
+    .max(5, "Stars cannot be more than 5"),
   comment: string().nullable(),
-  messageId: string().required(),
+  message_id: number().strict().required(),
+});
+
+const createImageCaptionSchema = object({
+  sources: array()
+    .of(string().required())
+    .required()
+    .min(1, "At least one source is required"),
+  context: string()
+    .strict()
+    .required("Missing or invalid content context")
+    .trim()
+    .min(1, "Missing or invalid content context"),
 });
 
 module.exports = {
@@ -29,4 +43,5 @@ module.exports = {
   updateChatSchema,
   createMessageSchema,
   createFeedbackSchema,
+  createImageCaptionSchema,
 };

@@ -15,12 +15,15 @@ const Message = require("../models/message");
 const createChat = async (req, res, next) => {
   try {
     const { id, page_url, title } = req.body;
-    if (!id || !page_url || !title) {
-      throw new AppError(
-        ERROR_CODES.INVALID_INPUT,
-        "Missing required fields: id, page_url, or title"
-      );
+
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.json({
+        success: true,
+        message: "Nothing to insert",
+        data: { affectedRows: 0 },
+      });
     }
+
     const normalizedPageUrl = commonHelper.processUrl(page_url);
     if (!normalizedPageUrl) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
@@ -107,7 +110,11 @@ const updateChat = async (req, res, next) => {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing chat id");
     }
     if (!req.body || Object.keys(req.body).length === 0) {
-      res.json({ success: true, message: "Nothing to update" });
+      return res.json({
+        success: true,
+        message: "Nothing to update",
+        data: { affectedRows: 0 },
+      });
     }
     const affectedRows = await Chat.update(id, req.body);
     res.json({

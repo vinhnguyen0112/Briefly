@@ -1,4 +1,6 @@
 const imageCaptionService = require("../services/imageCaptionService");
+const AppError = require("../models/appError");
+const { ERROR_CODES } = require("../errors");
 
 /**
  * Express handler for generating AI-powered image captions.
@@ -8,32 +10,18 @@ const imageCaptionService = require("../services/imageCaptionService");
  * @param {Function} next
  * @returns {Promise<void>}
  */
-const imageCaption = async (req, res, next) => {
+const captionize = async (req, res, next) => {
   try {
-    const { sources, content } = req.body;
-
-    if (!Array.isArray(sources) || sources.length === 0) {
-      return res
-        .status(400)
-        .json({ error: "sources must be a non-empty array" });
-    }
-
-    if (typeof content !== "string" || content.trim() === "") {
-      return res
-        .status(400)
-        .json({ error: "Missing or invalid content context" });
-    }
-
+    const { sources, context } = req.body;
     const { captions, usage } = await imageCaptionService.generateCaptions(
       sources,
-      content
+      context
     );
-    console.log(captions);
-    console.log(usage);
-    res.json({ captions, usage });
+
+    res.json({ success: true, data: { captions, usage } });
   } catch (err) {
     return next(err);
   }
 };
 
-module.exports = { imageCaption };
+module.exports = { captionize };
