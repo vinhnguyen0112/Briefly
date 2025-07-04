@@ -633,7 +633,7 @@ paths:
       summary: Submit feedback
       description: >
         Submit feedback from an authenticated user.  
-        Requires a valid session and a request body with stars (1-5), optional comment, and optional messageId.
+        Requires a valid session and request body with stars (1-5), message ID and optional comment.
       tags:
         - Feedback
       security:
@@ -748,7 +748,7 @@ components:
       type: object
       required:
         - stars
-        - messageId
+        - message_id
       properties:
         stars:
           type: integer
@@ -758,7 +758,7 @@ components:
         comment:
           type: string
           description: Optional feedback comment
-        messageId:
+        message_id:
           type: string
           description: Required message ID of the feedback
     ErrorResponse:

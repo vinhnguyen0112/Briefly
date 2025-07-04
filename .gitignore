@@ -1,5 +1,5 @@
 server/node_modules
 server/.env
-server/.env.test
 server/.env.production
+server/.env.test
 .DS_Store

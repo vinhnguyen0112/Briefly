@@ -1,71 +1,46 @@
 const supertest = require("supertest");
 const jestVariables = require("./jestVariables");
-
-jest.mock("../helpers/dbHelper", () => ({
-  executeQuery: jest
-    .fn()
-    .mockResolvedValue({ insertId: "mock-id", affectedRows: 1 }),
-}));
-
-jest.mock("../helpers/redisHelper", () => ({
-  redisCluster: {
-    connect: jest.fn().mockResolvedValue(true),
-    quit: jest.fn().mockResolvedValue(true),
-  },
-}));
-
-jest.mock("../middlewares/authMiddlewares", () => ({
-  validateSession: (req, res, next) => {
-    // Check if request has Authorization header
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith("Bearer auth:")) {
-      return res.status(401).json({ error: "Authentication required" });
-    }
-    req.session = { user_id: "test-user-789" };
-    req.sessionType = "auth";
-    next();
-  },
-  verifyOrigin: (req, res, next) => next(),
-}));
-
-// Mock other dependencies to prevent errors
-jest.mock("../helpers/authHelper", () => ({
-  extractFromAuthHeader: jest.fn().mockReturnValue("mock-token"),
-  verifyGoogleToken: jest
-    .fn()
-    .mockResolvedValue({ userId: "test-user", name: "Test User" }),
-  verifyFacebookToken: jest
-    .fn()
-    .mockResolvedValue({ userId: "test-user", name: "Test User" }),
-}));
-
-jest.mock("../models/user", () => ({
-  create: jest.fn().mockResolvedValue(true),
-  getById: jest.fn().mockResolvedValue({ id: "test-user", name: "Test User" }),
-}));
-
-jest.mock("../models/session", () => ({
-  create: jest.fn().mockResolvedValue(true),
-  getById: jest
-    .fn()
-    .mockResolvedValue({ id: "test-session", user_id: "test-user" }),
-  delete: jest.fn().mockResolvedValue(1),
-}));
-
-jest.mock("../models/anonSession", () => ({
-  create: jest.fn().mockResolvedValue(true),
-  getById: jest.fn().mockResolvedValue({ id: "test-anon-session" }),
-  delete: jest.fn().mockResolvedValue(1),
-}));
-
 const app = require("../app");
+const { ERROR_CODES } = require("../errors");
+const { v4: uuidv4 } = require("uuid");
+const message = require("../models/message");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
+const sampleChatId = uuidv4();
+let sampleMessageId;
+
+// Insert a sample message to test
+beforeAll(async () => {
+  await supertest(app)
+    .post("/api/chats")
+    .set("Authorization", authHeader)
+    .send({
+      id: sampleChatId,
+      title: "Test Chat",
+      page_url: "www.example.com",
+    })
+    .expect(200);
+
+  await supertest(app)
+    .post(`/api/chats/${sampleChatId}/messages`)
+    .set("Authorization", authHeader)
+    .send({
+      role: "assistant",
+      content: "This is a test message",
+      model: "gpt-3.5",
+    })
+    .expect(200)
+    .then((response) => {
+      expect(response.body).toHaveProperty("success", true);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body.data).toHaveProperty("id");
+      sampleMessageId = response.body.data.id;
+    });
+
+  expect(sampleMessageId).toBeTruthy();
+});
 
 describe("POST /api/feedback", () => {
-  /**
-   * Test successful feedback submission with complete data
-   */
   it("Should successfully submit feedback with valid data", async () => {
     await supertest(app)
       .post("/api/feedback")
@@ -73,6 +48,7 @@ describe("POST /api/feedback", () => {
       .send({
         stars: 5,
         comment: "Great service!",
+        message_id: sampleMessageId,
       })
       .expect(200)
       .then((response) => {
@@ -82,14 +58,11 @@ describe("POST /api/feedback", () => {
       });
   });
 
-  /**
-   * Test feedback submission with only stars rating
-   */
   it("Should successfully submit feedback with only stars", async () => {
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ stars: 4 })
+      .send({ stars: 4, message_id: sampleMessageId })
       .expect(200)
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
@@ -98,28 +71,25 @@ describe("POST /api/feedback", () => {
       });
   });
 
-  /**
-   * Test authentication required - no authorization header
-   */
   it("Should fail if no authentication provided", async () => {
     await supertest(app)
       .post("/api/feedback")
       .send({
         stars: 3,
         comment: "Anonymous feedback",
+        message_id: sampleMessageId,
       })
       .expect(401)
       .then((response) => {
-        expect(response.body).toHaveProperty(
-          "error",
-          "Authentication required"
-        );
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.UNAUTHORIZED,
+          },
+        });
       });
   });
 
-  /**
-   * Test authentication required - invalid authorization header
-   */
   it("Should fail if invalid authentication provided", async () => {
     await supertest(app)
       .post("/api/feedback")
@@ -127,128 +97,178 @@ describe("POST /api/feedback", () => {
       .send({
         stars: 3,
         comment: "Invalid auth feedback",
+        message_id: sampleMessageId,
       })
       .expect(401)
       .then((response) => {
-        expect(response.body).toHaveProperty(
-          "error",
-          "Authentication required"
-        );
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.UNAUTHORIZED,
+          },
+        });
       });
   });
 
-  /**
-   * Test validation error when stars field is missing
-   */
-  it("Should fail if stars field is missing", async () => {
+  it("Should fail if stars is missing", async () => {
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ comment: "Comment without stars" })
+      .send({ comment: "Comment without stars", message_id: sampleMessageId })
       .expect(400)
       .then((response) => {
-        expect(response.body).toHaveProperty("error", "Invalid stars");
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.INVALID_INPUT,
+          },
+        });
       });
   });
 
-  /**
-   * Test validation error for stars value below minimum
-   */
+  it("Should fail if message_id is missing", async () => {
+    await supertest(app)
+      .post("/api/feedback")
+      .set("Authorization", authHeader)
+      .send({ stars: 4, comment: "Comment without stars" })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.INVALID_INPUT,
+          },
+        });
+      });
+  });
+
   it("Should fail if stars is less than 1", async () => {
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ stars: 0, comment: "Invalid rating" })
+      .send({
+        stars: 0,
+        comment: "Invalid rating",
+        message_id: sampleMessageId,
+      })
       .expect(400)
       .then((response) => {
-        expect(response.body).toHaveProperty("error", "Invalid stars");
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.INVALID_INPUT,
+          },
+        });
       });
   });
 
-  /**
-   * Test validation error for stars value above maximum
-   */
   it("Should fail if stars is greater than 5", async () => {
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ stars: 6, comment: "Invalid rating" })
+      .send({
+        stars: 6,
+        comment: "Invalid rating",
+        message_id: sampleMessageId,
+      })
       .expect(400)
       .then((response) => {
-        expect(response.body).toHaveProperty("error", "Invalid stars");
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.INVALID_INPUT,
+          },
+        });
       });
   });
 
-  /**
-   * Test validation error for non-numeric stars value
-   */
   it("Should fail if stars is not a number", async () => {
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ stars: "five", comment: "Invalid rating type" })
+      .send({
+        stars: "five",
+        comment: "Invalid rating type",
+        message_id: sampleMessageId,
+      })
       .expect(400)
       .then((response) => {
-        expect(response.body).toHaveProperty("error", "Invalid stars");
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.INVALID_INPUT,
+          },
+        });
       });
   });
 
-  /**
-   * Test validation error for decimal stars value
-   */
   it("Should fail if stars is a decimal number", async () => {
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ stars: 4.5, comment: "Decimal rating" })
+      .send({
+        stars: 4.5,
+        comment: "Decimal rating",
+        message_id: sampleMessageId,
+      })
       .expect(400)
       .then((response) => {
-        expect(response.body).toHaveProperty("error", "Invalid stars");
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.INVALID_INPUT,
+          },
+        });
       });
   });
 
-  /**
-   * Test boundary values for stars rating
-   */
   it("Should accept boundary values 1 and 5 for stars", async () => {
     // Test minimum boundary
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ stars: 1, comment: "Minimum rating" })
-      .expect(200);
+      .send({
+        stars: 1,
+        comment: "Minimum rating",
+        message_id: sampleMessageId,
+      })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+      });
 
     // Test maximum boundary
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ stars: 5, comment: "Maximum rating" })
-      .expect(200);
-  });
-
-  /**
-   * Test empty comment handling
-   */
-  it("Should accept empty comment", async () => {
-    await supertest(app)
-      .post("/api/feedback")
-      .set("Authorization", authHeader)
-      .send({ stars: 3, comment: "" })
+      .send({
+        stars: 5,
+        comment: "Maximum rating",
+        message_id: sampleMessageId,
+      })
       .expect(200)
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
       });
   });
 
-  /**
-   * Test long comment handling
-   */
+  it("Should accept empty comment", async () => {
+    await supertest(app)
+      .post("/api/feedback")
+      .set("Authorization", authHeader)
+      .send({ stars: 3, comment: "", message_id: sampleMessageId })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+      });
+  });
+
   it("Should accept long comments", async () => {
     const longComment = "A".repeat(1000);
     await supertest(app)
       .post("/api/feedback")
       .set("Authorization", authHeader)
-      .send({ stars: 4, comment: longComment })
+      .send({ stars: 4, comment: longComment, message_id: sampleMessageId })
       .expect(200)
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
