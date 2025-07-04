@@ -1,6 +1,4 @@
 const imageCaptionService = require("../services/imageCaptionService");
-const AppError = require("../models/appError");
-const { ERROR_CODES } = require("../errors");
 
 /**
  * Express handler for generating AI-powered image captions.

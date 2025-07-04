@@ -17,11 +17,11 @@ afterAll(async () => {
 });
 
 describe("POST /chats", () => {
-  const chatId = uuiv4();
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com/";
 
   it("Should create a new chat if all parameters are correctly provided", async () => {
+    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
@@ -36,7 +36,8 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if missing 'title'", async () => {
+  it("Should fail if title is missing", async () => {
+    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
@@ -50,7 +51,76 @@ describe("POST /chats", () => {
       });
   });
 
+  it("Should fail if title is empty", async () => {
+    const chatId = uuiv4();
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({ id: chatId, page_url: pageUrl, title: "" })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if title is null", async () => {
+    const chatId = uuiv4();
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({ id: chatId, page_url: pageUrl, title: null })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if title is not a string", async () => {
+    const chatId = uuiv4();
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: chatId,
+        title: 123,
+        page_url: pageUrl,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if title is too long", async () => {
+    const chatId = uuiv4();
+    await supertest(app)
+      .post("/api/chats")
+      .set("Authorization", authHeader)
+      .send({
+        id: chatId,
+        title: "".padEnd(257, "a"),
+        page_url: pageUrl,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.TOO_LONG },
+        });
+      });
+  });
+
   it("Should fail if missing 'page_url'", async () => {
+    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
@@ -82,25 +152,8 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if title is not a string", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .set("Authorization", authHeader)
-      .send({
-        id: chatId,
-        title: 123,
-        page_url: pageUrl,
-      })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
-        });
-      });
-  });
-
   it("Should fail if page's url is an invalid url", async () => {
+    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
@@ -119,6 +172,7 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if page's url is not a string", async () => {
+    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
@@ -324,43 +378,6 @@ describe("PUT /chats/:id", () => {
     expect(chat).toHaveProperty("title", updatedTitle);
   });
 
-  it("Should update a chat's page_url", async () => {
-    const updatedPageUrl = "https://www.updated.com";
-    await supertest(app)
-      .put(`/api/chats/${chatId}`)
-      .set("Authorization", authHeader)
-      .send({ page_url: updatedPageUrl })
-      .expect(200)
-      .then((response) => {
-        expect(response.body).toHaveProperty("success", true);
-        expect(response.body.data).toMatchObject({ affectedRows: 1 });
-      });
-
-    const chat = await Chat.getById(chatId);
-    expect(chat).toHaveProperty("page_url", updatedPageUrl);
-  });
-
-  it("Should update both chat's title and page_url", async () => {
-    const updatedTitle = "Updated both title and page_url";
-    const updatedPageUrl = "https://www.updated-both.com";
-    await supertest(app)
-      .put(`/api/chats/${chatId}`)
-      .set("Authorization", authHeader)
-      .send({
-        title: updatedTitle,
-        page_url: updatedPageUrl,
-      })
-      .expect(200)
-      .then((response) => {
-        expect(response.body).toHaveProperty("success", true);
-        expect(response.body.data).toMatchObject({ affectedRows: 1 });
-      });
-
-    const chat = await Chat.getById(chatId);
-    expect(chat).toHaveProperty("title", updatedTitle);
-    expect(chat).toHaveProperty("page_url", updatedPageUrl);
-  });
-
   it("Should fail if title is not a string", async () => {
     await supertest(app)
       .put(`/api/chats/${chatId}`)
@@ -375,24 +392,28 @@ describe("PUT /chats/:id", () => {
       });
   });
 
-  it("Should have no effect if request body is empty", async () => {
+  it("Should have no effect if title is empty", async () => {
     await supertest(app)
       .put(`/api/chats/${chatId}`)
       .set("Authorization", authHeader)
-      .send({})
+      .send({ title: "" })
       .expect(200)
       .then((response) => {
-        expect(response.body).toHaveProperty("success", true);
-        expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("affectedRows", 0);
+        expect(response.body).toMatchObject({
+          success: true,
+          data: { affectedRows: 0 },
+        });
       });
+
+    const chat = await Chat.getById(chatId);
+    expect(chat.title.length > 0).toBeTruthy();
   });
 
-  it("Should fail if page_url is not a string", async () => {
+  it("Should have no effect if title is null", async () => {
     await supertest(app)
       .put(`/api/chats/${chatId}`)
       .set("Authorization", authHeader)
-      .send({ page_url: 123456 })
+      .send({ title: null })
       .expect(400)
       .then((response) => {
         expect(response.body).toMatchObject({
@@ -408,6 +429,19 @@ describe("PUT /chats/:id", () => {
       .set("Authorization", authHeader)
       .send({ title: "Updated Title" })
       .expect(404); // Route not found
+  });
+
+  it("Should have no effect if request body is empty", async () => {
+    await supertest(app)
+      .put(`/api/chats/${chatId}`)
+      .set("Authorization", authHeader)
+      .send({})
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("affectedRows", 0);
+      });
   });
 
   it("Should have no effect if chat not found", async () => {
@@ -563,6 +597,34 @@ describe("POST /chats/:chat_id/messages", () => {
       });
   });
 
+  it("Should fail if content is not a string", async () => {
+    await supertest(app)
+      .post(`/api/chats/${chatId}/messages`)
+      .set("Authorization", authHeader)
+      .send({ role: "user", content: 123 })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if content is null", async () => {
+    await supertest(app)
+      .post(`/api/chats/${chatId}/messages`)
+      .set("Authorization", authHeader)
+      .send({ role: "user", content: null })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
   it("Should fail if missing 'role' fields", async () => {
     await supertest(app)
       .post(`/api/chats/${chatId}/messages`)
@@ -591,16 +653,30 @@ describe("POST /chats/:chat_id/messages", () => {
       });
   });
 
-  it("Should fail if content is not a string", async () => {
+  it("Should fail if role is null", async () => {
     await supertest(app)
       .post(`/api/chats/${chatId}/messages`)
       .set("Authorization", authHeader)
-      .send({ role: "user", content: 123 })
+      .send({ role: null, content: "Test user message" })
       .expect(400)
       .then((response) => {
         expect(response.body).toMatchObject({
           success: false,
           error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if chatId doesn't exist", async () => {
+    await supertest(app)
+      .post(`/api/chats/nonexist-chat-id/messages`)
+      .set("Authorization", authHeader)
+      .send({ role: "user", content: "Test user message" })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.REFERENCED_ROW_MISSING },
         });
       });
   });

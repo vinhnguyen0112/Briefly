@@ -10,6 +10,8 @@ const ERROR_CODES = {
   REFERENCED_ROW_MISSING: "REFERENCED_ROW_MISSING", // MySQL foreign key error
   NULL_FIELD: "NULL_FIELD", // MySQL null field error,
   ROW_IS_REFERENCED: "ROW_IS_REFERENCED", // MySQL row is referenced error
+  OUT_OF_RANGE: "OUT_OF_RANGE", // MySQL data out of range warning
+  TOO_LONG: "TOO_LONG", // MySQL data too long warning
 };
 
 module.exports = { ERROR_CODES };

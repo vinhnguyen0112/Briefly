@@ -152,6 +152,46 @@ describe("POST /api/feedback", () => {
       });
   });
 
+  it("Should fail if message doesn't exists", async () => {
+    await supertest(app)
+      .post("/api/feedback")
+      .set("Authorization", authHeader)
+      .send({
+        stars: 4,
+        comment: "Example comment",
+        message_id: -1,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.REFERENCED_ROW_MISSING,
+          },
+        });
+      });
+  });
+
+  it("Should fail if message_id is out of range", async () => {
+    await supertest(app)
+      .post("/api/feedback")
+      .set("Authorization", authHeader)
+      .send({
+        stars: 4,
+        comment: "Example comment",
+        message_id: 999999999999,
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: {
+            code: ERROR_CODES.OUT_OF_RANGE,
+          },
+        });
+      });
+  });
+
   it("Should fail if stars is less than 1", async () => {
     await supertest(app)
       .post("/api/feedback")

@@ -85,8 +85,6 @@ class Chat {
    * Update a chat
    * @param {String} id ID of the chat
    * @param {Object} updates Update values
-   * @param {String} [updates.page_url]
-   * @param {String} [updates.page_id]
    * @param {String} [updates.title]
    * @returns {Promise<number>} Number of affected rows
    */

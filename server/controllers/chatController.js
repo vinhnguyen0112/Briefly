@@ -116,7 +116,10 @@ const updateChat = async (req, res, next) => {
         data: { affectedRows: 0 },
       });
     }
-    const affectedRows = await Chat.update(id, req.body);
+
+    const { title } = req.body;
+
+    const affectedRows = await Chat.update(id, { title });
     res.json({
       success: true,
       message: "Chat updated successfully.",

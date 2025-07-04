@@ -792,8 +792,6 @@ components:
     UpdateChatRequest:
       type: object
       properties:
-        page_url:
-          type: string
         title:
           type: string
     CreateMessageRequest:

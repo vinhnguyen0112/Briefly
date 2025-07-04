@@ -21,7 +21,7 @@ const globalErrorHandler = (err, req, res, next) => {
       return res.status(400).json({
         success: false,
         error: {
-          code: "DUPLICATE_ENTRY",
+          code: ERROR_CODES.DUPLICATE_ENTRY,
           message: "A record with the same value already exists.",
         },
       });
@@ -29,7 +29,7 @@ const globalErrorHandler = (err, req, res, next) => {
       return res.status(400).json({
         success: false,
         error: {
-          code: "REFERENCED_ROW_MISSING",
+          code: ERROR_CODES.REFERENCED_ROW_MISSING,
           message: "Referenced resource does not exist.",
         },
       });
@@ -37,7 +37,7 @@ const globalErrorHandler = (err, req, res, next) => {
       return res.status(400).json({
         success: false,
         error: {
-          code: "NULL_FIELD",
+          code: ERROR_CODES.NULL_FIELD,
           message: "A required field is missing.",
         },
       });
@@ -45,9 +45,25 @@ const globalErrorHandler = (err, req, res, next) => {
       return res.status(400).json({
         success: false,
         error: {
-          code: "ROW_IS_REFERENCED",
+          code: ERROR_CODES.ROW_IS_REFERENCED,
           message:
             "Cannot delete or update this resource because it is still referenced elsewhere.",
+        },
+      });
+    } else if (err.code === "ER_WARN_DATA_OUT_OF_RANGE") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: ERROR_CODES.OUT_OF_RANGE,
+          message: "Data out of range.",
+        },
+      });
+    } else if (err.code === "ER_DATA_TOO_LONG") {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: ERROR_CODES.TOO_LONG,
+          message: "Data too long.",
         },
       });
     }
