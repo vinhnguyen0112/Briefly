@@ -1,5 +1,13 @@
 const imageCaptionService = require("../services/imageCaptionService");
 
+/**
+ * Express handler for generating AI-powered image captions.
+ * Accepts array of image sources and content context to generate relevant captions.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ * @returns {Promise<void>}
+ */
 const imageCaption = async (req, res, next) => {
   try {
     const { sources, content } = req.body;
