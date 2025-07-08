@@ -10,6 +10,7 @@ import {
   resetCurrentChatState,
   setCurrentChatState,
   addToScreenStack,
+  resetPaginationState,
 } from "./state.js";
 import {
   handleResize,
@@ -386,11 +387,13 @@ export function setupEventListeners() {
             chrome.runtime.sendMessage(
               { action: "clear_chat_history" },
               (response) => {
-                // TODO: Handle response
                 if (response.success) {
                   console.log("Briefly: Clear chat history successfully");
+                  state.chatHistory = []; // Empty out chat history
+                  renderAllChatHistory();
                 } else {
                   console.log("Briefly: Clear user history failed!");
+                  // TODO: Display error?
                 }
               }
             );
@@ -401,12 +404,16 @@ export function setupEventListeners() {
   });
 
   elements.refreshChatHistoryButton.addEventListener("click", (e) => {
-    chrome.runtime.sendMessage(
-      { action: "refresh_chat_history" },
-      (response) => {
-        //TODO: Handle response
-      }
-    );
+    // chrome.runtime.sendMessage(
+    //   { action: "refresh_chat_history" },
+    //   (response) => {
+    //     //TODO: Handle response
+    //     if (response.success) {
+    //     }
+    //   }
+    // );
+    state.chatHistory = []; // Empty out chat history
+    resetPaginationState(); // Reset pagination state
   });
 
   // Hide menus when clicking outside
@@ -601,7 +608,7 @@ export function toggleChatHistoryScreen() {
 }
 
 // Fetch chat history for the current page
-export function fetchChatHistory() {
+function fetchChatHistory() {
   console.log("Fetching chat history");
   state.pagination.isFetching = true;
 
@@ -687,8 +694,10 @@ function renderCurrentPageChatHistory() {
   }
 }
 
-// Render all chat history, for on chat history open
-async function renderAllChatHistory() {
+/**
+ * Render all chat history from stored history
+ */
+function renderAllChatHistory() {
   const { chatHistoryList, chatHistoryEmpty } = elements;
 
   if (!chatHistoryList) return;
@@ -754,13 +763,13 @@ function createChatHistoryItem(chat) {
       return;
     }
 
-    const history = [];
     clearMessagesFromChat();
     closeChatHistoryScreen();
     switchToChat();
 
     let messages = [];
 
+    // If online, fetch messages from the server
     if (navigator.onLine) {
       const response = await new Promise((resolve) => {
         chrome.runtime.sendMessage(
@@ -777,17 +786,20 @@ function createChatHistoryItem(chat) {
       const found = await idbHandler.getChatById(chat.id);
       if (!found) await idbHandler.addChat(chat);
       await idbHandler.overwriteChatMessages(chat.id, messages);
-    } else {
+    }
+    // If offline, get cached messages in IndexedDB if any
+    else {
       messages = await idbHandler.getMessagesForChat(chat.id);
     }
 
-    console.log("Messages: ", messages);
-
+    // Push fetched messages to history stack
+    const history = [];
     messages.forEach((message) => {
       addMessageToChat(message.content, message.role);
       history.push({ role: message.role, content: message.content });
     });
 
+    // Update current chat state to this chat
     setCurrentChatState({ ...chat, history });
   });
 
