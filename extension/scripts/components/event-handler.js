@@ -372,15 +372,21 @@ export function setupEventListeners() {
     switchToChat();
   });
 
-  setupChatHistoryEvents();
+  setupListenersForDynamicChatHistoryElements();
 
-  // Hide menus when clicking outside
-  document.addEventListener("click", () => {
-    closeAllChatHistoryItemsMenu();
-  });
+  // TODO: Add event listeners
+  elements.clearChatHistoryButton.addEventListener("click");
+
+  elements.refreshChatHistoryButton
+    .addEventListener("click")
+
+    // Hide menus when clicking outside
+    .document.addEventListener("click", () => {
+      closeAllChatHistoryItemsMenu();
+    });
 }
 
-export function setupChatHistoryEvents() {
+export function setupListenersForDynamicChatHistoryElements() {
   if (state.isChatHistoryEventsInitialized) {
     console.log("Chat history event already initialized, returning");
     return;
@@ -393,6 +399,8 @@ export function setupChatHistoryEvents() {
   const closeChatHistoryButton = document.getElementById(
     "close-chat-history-button"
   );
+
+  chatHistoryButton.removeEventListener("click");
 
   chatHistoryButton.addEventListener("click", (e) => {
     toggleChatHistoryScreen();

@@ -57,6 +57,8 @@ const translations = {
 
     newChat: "New Chat",
     chatHistory: "Chat History",
+    clearHistory: "Clear History",
+    refreshHistory: "Refresh History",
     noChats: "No chats yet.",
     rename: "Rename",
     delete: "Delete",
@@ -118,6 +120,8 @@ const translations = {
 
     newChat: "Cuộc Trò Chuyện Mới",
     chatHistory: "Lịch Sử Trò Chuyện",
+    clearHistory: "Xóa Lịch Sử",
+    refreshHistory: "Tải Lại Lịch Sử",
     noChats: "Chưa có cuộc trò chuyện nào.",
     rename: "Sửa tên",
     delete: "Xóa",

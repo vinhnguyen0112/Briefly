@@ -1341,7 +1341,8 @@ input:checked + .slider:before {
   gap: 8px;
 }
 
-/* Chat History Page Styles */
+/* CHAT HISTORY */
+
 #chat-history-screen {
   position: absolute;
   top: 0;
@@ -1532,6 +1533,37 @@ input:checked + .slider:before {
   outline: none;
 }
 
+/* Chat History Header Actions */
+.chat-history-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Clear Chat History Button */
+#clear-chat-history-button {
+  background-color: #fff4f4;
+  color: #e74c3c;
+  border: 1px solid #f5c6cb;
+}
+
+#clear-chat-history-button:hover {
+  background-color: #ffeaea;
+  color: #c0392b;
+  border-color: #e74c3c;
+}
+
+.clear-history-label {
+  font-weight: 500;
+  font-size: 13px;
+  margin-left: 2px;
+  color: inherit;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+/* CUSTOM BUTTONS */
+
 .button-danger {
   background-color: #e74c3c;
   color: #fff;
@@ -1585,6 +1617,8 @@ input:checked + .slider:before {
   opacity: 0.8;
 }
 
+/* FEEDBACK */
+
 .feedback-icon {
   background: none;
   border: none;
@@ -1632,8 +1666,6 @@ input:checked + .slider:before {
   max-width: 90vw;
   text-align: center;
 }
-
-/* ============================================================= */
 
 #cocbot-feedback-modal {
   position: fixed;

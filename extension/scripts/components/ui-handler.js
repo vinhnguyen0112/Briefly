@@ -14,7 +14,7 @@ import {
 } from "./content-handler.js";
 import {
   renderToggleAccountPopupUI,
-  setupChatHistoryEvents,
+  setupListenersForDynamicChatHistoryElements,
   showPopupAlert,
   showSignInAlertPopup,
   toggleChatHistoryScreen,
@@ -634,6 +634,7 @@ export function injectChatHistoryElements(isAuth) {
   function createChatHistoryButton() {
     const btn = document.createElement("button");
     btn.id = "chat-history-button";
+    btn.setAttribute("data-i18n-title", "chatHistory");
     btn.innerHTML = `
       <svg
         aria-hidden="true"
@@ -700,7 +701,7 @@ export function injectChatHistoryElements(isAuth) {
       newChatBtn.insertAdjacentElement("afterend", chatHistoryButton);
     }
 
-    setupChatHistoryEvents();
+    setupListenersForDynamicChatHistoryElements();
   } else {
     // Remove chat history screen if present
     if (chatHistoryScreen) {

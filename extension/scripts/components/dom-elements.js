@@ -84,4 +84,8 @@ export const elements = {
   // Chat history elements
   chatHistoryList: document.getElementById("chat-history-list"),
   chatHistoryEmpty: document.getElementById("chat-history-empty"),
+  clearChatHistoryButton: document.getElementById("clear-chat-history-button"),
+  refreshChatHistoryButton: document.getElementById(
+    "refresh-chat-history-button"
+  ),
 };
