@@ -374,16 +374,45 @@ export function setupEventListeners() {
 
   setupListenersForDynamicChatHistoryElements();
 
-  // TODO: Add event listeners
-  elements.clearChatHistoryButton.addEventListener("click");
-
-  elements.refreshChatHistoryButton
-    .addEventListener("click")
-
-    // Hide menus when clicking outside
-    .document.addEventListener("click", () => {
-      closeAllChatHistoryItemsMenu();
+  elements.clearChatHistoryButton.addEventListener("click", (e) => {
+    showPopupAlert({
+      title: "Delete confirmation",
+      message:
+        "Do you want to clear all chat history? This action is irreversable",
+      buttons: [
+        {
+          label: "Delete",
+          eventHandler: () => {
+            chrome.runtime.sendMessage(
+              { action: "clear_chat_history" },
+              (response) => {
+                // TODO: Handle response
+                if (response.success) {
+                  console.log("Briefly: Clear chat history successfully");
+                } else {
+                  console.log("Briefly: Clear user history failed!");
+                }
+              }
+            );
+          },
+        },
+      ],
     });
+  });
+
+  elements.refreshChatHistoryButton.addEventListener("click", (e) => {
+    chrome.runtime.sendMessage(
+      { action: "refresh_chat_history" },
+      (response) => {
+        //TODO: Handle response
+      }
+    );
+  });
+
+  // Hide menus when clicking outside
+  document.addEventListener("click", () => {
+    closeAllChatHistoryItemsMenu();
+  });
 }
 
 export function setupListenersForDynamicChatHistoryElements() {
@@ -400,8 +429,7 @@ export function setupListenersForDynamicChatHistoryElements() {
     "close-chat-history-button"
   );
 
-  chatHistoryButton.removeEventListener("click");
-
+  // TODO: Should I remove event listeners first
   chatHistoryButton.addEventListener("click", (e) => {
     toggleChatHistoryScreen();
   });
@@ -717,24 +745,35 @@ function createChatHistoryItem(chat) {
 
   // Open chat when click on chat history item
   item.addEventListener("click", async (e) => {
+    // Ignore clicks on certain sub-elements
     if (
       e.target.closest(".chat-history-actions-menu") ||
       e.target.classList.contains("chat-history-actions-button") ||
       e.target.classList.contains("chat-history-title-input")
-    )
+    ) {
       return;
+    }
 
     const history = [];
     clearMessagesFromChat();
     closeChatHistoryScreen();
     switchToChat();
 
-    let messages;
-    // If online
+    let messages = [];
+
     if (navigator.onLine) {
-      // Get messages from DB, default to empty
-      messages = (await chatHandler.getMessages(chat.id)) || [];
-      // Update IDB cache
+      const response = await new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+          {
+            action: "fetch_chat_messages",
+            chatId: chat.id,
+          },
+          (res) => resolve(res || {})
+        );
+      });
+
+      messages = response.messages || [];
+
       const found = await idbHandler.getChatById(chat.id);
       if (!found) await idbHandler.addChat(chat);
       await idbHandler.overwriteChatMessages(chat.id, messages);
@@ -742,12 +781,13 @@ function createChatHistoryItem(chat) {
       messages = await idbHandler.getMessagesForChat(chat.id);
     }
 
+    console.log("Messages: ", messages);
+
     messages.forEach((message) => {
       addMessageToChat(message.content, message.role);
       history.push({ role: message.role, content: message.content });
     });
 
-    // Set current chat
     setCurrentChatState({ ...chat, history });
   });
 
@@ -890,8 +930,26 @@ export function closeChatHistoryScreen() {
   elements.chatHistoryScreen.style.display = "none";
 }
 
-// Create and popup a custom alert
-export function showPopupAlert({ title, message = "", buttons = [] }) {
+/**
+ * @typedef {Object} PopupButton
+ * @property {string} label The button label text
+ * @property {"primary" | "secondary" | "danger" | string} style Visual style of the button
+ * @property {Function} [eventHandler] Function to execute when the button is clicked
+ */
+
+/**
+ * Dynamically displays a popup alert with a title, optional message, and buttons.
+ *
+ * A close button is created by default
+ *
+ * @param {Object} options Configuration for the popup
+ * @param {string} options.title The popup title
+ * @param {string} options.message The optional message content
+ * @param {Array<PopupButton>} options.buttons Array of buttons to display
+ */
+export function showPopupAlert(options) {
+  const { title, message, buttons = [] } = options;
+
   // Create overlay
   const alertOverlay = document.createElement("div");
   alertOverlay.className = "dynamic-alert-overlay overlay";
@@ -938,16 +996,11 @@ export function showPopupAlert({ title, message = "", buttons = [] }) {
   closeBtn.className = "button button-secondary";
   closeBtn.textContent = "Close";
   closeBtn.style.width = "100%";
-
-  closeBtn.onclick = () => {
-    alertOverlay.remove();
-  };
-
-  // Appending
+  closeBtn.onclick = () => alertOverlay.remove();
   content.appendChild(closeBtn);
+
   popup.appendChild(content);
   alertOverlay.appendChild(popup);
-
   document.body.appendChild(alertOverlay);
 }
 

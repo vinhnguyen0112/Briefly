@@ -4,10 +4,12 @@ const API_BASE = "http://localhost:3000/api/chats";
 
 // Create a new chat
 async function createChat({ id, page_url, title }) {
-  return sendRequest(API_BASE, {
+  const response = sendRequest(API_BASE, {
     method: "POST",
     body: { id, page_url, title },
-  }).then((data) => data.data);
+  });
+
+  return response;
 }
 
 // Get all chats for a user
@@ -27,9 +29,14 @@ async function getChatsForCurrentUser({ offset = 0, limit = 20 }) {
   return data.data;
 }
 
-// Update a chat
+/**
+ * Update a chat by ID
+ * @param {String} id ID of the chat to update
+ * @param {Object | FormData} updates Update values as object
+ * @returns
+ */
 async function updateChat(id, updates) {
-  return sendRequest(`${API_BASE}/${id}`, {
+  return await sendRequest(`${API_BASE}/${id}`, {
     method: "PUT",
     body: updates,
   });
@@ -37,24 +44,49 @@ async function updateChat(id, updates) {
 
 // Delete a chat
 async function deleteChat(id) {
-  return sendRequest(`${API_BASE}/${id}`, {
+  return await sendRequest(`${API_BASE}/${id}`, {
     method: "DELETE",
   });
 }
 
-// Add a message to a chat
-async function addMessage(chatId, { role, content, model }) {
-  return sendRequest(`${API_BASE}/${chatId}/messages`, {
+/**
+ * Delete all chats of the current signed in session
+ */
+async function deleteAllChatsOfCurrentUser() {
+  return await sendRequest(`${API_BASE}`, {
+    method: "DELETE",
+  });
+}
+
+/**
+ * @typedef {Object} CreateMessageBody
+ * @property {String} role
+ * @property {String} content
+ * @property {String} [model]
+ */
+
+/**
+ * Add a message to a chat
+ * @param {String} chatId ID of the chat
+ * @param {CreateMessageBody} messageBody Mesage body
+ * @returns
+ */
+async function addMessage(chatId, messageBody) {
+  const { role, content, model } = messageBody;
+  const response = await sendRequest(`${API_BASE}/${chatId}/messages`, {
     method: "POST",
     body: { role, content, model },
-  }).then((data) => data.data);
+  });
+
+  console.log("add message response: ", response);
+  return response.data;
 }
 
 // Get all messages for a chat
 async function getMessages(chatId) {
-  return sendRequest(`${API_BASE}/${chatId}/messages`).then(
-    (data) => data.data
-  );
+  const response = await sendRequest(`${API_BASE}/${chatId}/messages`);
+  console.log(response);
+  return response;
 }
 
 const chatHandler = {
@@ -62,6 +94,7 @@ const chatHandler = {
   getChatsForCurrentUser,
   updateChat,
   deleteChat,
+  deleteAllChatsOfCurrentUser,
   addMessage,
   getMessages,
 };

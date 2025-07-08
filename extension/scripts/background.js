@@ -670,6 +670,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+  if (message.action === "fetch_chat_messages") {
+    chatHandler.getMessages(message.chatId).then((response) => {
+      console.log("fetch_chat_messages response: ", response);
+      sendResponse({
+        success: response.success,
+        messages: response.data.messages,
+      });
+    });
+
+    return true;
+  }
+  if (message.action === "clear_chat_history") {
+    chatHandler.deleteAllChatsOfCurrentUser().then((response) => {
+      console.log("clear_chat_history response: ", response);
+      sendResponse({ success: response.success });
+    });
+
+    return true;
+  }
   if (message.action === "process_images") {
     resetProcessedImages();
     handleCaptionImages(message.images, message.content)

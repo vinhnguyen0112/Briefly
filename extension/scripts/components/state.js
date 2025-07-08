@@ -309,16 +309,30 @@ export function setCurrentChatState(chat) {
   };
 }
 
-// Helper function to send requests with session and visitor ID
-// By default, it will include both session and visitor ID headers
-export async function sendRequest(
-  url,
-  options = {},
-  { withSession = true, withVisitorId = true } = {}
-) {
-  const headers = new Headers(options.headers);
+/**
+ * A helper function to send a request with session or visitor ID attached as headers.
+ *
+ * Session and visitor ID is attached in headers by default.
+ *
+ * @param {string} url The endpoint URL
+ * @param {Object} options Fetch options with custom flags
+ * @param {String} [options.method] HTTP method
+ * @param {Object|FormData} [options.body] Request payload
+ * @param {Object} [options.headers] Additional headers
+ * @param {boolean} [options.withSession] Whether to include session in headers
+ * @param {boolean} [options.withVisitorId] Whether to include visitor ID in headers
+ * @returns {Promise<Object>} Parsed JSON response
+ */
+export async function sendRequest(url, options = {}) {
+  const {
+    withSession = true,
+    withVisitorId = true,
+    headers: customHeaders,
+    ...fetchOptions
+  } = options;
 
-  // Add session header if requested
+  const headers = new Headers(customHeaders);
+
   if (withSession) {
     const userSession = await getUserSession();
     const anonSession = !userSession && (await getAnonSession());
@@ -330,28 +344,28 @@ export async function sendRequest(
     );
   }
 
-  // Add visitor header if requested
   if (withVisitorId) {
     const visitorId = await getVisitorId();
     headers.set("Visitor", visitorId);
   }
 
-  // JSON body handling
+  // JSON encoding
   if (
-    options.body &&
-    typeof options.body === "object" &&
-    !(options.body instanceof FormData)
+    fetchOptions.body &&
+    typeof fetchOptions.body === "object" &&
+    !(fetchOptions.body instanceof FormData)
   ) {
     headers.set("Content-Type", "application/json");
-    options.body = JSON.stringify(options.body);
+    fetchOptions.body = JSON.stringify(fetchOptions.body);
   }
 
-  const response = await fetch(url, { ...options, headers });
+  const response = await fetch(url, { ...fetchOptions, headers });
 
-  // Handle error responses
+  // Error handling
   if (!response.ok) {
     const data = await response.json();
     const { code, message } = data.error;
+    // If user session is invalid, signed them out gracefully
     if (code === "AUTH_SESSION_INVALID") {
       clearUserSession().then(() => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -369,16 +383,15 @@ export async function sendRequest(
   }
 
   const data = await response.json();
-  // Handle assigning new anon session
+
+  // If server assigned a new anonymous session, save it
   if (
     data.meta &&
     data.meta.newAnonSessionAssigned &&
     data.meta.newAnonSession
   ) {
-    console.log("New anon session assigned. Updating storage");
-    saveAnonSession(data.meta.newAnonSession).then(() => {
-      console.log("CocBot: Updated anon session after request");
-    });
+    console.log("New anon session assigned, saving to storage...");
+    await saveAnonSession(data.meta.newAnonSession);
   }
 
   return data;

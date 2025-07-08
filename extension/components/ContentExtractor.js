@@ -316,8 +316,6 @@ function startMutationObserver() {
         images: newImages,
         content: contentContext,
       });
-    } else {
-      console.log("👀 [Observer] No new images detected in mutation");
     }
   });
 
@@ -346,14 +344,9 @@ function waitForDomReady(callback) {
 waitForDomReady(() => {
   sentImages.clear();
   totalImagesSent = 0;
-  console.log("✅ [Init] CaptionZing ready");
   const extracted = extractPageContent();
   contentContext = extracted.content || "(no content)";
-  console.log(
-    "🧠 [Init] Context for captioning:",
-    contentContext.slice(0, 100)
-  );
-  autoSendImagesLoop(3000);
+  // autoSendImagesLoop(3000);
 });
 
 // ===================================== // ================================
