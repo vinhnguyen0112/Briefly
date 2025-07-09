@@ -553,11 +553,16 @@ function showClearChatHistoryDialog() {
  * Event handler for clear chat history
  */
 function clearChatHistoryEventHandler() {
+  // TODO: Refactor event handler to exclude current chat from deletion
   chrome.runtime.sendMessage({ action: "clear_chat_history" }, (response) => {
     if (response.success) {
       console.log("Briefly: Clear chat history successfully");
       state.chatHistory = [];
       renderAllChatHistory();
+
+      // Reset current chat for now
+      clearMessagesFromChatContainer();
+      resetCurrentChatState();
     } else {
       console.log("Briefly: Clear user history failed!");
     }
@@ -912,8 +917,8 @@ function showDeleteChatDialog(chat) {
         label: "Yes",
         style: "danger",
         eventHandler: async () => {
-          await chatHandler.deleteChat(chat.id);
-          await idbHandler.deleteChat(chat.id);
+          await chatHandler.deleteChatById(chat.id);
+          await idbHandler.deleteChatById(chat.id);
           state.chatHistory = state.chatHistory.filter((c) => c.id !== chat.id);
           removeChatHistoryItem(chat.id);
           if (chat.id === state.currentChat.id) {
@@ -956,7 +961,7 @@ export function closeChatHistoryScreen() {
 /**
  * @typedef {Object} PopupButton
  * @property {string} label The button label text
- * @property {"primary" | "secondary" | "danger" | string} style Visual style of the button
+ * @property {"primary" | "secondary" | "danger" | "warning" | "confirm"} style Visual style of the button
  * @property {Function} [eventHandler] Function to execute when the button is clicked
  */
 /**

@@ -226,7 +226,6 @@ function renderWelcomeScreen(existingQuestions) {
 
 // add message to chat
 export async function addMessageToChat(message, role) {
-  console.log("Adding message: ", message, role);
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
 
@@ -601,7 +600,10 @@ export function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Handle UI changes when authentication state changes
+/**
+ * Handle events when authentication state changes
+ * @param {boolean} isAuth Authentication state
+ */
 function handleAuthStateChange(isAuth) {
   // Reset UI
   renderToggleAccountPopupUI(isAuth);
@@ -610,7 +612,7 @@ function handleAuthStateChange(isAuth) {
 
   state.isChatHistoryEventsInitialized = false;
 
-  // Inject or remove chat history screen based on user session state
+  // Inject or remove dynamic chat history elements based on authentication state
   configureChatHistoryElementsOnAuthState(isAuth);
 
   // Navigate back to welcome page
@@ -629,7 +631,8 @@ function handleAuthStateChange(isAuth) {
 }
 
 /**
- * Inject or remove chat history elements based on authentication state. And attach reference to new elements
+ * Inject or remove chat history elements based on authentication state.
+ * And attach reference to new elements
  * @param {boolean} isAuth Authenticated state
  */
 export function configureChatHistoryElementsOnAuthState(isAuth) {

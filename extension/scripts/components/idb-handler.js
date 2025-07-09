@@ -2,8 +2,8 @@ const DB_NAME = "briefly_db";
 const DB_VERSION = 1;
 
 /**
- * Opens the IndexedDB database and sets up object stores if needed.
- * @returns {Promise} Database instance
+ * Opens the IndexedDB and sets up object stores.
+ * @returns {Promise<Object>} Database instance
  **/
 async function openIndexedDB() {
   return await new Promise((resolve, reject) => {
@@ -30,8 +30,6 @@ async function openIndexedDB() {
 
 // Set up object stores for the database
 function setupObjectStores(db) {
-  console.log("Setting up object stores");
-
   // Create "chats" object store if needed
   if (!db.objectStoreNames.contains("chats")) {
     const chatsStore = db.createObjectStore("chats", {
@@ -49,9 +47,13 @@ function setupObjectStores(db) {
 }
 
 /**
- * Adds a new chat to the "chats" object store.
- * @param {Object} chat - The chat object to store.
- * @returns {Promise<string>}
+ * Add a chat to IndexedDB
+ * @param {Object} chat Chat object
+ * @param {String} chat.title
+ * @param {String} chat.page_url
+ * @param {Date} [chat.created_at]
+ * @param {Date} [chat.updated_at]
+ * @returns {Promise<String>} Inserted chat's ID
  */
 async function addChat(chat) {
   const { db } = await openIndexedDB();
@@ -84,8 +86,8 @@ async function addChat(chat) {
 
 /**
  * Get a chat by ID
- * @param {string} id - The ID of the chat to check.
- * @returns {Promise<boolean>}
+ * @param {string} id Chat ID
+ * @returns {Promise<Object>}
  */
 async function getChatById(id) {
   const { db } = await openIndexedDB();
@@ -110,8 +112,9 @@ async function getChatById(id) {
 }
 
 /**
- * Adds a single message
- * @param {Object} message - The message object to store. Must include chat_id.
+ * Add a single message to a chat in IndexedDB
+ * @param {String} chatId Chat ID
+ * @param {Object} message Message object to insert
  * @returns {Promise<void>}
  */
 async function addMessageToChat(chatId, message) {
@@ -163,9 +166,9 @@ async function addMessageToChat(chatId, message) {
 }
 
 /**
- * Overwrite chat's messages
- * @param {string} chatId - The ID of the chat to add messages to.
- * @param {Array<Object>} messages - Array of message objects to add.
+ * Overwrite the chat's messages with input messages
+ * @param {string} chatId Chat ID
+ * @param {Array<Object>} messages Array of messages
  * @returns {Promise<void>}
  */
 async function overwriteChatMessages(chatId, messages) {
@@ -226,9 +229,9 @@ async function overwriteChatMessages(chatId, messages) {
 }
 
 /**
- * Updates a chat
- * @param {string} chatId - The ID of the chat to update.
- * @param {Object} updates - An object containing the fields to update.
+ * Update a chat in IndexedDB
+ * @param {string} chatId Chat ID
+ * @param {Object} updates Update values
  * @returns {Promise}
  */
 async function updateChat(chatId, updates) {
@@ -280,11 +283,11 @@ async function updateChat(chatId, updates) {
 }
 
 /**
- * Deletes a chat by ID from the "chats" object store.
- * @param {string} id - The ID of the chat to delete.
+ * Deletes a chat by ID from IndexedDB
+ * @param {string} id Chat ID
  * @returns {Promise<void>}
  */
-async function deleteChat(id) {
+async function deleteChatById(id) {
   const { db } = await openIndexedDB();
   return await new Promise((resolve, reject) => {
     const transaction = db.transaction("chats", "readwrite");
@@ -306,7 +309,7 @@ async function deleteChat(id) {
 /**
  * Get all messages for a chat.
  * @param {string} chatId
- * @returns {Promise<Array>} Resolves with an array of messages
+ * @returns {Promise<Array>} Array of messages
  */
 async function getMessagesForChat(chatId) {
   const { db } = await openIndexedDB();
@@ -325,8 +328,8 @@ async function getMessagesForChat(chatId) {
 }
 
 /**
- * Get all chats.
- * @returns {Promise<Array>} Resolves with an array of chats
+ * Get all chats from IndexedDB
+ * @returns {Promise<Array>} Array of chats
  */
 async function getAllChats() {
   const { db } = await openIndexedDB();
@@ -346,7 +349,7 @@ async function getAllChats() {
 }
 
 /**
- * Wipes all data from the "chats" object store.
+ * Clear all chats from IndexedDB
  * @returns {Promise<void>}
  */
 async function clearChats() {
@@ -377,7 +380,7 @@ const idbHandler = {
   addMessageToChat,
   overwriteChatMessages,
   updateChat,
-  deleteChat,
+  deleteChatById,
   getMessagesForChat,
   clearChats,
 };
