@@ -22,7 +22,7 @@ import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
 import { isUserAuthenticated } from "./components/auth-handler.js";
 import { getFingerprint, setupAnonSession } from "./components/anon-handler.js";
-import { injectChatHistoryElements } from "./components/ui-handler.js";
+import { configureChatHistoryElementsOnAuthState } from "./components/ui-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Render UI on first load based on user authentication state
       renderToggleAccountPopupUI(isAuth);
-      injectChatHistoryElements(isAuth);
+      configureChatHistoryElementsOnAuthState(isAuth);
     })
     .catch((err) => {
       console.error("CocBot: Error validating user session", err);

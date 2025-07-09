@@ -292,6 +292,9 @@ export function resetCurrentChatState() {
   };
 }
 
+/**
+ * Reset pagination state to default
+ */
 export function resetPaginationState() {
   state.pagination = {
     currentPage: 0,
@@ -300,7 +303,15 @@ export function resetPaginationState() {
   };
 }
 
-export function setCurrentChatState(chat) {
+/**
+ * Set current chat state
+ * @param {Object} chat
+ * @param {String} [chat.id]
+ * @param {String} [chat.title]
+ * @param {String} [chat.pageUrl]
+ * @param {Array<Object>} [chat.history]
+ */
+export function setCurrentChatState(chat = {}) {
   state.currentChat = {
     id: chat.id || null,
     title: chat.title || "",

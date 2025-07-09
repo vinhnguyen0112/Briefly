@@ -1201,16 +1201,19 @@ input:checked + .slider:before {
 /* Popup container */
 .popup {
   position: absolute;
-  top: 50px;
-  /* Adjust based on the position of the account button */
-  right: 16px;
   background-color: var(--background);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
   z-index: 10001;
   padding: 16px;
-  width: 200px;
+  width: calc(var(--sidebar-width) * 0.8);
+  /* Scale with sidebar width */
+  max-width: var(--sidebar-max-width);
+  /* Ensure it doesn't exceed max width */
+  min-width: var(--sidebar-min-width);
+  /* Ensure it doesn't go below min width */
+  text-align: center;
 }
 
 /* Popup content */
@@ -1266,7 +1269,7 @@ input:checked + .slider:before {
   /* Disable interactions */
 }
 
-/* Sign-in alert popup styles */
+/* Alert popup styles */
 .alert-popup {
   background-color: var(--background);
   border: 1px solid var(--border);
@@ -1283,25 +1286,25 @@ input:checked + .slider:before {
   text-align: center;
 }
 
-#sign-in-alert-popup .popup-title {
+.alert-popup .popup-title {
   font-size: 18px;
   font-weight: 600;
   color: var(--foreground);
-  margin-bottom: 12px;
+  margin-bottom: 4px;
 }
 
-#sign-in-alert-popup .popup-message {
+.alert-popup .popup-message {
   font-size: 14px;
   color: var(--muted-foreground);
-  margin-bottom: 20px;
+  margin-bottom: 8px;
 }
 
-#sign-in-alert-popup .button {
+.alert-popup .button {
   width: 100%;
-  margin-bottom: 10px;
+  margin-bottom: 8px; /* 8 pixels gap between vertically stacked buttons*/
 }
 
-#sign-in-alert-popup .button:last-child {
+.alert-popup .button:last-child {
   margin-bottom: 0;
 }
 
@@ -1948,4 +1951,37 @@ input:checked + .slider:before {
   cursor: not-allowed;
   opacity: 0.5;
   transition: opacity 0.2s;
+}
+
+#account-popup {
+  min-width: fit-content;
+  max-width: fit-content;
+}
+
+/* Loading spinner styling */
+.chat-history-spinner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 16px 0;
+}
+
+.spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 8px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }

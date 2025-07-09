@@ -24,6 +24,7 @@ import {
   clearMessagesFromChat,
   updateFeedbackIconsForAssistantMessages,
   removeFeedbackIconsForAssistantMessages,
+  clearChatHistoryList,
 } from "./ui-handler.js";
 import {
   requestPageContent,
@@ -375,7 +376,47 @@ export function setupEventListeners() {
 
   setupListenersForDynamicChatHistoryElements();
 
-  elements.clearChatHistoryButton.addEventListener("click", (e) => {
+  // Hide menus when clicking outside
+  document.addEventListener("click", () => {
+    closeAllChatHistoryItemsMenu();
+  });
+}
+
+/**
+ * Set up event listeners for dynamic chat history elements
+ * @returns
+ */
+export function setupListenersForDynamicChatHistoryElements() {
+  if (state.isChatHistoryEventsInitialized) {
+    console.log("Chat history event already initialized, returning");
+    return;
+  }
+
+  console.log("Setting up chat history events");
+
+  // Re-querying elements incase they are removed
+  const chatHistoryButton = document.getElementById("chat-history-button");
+  const chatHistoryContent = document.getElementById("chat-history-content");
+  const clearChatHistoryButton = document.getElementById(
+    "clear-chat-history-button"
+  );
+  const refreshChatHistoryButton = document.getElementById(
+    "refresh-chat-history-button"
+  );
+  const closeChatHistoryButton = document.getElementById(
+    "close-chat-history-button"
+  );
+
+  chatHistoryButton.addEventListener("click", (e) => {
+    toggleChatHistoryScreen();
+  });
+
+  closeChatHistoryButton.addEventListener("click", (e) => {
+    closeChatHistoryScreen();
+    state.screenStack.pop();
+  });
+
+  clearChatHistoryButton.addEventListener("click", (e) => {
     // Display confirmation dialog
     showPopupDialog({
       title: "Delete confirmation",
@@ -404,40 +445,15 @@ export function setupEventListeners() {
     });
   });
 
-  elements.refreshChatHistoryButton.addEventListener("click", (e) => {
-    // state.chatHistory = []; // Empty out chat history
-    // resetPaginationState(); // Reset pagination state
-    showPopupAlert({ title: "Test", message: "test", type: "info" });
-  });
-
-  // Hide menus when clicking outside
-  document.addEventListener("click", () => {
-    closeAllChatHistoryItemsMenu();
-  });
-}
-
-export function setupListenersForDynamicChatHistoryElements() {
-  if (state.isChatHistoryEventsInitialized) {
-    console.log("Chat history event already initialized, returning");
-    return;
-  }
-  console.log("Setting up chat history events");
-
-  // Re-querying elements incase they are removed
-  const chatHistoryButton = document.getElementById("chat-history-button");
-  const chatHistoryContent = document.getElementById("chat-history-content");
-  const closeChatHistoryButton = document.getElementById(
-    "close-chat-history-button"
-  );
-
-  // TODO: Should I remove event listeners first
-  chatHistoryButton.addEventListener("click", (e) => {
-    toggleChatHistoryScreen();
-  });
-
-  closeChatHistoryButton.addEventListener("click", (e) => {
-    closeChatHistoryScreen();
-    state.screenStack.pop();
+  refreshChatHistoryButton.addEventListener("click", (e) => {
+    if (state.pagination.isFetching) {
+      console.log("Refresh locked");
+      return;
+    }
+    clearChatHistoryList(); // Clear chat history list
+    state.chatHistory = []; // Empty out chat history
+    resetPaginationState(); // Reset pagination state
+    fetchChatHistory(); // Force fetch
   });
 
   // Chat history infinite scroll
@@ -606,6 +622,23 @@ function fetchChatHistory() {
   console.log("Fetching chat history");
   state.pagination.isFetching = true;
 
+  // Show loading indicator
+  const { chatHistoryList, chatHistoryEmpty } = elements;
+  if (chatHistoryList) {
+    // Remove previous spinner if any
+    let spinner = chatHistoryList.querySelector(".chat-history-spinner");
+    if (spinner) spinner.remove();
+
+    // Add a new spinner
+    spinner = document.createElement("div");
+    spinner.className = "chat-history-spinner";
+    spinner.innerHTML = `
+        <div class="spinner" style="margin: 24px auto;"></div>
+        <div style="text-align:center;color:#888;font-size:14px;margin-top:8px;">Fetching chat history...</div>
+      `;
+    chatHistoryList.appendChild(spinner);
+  }
+
   chrome.runtime.sendMessage(
     {
       action: "fetch_chat_history",
@@ -643,6 +676,9 @@ function fetchChatHistory() {
         fetchedChats.values()
       );
       console.log("Has more chats: ", response.hasMore);
+
+      // Remove spinner
+      chatHistoryList.querySelector(".chat-history-spinner").remove();
 
       // Render new chats
       renderCurrentPageChatHistory();
@@ -775,6 +811,7 @@ function createChatHistoryItem(chat) {
         );
       });
 
+      console.log("Messages from background script: ", response.messages);
       messages = response.messages || [];
 
       const found = await idbHandler.getChatById(chat.id);
@@ -788,10 +825,11 @@ function createChatHistoryItem(chat) {
 
     // Push fetched messages to history stack
     const history = [];
-    messages.forEach((message) => {
-      addMessageToChat(message.content, message.role);
+    for (const message of messages) {
+      // Wait for prior message to be added first to avoid messages disorder
+      await addMessageToChat(message.content, message.role);
       history.push({ role: message.role, content: message.content });
-    });
+    }
 
     // Update current chat state to this chat
     setCurrentChatState({ ...chat, history });
@@ -1015,11 +1053,17 @@ export function showPopupDialog(options) {
  * The icon and color are set based on the `type` param.
  *
  * @param {Object} options
- * @param {string} options.title   - The alert title text.
- * @param {string} options.message - The alert message content.
- * @param {'success'|'error'|'warning'|'info'} [options.type='info'] - The alert type.
+ * @param {string} options.title The alert title text.
+ * @param {string} options.message The alert message content.
+ * @param {string} options.buttonLabel The close button label.
+ * @param {'success'|'error'|'warning'|'info'} [options.type] The alert type.
  */
-export function showPopupAlert({ title, message, type = "info" }) {
+export function showPopupAlert({
+  title,
+  message,
+  type = "info",
+  buttonLabel = "Close",
+}) {
   const ICONS = {
     success: {
       svg: `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#27ae60"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 12l2.5 2.5L16 9"/></svg>`,
@@ -1070,10 +1114,10 @@ export function showPopupAlert({ title, message, type = "info" }) {
 
   const closeBtn = document.createElement("button");
   closeBtn.className = "button button-secondary";
-  closeBtn.textContent = "×";
+  closeBtn.textContent = buttonLabel;
   closeBtn.setAttribute("aria-label", "Close");
   closeBtn.onclick = () => alertOverlay.remove();
-  popup.appendChild(closeBtn);
+  content.appendChild(closeBtn);
 
   popup.appendChild(content);
   alertOverlay.appendChild(popup);
@@ -1082,12 +1126,19 @@ export function showPopupAlert({ title, message, type = "info" }) {
 
 // Toggle on/off the account popup UI
 function toggleAccountPopupUI() {
-  const popup = elements.accountPopup;
+  const { accountPopup, accountButton } = elements;
 
-  if (popup.style.display === "none" || !popup.style.display) {
-    popup.style.display = "block";
+  if (accountPopup.style.display === "none" || !accountPopup.style.display) {
+    // Get button position
+    const rect = accountButton.getBoundingClientRect();
+    // Set accountPopup position just below the button, aligned right edge
+    accountPopup.style.top = `${rect.bottom + window.scrollY + 4}px`;
+    accountPopup.style.right = `${
+      window.innerWidth - rect.right - window.scrollX - 16
+    }px`; // Offset by 16 pixels
+    accountPopup.style.display = "block";
   } else {
-    popup.style.display = "none";
+    accountPopup.style.display = "none";
   }
 }
 

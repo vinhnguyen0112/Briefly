@@ -227,6 +227,7 @@ function renderWelcomeScreen(existingQuestions) {
 
 // add message to chat
 export async function addMessageToChat(message, role) {
+  console.log("Adding message: ", message, role);
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
 
@@ -266,7 +267,10 @@ export function clearMessagesFromChat() {
   }
 }
 
-export function clearChatHistory() {
+/**
+ * Clear chat history list
+ */
+export function clearChatHistoryList() {
   if (elements.chatHistoryList) {
     elements.chatHistoryList.innerHTML = "";
   }
@@ -601,12 +605,12 @@ function handleAuthStateChange(isAuth) {
   // Reset UI
   renderToggleAccountPopupUI(isAuth);
   clearMessagesFromChat();
-  clearChatHistory();
+  clearChatHistoryList();
 
   state.isChatHistoryEventsInitialized = false;
 
   // Inject or remove chat history screen based on user session state
-  injectChatHistoryElements(isAuth);
+  configureChatHistoryElementsOnAuthState(isAuth);
 
   // Navigate back to welcome page
   state.welcomeMode = true;
@@ -623,7 +627,11 @@ function handleAuthStateChange(isAuth) {
   elements.chatHistoryScreen.style.display = "none";
 }
 
-export function injectChatHistoryElements(isAuth) {
+/**
+ * Inject or remove chat history elements based on authentication state. And attach reference to new elements
+ * @param {boolean} isAuth Authenticated state
+ */
+export function configureChatHistoryElementsOnAuthState(isAuth) {
   const sidebarContentWrapper = document.querySelector(
     ".sidebar-content-wrapper"
   );
@@ -666,13 +674,61 @@ export function injectChatHistoryElements(isAuth) {
       chatHistoryScreen.innerHTML = `
           <div class="chat-history-header">
             <h3 data-i18n="chatHistory">Chat History</h3>
-            <button
-              id="close-chat-history-button"
-              class="icon-button"
-              title="Close"
-            >
-              ×
-            </button>
+            <div class="chat-history-header-actions">
+              <button
+                id="clear-chat-history-button"
+                class="icon-button"
+                data-i18n-title="clearHistory"
+              >
+                <svg
+                  class="w-6 h-6 text-gray-800 dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"
+                  />
+                </svg>
+              </button>
+              <button
+                id="refresh-chat-history-button"
+                class="icon-button"
+                data-i18n-title="refreshHistory"
+              >
+                <svg
+                  class="w-6 h-6 text-gray-800 dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"
+                  />
+                </svg>
+              </button>
+              <button
+                id="close-chat-history-button"
+                class="icon-button"
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
           </div>
           <div id="chat-history-content">
             <div id="chat-history-list"></div>
@@ -684,6 +740,7 @@ export function injectChatHistoryElements(isAuth) {
 
       // Inject chat history screen
       sidebarContentWrapper.appendChild(chatHistoryScreen);
+
       // Reference to new chat history elements
       elements.chatHistoryScreen = chatHistoryScreen;
       elements.chatHistoryList =
