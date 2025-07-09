@@ -17,7 +17,6 @@ import {
   setupListenersForDynamicChatHistoryElements,
   showPopupDialog,
   showSignInAlertPopup,
-  toggleChatHistoryScreen,
 } from "./event-handler.js";
 
 // close all panels
@@ -260,8 +259,10 @@ export async function addMessageToChat(message, role) {
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 }
 
-// Clear all chat messages from the chat container
-export function clearMessagesFromChat() {
+/**
+ * Clear all messages from chat container
+ */
+export function clearMessagesFromChatContainer() {
   if (elements.chatContainer) {
     elements.chatContainer.innerHTML = "";
   }
@@ -604,7 +605,7 @@ export function escapeHtml(text) {
 function handleAuthStateChange(isAuth) {
   // Reset UI
   renderToggleAccountPopupUI(isAuth);
-  clearMessagesFromChat();
+  clearMessagesFromChatContainer();
   clearChatHistoryList();
 
   state.isChatHistoryEventsInitialized = false;

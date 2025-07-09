@@ -21,7 +21,7 @@ import {
   closeAllPanels,
   switchToChat,
   handleContentMessage,
-  clearMessagesFromChat,
+  clearMessagesFromChatContainer,
   updateFeedbackIconsForAssistantMessages,
   removeFeedbackIconsForAssistantMessages,
   clearChatHistoryList,
@@ -370,7 +370,7 @@ export function setupEventListeners() {
 
   elements.newChatButton.addEventListener("click", () => {
     resetCurrentChatState();
-    clearMessagesFromChat();
+    clearMessagesFromChatContainer();
     switchToChat();
   });
 
@@ -380,97 +380,6 @@ export function setupEventListeners() {
   document.addEventListener("click", () => {
     closeAllChatHistoryItemsMenu();
   });
-}
-
-/**
- * Set up event listeners for dynamic chat history elements
- * @returns
- */
-export function setupListenersForDynamicChatHistoryElements() {
-  if (state.isChatHistoryEventsInitialized) {
-    console.log("Chat history event already initialized, returning");
-    return;
-  }
-
-  console.log("Setting up chat history events");
-
-  // Re-querying elements incase they are removed
-  const chatHistoryButton = document.getElementById("chat-history-button");
-  const chatHistoryContent = document.getElementById("chat-history-content");
-  const clearChatHistoryButton = document.getElementById(
-    "clear-chat-history-button"
-  );
-  const refreshChatHistoryButton = document.getElementById(
-    "refresh-chat-history-button"
-  );
-  const closeChatHistoryButton = document.getElementById(
-    "close-chat-history-button"
-  );
-
-  chatHistoryButton.addEventListener("click", (e) => {
-    toggleChatHistoryScreen();
-  });
-
-  closeChatHistoryButton.addEventListener("click", (e) => {
-    closeChatHistoryScreen();
-    state.screenStack.pop();
-  });
-
-  clearChatHistoryButton.addEventListener("click", (e) => {
-    // Display confirmation dialog
-    showPopupDialog({
-      title: "Delete confirmation",
-      message:
-        "Do you want to clear all chat history? This action is irreversable",
-      buttons: [
-        {
-          label: "Delete",
-          eventHandler: () => {
-            // Pass clear_chat_history message to background script
-            chrome.runtime.sendMessage(
-              { action: "clear_chat_history" },
-              (response) => {
-                if (response.success) {
-                  console.log("Briefly: Clear chat history successfully");
-                  state.chatHistory = []; // Empty out chat history
-                  renderAllChatHistory(); // Re-render chat history screen
-                } else {
-                  console.log("Briefly: Clear user history failed!");
-                }
-              }
-            );
-          },
-        },
-      ],
-    });
-  });
-
-  refreshChatHistoryButton.addEventListener("click", (e) => {
-    if (state.pagination.isFetching) {
-      console.log("Refresh locked");
-      return;
-    }
-    clearChatHistoryList(); // Clear chat history list
-    state.chatHistory = []; // Empty out chat history
-    resetPaginationState(); // Reset pagination state
-    fetchChatHistory(); // Force fetch
-  });
-
-  // Chat history infinite scroll
-  chatHistoryContent.addEventListener("scroll", (e) => {
-    const { scrollTop, scrollHeight, clientHeight } = chatHistoryContent;
-
-    if (
-      scrollTop + clientHeight >= scrollHeight - 100 &&
-      !state.pagination.isFetching &&
-      state.pagination.hasMore
-    ) {
-      fetchChatHistory();
-      return;
-    }
-  });
-
-  state.isChatHistoryEventsInitialized = true;
 }
 
 // set up quick action buttons
@@ -549,46 +458,51 @@ function setupAuthenticationButtons() {
   );
 }
 
-// Close the account popup UI
-function closeAccountPopupUI() {
-  elements.accountPopup.style.display = "none";
-}
-
-// Render the account popup UI
-export function renderToggleAccountPopupUI(isAuthenticated) {
-  if (isAuthenticated) {
-    elements.signOutButton.style.display = "flex";
-
-    // Hide all Google and Facebook login buttons in the header
-    elements.googleLoginButtons.forEach((button) => {
-      if (button.classList.contains("header-button")) {
-        button.style.display = "none";
-      }
-    });
-    elements.facebookLoginButtons.forEach((button) => {
-      if (button.classList.contains("header-button")) {
-        button.style.display = "none";
-      }
-    });
-  } else {
-    elements.signOutButton.style.display = "none";
-
-    // Show all Google and Facebook login buttons in the header
-    elements.googleLoginButtons.forEach((button) => {
-      if (button.classList.contains("header-button")) {
-        button.style.display = "flex";
-      }
-    });
-    elements.facebookLoginButtons.forEach((button) => {
-      if (button.classList.contains("header-button")) {
-        button.style.display = "flex";
-      }
-    });
+/**
+ * Initializes event listeners for dynamic chat history UI elements.
+ */
+export function setupListenersForDynamicChatHistoryElements() {
+  if (state.isChatHistoryEventsInitialized) {
+    console.log("Chat history event already initialized, returning");
+    return;
   }
+  console.log("Setting up chat history events");
+
+  const chatHistoryButton = document.getElementById("chat-history-button");
+  const chatHistoryContent = document.getElementById("chat-history-content");
+  const clearChatHistoryButton = document.getElementById(
+    "clear-chat-history-button"
+  );
+  const refreshChatHistoryButton = document.getElementById(
+    "refresh-chat-history-button"
+  );
+  const closeChatHistoryButton = document.getElementById(
+    "close-chat-history-button"
+  );
+
+  chatHistoryButton.addEventListener("click", toggleChatHistoryScreen);
+
+  closeChatHistoryButton.addEventListener("click", () => {
+    closeChatHistoryScreen();
+    state.screenStack.pop();
+  });
+
+  clearChatHistoryButton.addEventListener("click", () => {
+    showClearChatHistoryDialog();
+  });
+
+  refreshChatHistoryButton.addEventListener(
+    "click",
+    refreshChatHistoryEventHandler
+  );
+
+  chatHistoryContent.addEventListener("scroll", chatHistoryScrollEventHandler);
+
+  state.isChatHistoryEventsInitialized = true;
 }
 
 // Toggle the display state of the chat history screen
-export function toggleChatHistoryScreen() {
+function toggleChatHistoryScreen() {
   const chatHistory = elements.chatHistoryScreen;
   // Open
   if (chatHistory.style.display === "none" || !chatHistory.style.display) {
@@ -617,27 +531,79 @@ export function toggleChatHistoryScreen() {
   console.log("Current stack: ", state.screenStack);
 }
 
-// Fetch chat history for the current page
+/**
+ * Shows a confirmation dialog to clear all chat history.
+ */
+function showClearChatHistoryDialog() {
+  showPopupDialog({
+    title: "Delete confirmation",
+    message:
+      "Do you want to clear all chat history? This action is irreversable",
+    buttons: [
+      {
+        label: "Delete",
+        style: "danger",
+        eventHandler: clearChatHistoryEventHandler,
+      },
+    ],
+  });
+}
+
+/**
+ * Event handler for clear chat history
+ */
+function clearChatHistoryEventHandler() {
+  chrome.runtime.sendMessage({ action: "clear_chat_history" }, (response) => {
+    if (response.success) {
+      console.log("Briefly: Clear chat history successfully");
+      state.chatHistory = [];
+      renderAllChatHistory();
+    } else {
+      console.log("Briefly: Clear user history failed!");
+    }
+  });
+}
+
+/**
+ * Event handler for refresh chat history action
+ */
+function refreshChatHistoryEventHandler() {
+  if (state.pagination.isFetching) {
+    console.log("Refresh locked");
+    return;
+  }
+  // Empty out chat history UI, state and reset pagination state
+  clearChatHistoryList();
+  state.chatHistory = [];
+  resetPaginationState();
+  fetchChatHistory(); // Force fetch chat history
+}
+
+/**
+ * Event handler for chat history infinite scroll action
+ * @param {Event} e
+ */
+function chatHistoryScrollEventHandler(e) {
+  const content = e.target;
+  const { scrollTop, scrollHeight, clientHeight } = content;
+  if (
+    scrollTop + clientHeight >= scrollHeight - 100 &&
+    !state.pagination.isFetching &&
+    state.pagination.hasMore
+  ) {
+    fetchChatHistory();
+  }
+}
+
+/**
+ * Fetches chat history for the current page and updates UI.
+ */
 function fetchChatHistory() {
   console.log("Fetching chat history");
   state.pagination.isFetching = true;
 
-  // Show loading indicator
-  const { chatHistoryList, chatHistoryEmpty } = elements;
-  if (chatHistoryList) {
-    // Remove previous spinner if any
-    let spinner = chatHistoryList.querySelector(".chat-history-spinner");
-    if (spinner) spinner.remove();
-
-    // Add a new spinner
-    spinner = document.createElement("div");
-    spinner.className = "chat-history-spinner";
-    spinner.innerHTML = `
-        <div class="spinner" style="margin: 24px auto;"></div>
-        <div style="text-align:center;color:#888;font-size:14px;margin-top:8px;">Fetching chat history...</div>
-      `;
-    chatHistoryList.appendChild(spinner);
-  }
+  const { chatHistoryList } = elements;
+  showFetchingChatHistorySpinner(chatHistoryList);
 
   chrome.runtime.sendMessage(
     {
@@ -645,73 +611,85 @@ function fetchChatHistory() {
       currentPage: state.pagination.currentPage,
     },
     async (response) => {
-      // Replace duplicated IDs with new chat
-      const fetchedChats = new Map(
-        response.chats.map((chat) => [
-          chat.id,
-          {
-            id: chat.id,
-            title: chat.title,
-            page_url: chat.page_url,
-            created_at: chat.created_at,
-          },
-        ])
-      );
-
-      const existingChats = new Map(
-        state.chatHistory.map((chat) => [chat.id, chat])
-      );
-
-      for (const [id, newChat] of fetchedChats.entries()) {
-        existingChats.set(id, newChat);
-      }
-
-      state.chatHistory = Array.from(existingChats.values());
-
+      mergeFetchedChats(response.chats);
       state.pagination.isFetching = false;
       state.pagination.hasMore = response.hasMore;
 
-      console.log(
-        `Fetched ${fetchedChats.length} chats: `,
-        fetchedChats.values()
-      );
-      console.log("Has more chats: ", response.hasMore);
-
-      // Remove spinner
-      chatHistoryList.querySelector(".chat-history-spinner").remove();
-
-      // Render new chats
+      removeChatHistorySpinner(chatHistoryList);
       renderCurrentPageChatHistory();
-
       state.pagination.currentPage += 1;
     }
   );
 }
 
-// Render chat history for the current page, for pagination
+/**
+ * Merges fetched chats into the current chat history state.
+ * @param {Array} chats
+ */
+function mergeFetchedChats(chats) {
+  const fetchedChats = new Map(
+    chats.map((chat) => [
+      chat.id,
+      {
+        id: chat.id,
+        title: chat.title,
+        page_url: chat.page_url,
+        created_at: chat.created_at,
+      },
+    ])
+  );
+  const existingChats = new Map(
+    state.chatHistory.map((chat) => [chat.id, chat])
+  );
+  for (const [id, newChat] of fetchedChats.entries()) {
+    existingChats.set(id, newChat);
+  }
+  state.chatHistory = Array.from(existingChats.values());
+}
+
+/**
+ * Shows a loading spinner in the chat history list during fetches.
+ * @param {HTMLElement} chatHistoryList
+ */
+function showFetchingChatHistorySpinner(chatHistoryList) {
+  if (!chatHistoryList) return;
+  let spinner = chatHistoryList.querySelector(".chat-history-spinner");
+  if (spinner) spinner.remove();
+  spinner = document.createElement("div");
+  spinner.className = "chat-history-spinner";
+  spinner.innerHTML = `
+    <div class="spinner" style="margin: 24px auto;"></div>
+    <div style="text-align:center;color:#888;font-size:14px;margin-top:8px;">Fetching chat history...</div>
+  `;
+  chatHistoryList.appendChild(spinner);
+}
+
+/**
+ * Removes the loading spinner from the chat history list.
+ * @param {HTMLElement} chatHistoryList
+ */
+function removeChatHistorySpinner(chatHistoryList) {
+  const spinner = chatHistoryList?.querySelector(".chat-history-spinner");
+  if (spinner) spinner.remove();
+}
+
+/**
+ * Renders the chat history of the current page
+ */
 function renderCurrentPageChatHistory() {
   const LIMIT = 20;
   const { chatHistoryList, chatHistoryEmpty } = elements;
-
   if (!chatHistoryList) return;
 
   try {
-    // If no chats, display 'no chats'
     if (!state.chatHistory || state.chatHistory.length === 0) {
       chatHistoryEmpty.style.display = "block";
       return;
-    } else {
-      // Hide 'no chats'
-      chatHistoryEmpty.style.display = "none";
     }
-
-    // Only render chats of current page
+    chatHistoryEmpty.style.display = "none";
     const startIdx = state.pagination.currentPage * LIMIT;
     const endIdx = startIdx + LIMIT;
     const chatsToRender = state.chatHistory.slice(startIdx, endIdx);
-
-    console.log("Chats to render: ", chatsToRender);
-
     chatsToRender.forEach((chat) => {
       const item = createChatHistoryItem(chat);
       chatHistoryList.appendChild(item);
@@ -725,11 +703,10 @@ function renderCurrentPageChatHistory() {
 }
 
 /**
- * Render all chat history from stored history
+ * Renders all chat history from stored state.
  */
 function renderAllChatHistory() {
   const { chatHistoryList, chatHistoryEmpty } = elements;
-
   if (!chatHistoryList) return;
 
   try {
@@ -737,10 +714,8 @@ function renderAllChatHistory() {
       chatHistoryEmpty.style.display = "block";
       chatHistoryList.innerHTML = "";
       return;
-    } else {
-      chatHistoryEmpty.style.display = "none";
     }
-
+    chatHistoryEmpty.style.display = "none";
     chatHistoryList.innerHTML = "";
     state.chatHistory.forEach((chat) => {
       const item = createChatHistoryItem(chat);
@@ -754,7 +729,11 @@ function renderAllChatHistory() {
   }
 }
 
-// Create chat history item
+/**
+ * Creates a chat history item DOM element with all event handlers.
+ * @param {Object} chat
+ * @returns {HTMLElement}
+ */
 function createChatHistoryItem(chat) {
   const item = document.createElement("div");
   item.className = "chat-history-item";
@@ -772,204 +751,204 @@ function createChatHistoryItem(chat) {
     </div>
     <div class="chat-history-actions-menu hidden">
       <button class="chat-history-actions-menu-item button" id="rename-button" data-i18n="rename">
-        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
           <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.779 17.779 4.36 19.918 6.5 13.5m4.279 4.279 8.364-8.643a3.027 3.027 0 0 0-2.14-5.165 3.03 3.03 0 0 0-2.14.886L6.5 13.5m4.279 4.279L6.499 13.5m2.14 2.14 6.213-6.504M12.75 7.04 17 11.28"/>
-        </svg>Rename</button>
+        </svg>
+        Rename
+      </button>
       <button class="chat-history-actions-menu-item button" id="delete-button" style="color:#E53E3E" data-i18n="delete">
-        <svg aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
-          <path stroke="#E53E3E" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
-        </svg>Delete</button>
+        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
+        </svg>
+        Delete
+      </button>
     </div>
   `;
 
-  // Open chat when click on chat history item
-  item.addEventListener("click", async (e) => {
-    // Ignore clicks on certain sub-elements
-    if (
-      e.target.closest(".chat-history-actions-menu") ||
-      e.target.classList.contains("chat-history-actions-button") ||
-      e.target.classList.contains("chat-history-title-input")
-    ) {
-      return;
-    }
-
-    clearMessagesFromChat();
-    closeChatHistoryScreen();
-    switchToChat();
-
-    let messages = [];
-
-    // If online, fetch messages from the server
-    if (navigator.onLine) {
-      const response = await new Promise((resolve) => {
-        chrome.runtime.sendMessage(
-          {
-            action: "fetch_chat_messages",
-            chatId: chat.id,
-          },
-          (res) => resolve(res || {})
-        );
-      });
-
-      console.log("Messages from background script: ", response.messages);
-      messages = response.messages || [];
-
-      const found = await idbHandler.getChatById(chat.id);
-      if (!found) await idbHandler.addChat(chat);
-      await idbHandler.overwriteChatMessages(chat.id, messages);
-    }
-    // If offline, get cached messages in IndexedDB if any
-    else {
-      messages = await idbHandler.getMessagesForChat(chat.id);
-    }
-
-    // Push fetched messages to history stack
-    const history = [];
-    for (const message of messages) {
-      // Wait for prior message to be added first to avoid messages disorder
-      await addMessageToChat(message.content, message.role);
-      history.push({ role: message.role, content: message.content });
-    }
-
-    // Update current chat state to this chat
-    setCurrentChatState({ ...chat, history });
-  });
-
+  item.addEventListener("click", (e) =>
+    handleChatHistoryItemClick(e, chat, item)
+  );
   setupChatHistoryActions(item, chat);
 
   return item;
 }
 
+/**
+ * Handles click on a chat history item (excluding menu/actions).
+ * @param {Event} e
+ * @param {Object} chat
+ * @param {HTMLElement} item
+ */
+async function handleChatHistoryItemClick(e, chat, item) {
+  if (
+    e.target.closest(".chat-history-actions-menu") ||
+    e.target.classList.contains("chat-history-actions-button") ||
+    e.target.classList.contains("chat-history-title-input")
+  ) {
+    return;
+  }
+  clearMessagesFromChatContainer();
+  closeChatHistoryScreen();
+  switchToChat();
+
+  let messages = [];
+  if (navigator.onLine) {
+    const response = await new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: "fetch_chat_messages", chatId: chat.id },
+        (res) => resolve(res || {})
+      );
+    });
+    messages = response.messages || [];
+    const found = await idbHandler.getChatById(chat.id);
+    if (!found) await idbHandler.addChat(chat);
+    await idbHandler.overwriteChatMessages(chat.id, messages);
+  } else {
+    messages = await idbHandler.getMessagesForChat(chat.id);
+  }
+
+  const history = [];
+  for (const message of messages) {
+    await addMessageToChat(message.content, message.role);
+    history.push({ role: message.role, content: message.content });
+  }
+  setCurrentChatState({ ...chat, history });
+}
+
+/**
+ * Sets up actions (rename/delete) for a chat history item.
+ * @param {HTMLElement} item
+ * @param {Object} chat
+ */
 function setupChatHistoryActions(item, chat) {
   const actionsBtn = item.querySelector(".chat-history-actions-button");
   const menu = item.querySelector(".chat-history-actions-menu");
 
   actionsBtn.addEventListener("click", (e) => {
     e.stopPropagation();
-
-    const isHidden = menu.classList.contains("hidden");
-
-    // Close all *other* menus, not this one
-    closeAllChatHistoryItemsMenu(menu);
-
-    if (isHidden) {
-      menu.classList.remove("hidden");
-    } else {
-      menu.classList.add("hidden");
-    }
-
-    // Positioning logic
-    if (!menu.classList.contains("hidden")) {
-      const menuRect = menu.getBoundingClientRect();
-      const buttonRect = actionsBtn.getBoundingClientRect();
-      const spaceBelow = window.innerHeight - buttonRect.bottom;
-      const spaceAbove = buttonRect.top;
-
-      if (spaceBelow < menuRect.height && spaceAbove > menuRect.height) {
-        menu.style.top = `auto`;
-        menu.style.bottom = `${spaceBelow}px`;
-      } else {
-        menu.style.top = "";
-        menu.style.bottom = "";
-      }
-    } else {
-      menu.style.top = "";
-      menu.style.bottom = "";
-    }
+    toggleChatHistoryMenu(menu);
   });
 
-  // Rename button handler
-  item.querySelector("#rename-button").addEventListener("click", async (e) => {
+  item.querySelector("#rename-button").addEventListener("click", (e) => {
     e.stopPropagation();
     menu.classList.add("hidden");
-
-    const titleDiv = item.querySelector(".chat-history-title");
-    const currentTitle = titleDiv.textContent.trim();
-    titleDiv.outerHTML = `<input type="text" class="chat-history-title-input" value="${currentTitle}" />`;
-    const input = item.querySelector(".chat-history-title-input");
-    input.focus();
-    input.select();
-
-    const save = async () => {
-      const newTitle = input.value.trim();
-      if (newTitle && newTitle !== currentTitle) {
-        try {
-          await chatHandler.updateChat(chat.id, { title: newTitle });
-          await idbHandler.updateChat(chat.id, { title: newTitle });
-          state.chatHistory = state.chatHistory.map((c) =>
-            c.id === chat.id ? { ...c, title: newTitle } : c
-          );
-        } catch (err) {
-          console.error(err);
-          showPopupDialog({
-            title: "Error",
-            message: "Failed to update chat title. Please try again later",
-          });
-          return;
-        }
-      }
-      input.outerHTML = `<div class="chat-history-title">${
-        newTitle || currentTitle
-      }</div>`;
-    };
-
-    input.addEventListener("keydown", (e) => {
-      if (e.key === "Enter") save();
-      else if (e.key === "Escape") {
-        input.outerHTML = `<div class="chat-history-title">${currentTitle}</div>`;
-      }
-    });
-
-    input.addEventListener("blur", save);
+    showRenameChatInput(item, chat);
   });
 
-  // Delete button handler
   item.querySelector("#delete-button").addEventListener("click", (e) => {
     e.stopPropagation();
     menu.classList.add("hidden");
-
-    showPopupDialog({
-      title: "Confirmation",
-      message: "Are you sure you want to delete this chat?",
-      buttons: [
-        {
-          label: "Yes",
-          eventHandler: async () => {
-            await chatHandler.deleteChat(chat.id);
-            await idbHandler.deleteChat(chat.id);
-            state.chatHistory = state.chatHistory.filter(
-              (c) => c.id !== chat.id
-            );
-            removeChatHistoryItem(chat.id);
-            // If deleted chat was current chat, reset current chat
-            if (chat.id === state.currentChat.id) {
-              clearMessagesFromChat();
-              resetCurrentChatState();
-            }
-          },
-        },
-        {
-          label: "No",
-        },
-      ],
-    });
+    showDeleteChatDialog(chat);
   });
 }
 
-// Helper to close all chat history action menus
-export function closeAllChatHistoryItemsMenu(except = null) {
-  document.querySelectorAll(".chat-history-actions-menu").forEach((el) => {
-    if (el !== except) {
-      el.classList.add("hidden");
+/**
+ * Toggles the visibility of a chat history item's menu, closing others.
+ * @param {HTMLElement} menu
+ */
+function toggleChatHistoryMenu(menu) {
+  const isHidden = menu.classList.contains("hidden");
+  closeAllChatHistoryItemsMenu(menu);
+  menu.classList.toggle("hidden", !isHidden);
+
+  // Optionally add positioning logic here if needed
+}
+
+/**
+ * Shows an input for renaming a chat and handles save/cancel.
+ * @param {HTMLElement} item
+ * @param {Object} chat
+ */
+function showRenameChatInput(item, chat) {
+  const titleDiv = item.querySelector(".chat-history-title");
+  const currentTitle = titleDiv.textContent.trim();
+  titleDiv.outerHTML = `<input type="text" class="chat-history-title-input" value="${currentTitle}" />`;
+  const input = item.querySelector(".chat-history-title-input");
+  input.focus();
+  input.select();
+
+  const save = async () => {
+    const newTitle = input.value.trim();
+    if (newTitle && newTitle !== currentTitle) {
+      try {
+        await chatHandler.updateChat(chat.id, { title: newTitle });
+        await idbHandler.updateChat(chat.id, { title: newTitle });
+        state.chatHistory = state.chatHistory.map((c) =>
+          c.id === chat.id ? { ...c, title: newTitle } : c
+        );
+      } catch (err) {
+        console.error(err);
+        showPopupDialog({
+          title: "Error",
+          message: "Failed to update chat title. Please try again later",
+        });
+        return;
+      }
+    }
+    input.outerHTML = `<div class="chat-history-title">${
+      newTitle || currentTitle
+    }</div>`;
+  };
+
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") save();
+    else if (e.key === "Escape") {
+      input.outerHTML = `<div class="chat-history-title">${currentTitle}</div>`;
     }
   });
+  input.addEventListener("blur", save);
 }
 
+/**
+ * Shows a confirmation dialog to delete a single chat.
+ * @param {Object} chat
+ */
+function showDeleteChatDialog(chat) {
+  showPopupDialog({
+    title: "Confirmation",
+    message: "Are you sure you want to delete this chat?",
+    buttons: [
+      {
+        label: "Yes",
+        style: "danger",
+        eventHandler: async () => {
+          await chatHandler.deleteChat(chat.id);
+          await idbHandler.deleteChat(chat.id);
+          state.chatHistory = state.chatHistory.filter((c) => c.id !== chat.id);
+          removeChatHistoryItem(chat.id);
+          if (chat.id === state.currentChat.id) {
+            clearMessagesFromChatContainer();
+            resetCurrentChatState();
+          }
+        },
+      },
+      { label: "No", style: "secondary" },
+    ],
+  });
+}
+
+/**
+ * Closes all chat history action menus except the provided one.
+ * @param {HTMLElement|null} except
+ */
+export function closeAllChatHistoryItemsMenu(except = null) {
+  document.querySelectorAll(".chat-history-actions-menu").forEach((el) => {
+    if (el !== except) el.classList.add("hidden");
+  });
+}
+
+/**
+ * Removes a chat history item
+ * @param {string} id
+ */
 function removeChatHistoryItem(id) {
   const itemToRemove = document.querySelector(`[data-chat-id="${id}"]`);
   elements.chatHistoryList.removeChild(itemToRemove);
 }
 
+/**
+ * Closes the chat history screen.
+ */
 export function closeChatHistoryScreen() {
   elements.chatHistoryScreen.style.display = "none";
 }
@@ -980,7 +959,6 @@ export function closeChatHistoryScreen() {
  * @property {"primary" | "secondary" | "danger" | string} style Visual style of the button
  * @property {Function} [eventHandler] Function to execute when the button is clicked
  */
-
 /**
  * Create and display a popup dialog with a title, optional message, and buttons.
  *
@@ -1139,6 +1117,44 @@ function toggleAccountPopupUI() {
     accountPopup.style.display = "block";
   } else {
     accountPopup.style.display = "none";
+  }
+}
+
+// Close the account popup UI
+function closeAccountPopupUI() {
+  elements.accountPopup.style.display = "none";
+}
+
+// Render the account popup UI
+export function renderToggleAccountPopupUI(isAuthenticated) {
+  if (isAuthenticated) {
+    elements.signOutButton.style.display = "flex";
+
+    // Hide all Google and Facebook login buttons in the header
+    elements.googleLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "none";
+      }
+    });
+    elements.facebookLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "none";
+      }
+    });
+  } else {
+    elements.signOutButton.style.display = "none";
+
+    // Show all Google and Facebook login buttons in the header
+    elements.googleLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "flex";
+      }
+    });
+    elements.facebookLoginButtons.forEach((button) => {
+      if (button.classList.contains("header-button")) {
+        button.style.display = "flex";
+      }
+    });
   }
 }
 

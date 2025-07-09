@@ -660,7 +660,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         offset: message.currentPage * CHAT_QUERY_LIMIT,
       })
       .then((data) => {
-        console.log("Fetch chat history request's data: ", data);
         sendResponse({
           success: true,
           chats: data.chats,
@@ -672,7 +671,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.action === "fetch_chat_messages") {
     chatHandler.getMessages(message.chatId).then((response) => {
-      console.log("fetch_chat_messages response: ", response);
       sendResponse({
         success: response.success,
         messages: response.data.messages,
@@ -683,7 +681,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.action === "clear_chat_history") {
     chatHandler.deleteAllChatsOfCurrentUser().then((response) => {
-      console.log("clear_chat_history response: ", response);
       sendResponse({ success: response.success });
     });
 
