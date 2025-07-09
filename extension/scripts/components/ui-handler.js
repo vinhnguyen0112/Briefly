@@ -15,7 +15,7 @@ import {
 import {
   renderToggleAccountPopupUI,
   setupListenersForDynamicChatHistoryElements,
-  showPopupAlert,
+  showPopupDialog,
   showSignInAlertPopup,
   toggleChatHistoryScreen,
 } from "./event-handler.js";
@@ -577,7 +577,7 @@ export function handleContentMessage(message) {
       handleAuthStateChange(message.isAuth);
       break;
     case "session_expired":
-      showPopupAlert({
+      showPopupDialog({
         title: "Session Expired",
         message:
           "Your session has expired and you have been signed out for security reasons",

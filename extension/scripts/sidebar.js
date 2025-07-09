@@ -12,7 +12,7 @@ import {
 import {
   renderToggleAccountPopupUI,
   setupEventListeners,
-  showPopupAlert,
+  showPopupDialog,
 } from "./components/event-handler.js";
 import {
   requestPageContent,
@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (isAuth && !isValid) {
         console.log("User session is invalid, signing out user");
         clearUserSession();
-        showPopupAlert({
+        showPopupDialog({
           title: "Session Expired",
           message:
             "Your session has expired and we have signed you out for security reasons",

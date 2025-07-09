@@ -376,7 +376,8 @@ export function setupEventListeners() {
   setupListenersForDynamicChatHistoryElements();
 
   elements.clearChatHistoryButton.addEventListener("click", (e) => {
-    showPopupAlert({
+    // Display confirmation dialog
+    showPopupDialog({
       title: "Delete confirmation",
       message:
         "Do you want to clear all chat history? This action is irreversable",
@@ -384,16 +385,16 @@ export function setupEventListeners() {
         {
           label: "Delete",
           eventHandler: () => {
+            // Pass clear_chat_history message to background script
             chrome.runtime.sendMessage(
               { action: "clear_chat_history" },
               (response) => {
                 if (response.success) {
                   console.log("Briefly: Clear chat history successfully");
                   state.chatHistory = []; // Empty out chat history
-                  renderAllChatHistory();
+                  renderAllChatHistory(); // Re-render chat history screen
                 } else {
                   console.log("Briefly: Clear user history failed!");
-                  // TODO: Display error?
                 }
               }
             );
@@ -404,16 +405,9 @@ export function setupEventListeners() {
   });
 
   elements.refreshChatHistoryButton.addEventListener("click", (e) => {
-    // chrome.runtime.sendMessage(
-    //   { action: "refresh_chat_history" },
-    //   (response) => {
-    //     //TODO: Handle response
-    //     if (response.success) {
-    //     }
-    //   }
-    // );
-    state.chatHistory = []; // Empty out chat history
-    resetPaginationState(); // Reset pagination state
+    // state.chatHistory = []; // Empty out chat history
+    // resetPaginationState(); // Reset pagination state
+    showPopupAlert({ title: "Test", message: "test", type: "info" });
   });
 
   // Hide menus when clicking outside
@@ -869,7 +863,7 @@ function setupChatHistoryActions(item, chat) {
           );
         } catch (err) {
           console.error(err);
-          showPopupAlert({
+          showPopupDialog({
             title: "Error",
             message: "Failed to update chat title. Please try again later",
           });
@@ -896,7 +890,7 @@ function setupChatHistoryActions(item, chat) {
     e.stopPropagation();
     menu.classList.add("hidden");
 
-    showPopupAlert({
+    showPopupDialog({
       title: "Confirmation",
       message: "Are you sure you want to delete this chat?",
       buttons: [
@@ -950,7 +944,7 @@ export function closeChatHistoryScreen() {
  */
 
 /**
- * Dynamically displays a popup alert with a title, optional message, and buttons.
+ * Create and display a popup dialog with a title, optional message, and buttons.
  *
  * A close button is created by default
  *
@@ -959,12 +953,12 @@ export function closeChatHistoryScreen() {
  * @param {string} options.message The optional message content
  * @param {Array<PopupButton>} options.buttons Array of buttons to display
  */
-export function showPopupAlert(options) {
+export function showPopupDialog(options) {
   const { title, message, buttons = [] } = options;
 
   // Create overlay
-  const alertOverlay = document.createElement("div");
-  alertOverlay.className = "dynamic-alert-overlay overlay";
+  const dialogOverlay = document.createElement("div");
+  dialogOverlay.className = "dynamic-dialog-overlay overlay";
 
   // Create popup
   const popup = document.createElement("div");
@@ -998,7 +992,7 @@ export function showPopupAlert(options) {
     button.onclick = (e) => {
       e.stopPropagation();
       if (typeof btn.eventHandler === "function") btn.eventHandler();
-      alertOverlay.remove();
+      dialogOverlay.remove();
     };
     content.appendChild(button);
   });
@@ -1008,8 +1002,78 @@ export function showPopupAlert(options) {
   closeBtn.className = "button button-secondary";
   closeBtn.textContent = "Close";
   closeBtn.style.width = "100%";
-  closeBtn.onclick = () => alertOverlay.remove();
+  closeBtn.onclick = () => dialogOverlay.remove();
   content.appendChild(closeBtn);
+
+  popup.appendChild(content);
+  dialogOverlay.appendChild(popup);
+  document.body.appendChild(dialogOverlay);
+}
+
+/**
+ * Displays a popup alert dialog with a title, message, icon, and a close (×) button.
+ * The icon and color are set based on the `type` param.
+ *
+ * @param {Object} options
+ * @param {string} options.title   - The alert title text.
+ * @param {string} options.message - The alert message content.
+ * @param {'success'|'error'|'warning'|'info'} [options.type='info'] - The alert type.
+ */
+export function showPopupAlert({ title, message, type = "info" }) {
+  const ICONS = {
+    success: {
+      svg: `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#27ae60"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M8 12l2.5 2.5L16 9"/></svg>`,
+      color: "#27ae60",
+    },
+    error: {
+      svg: `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#e74c3c"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" stroke-linecap="round" d="M15 9l-6 6m0-6l6 6"/></svg>`,
+      color: "#e74c3c",
+    },
+    warning: {
+      svg: `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#f39c12"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" stroke-linecap="round" d="M12 8v4m0 4h.01"/></svg>`,
+      color: "#f39c12",
+    },
+    info: {
+      svg: `<svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#3498db"><circle cx="12" cy="12" r="10" stroke-width="2"/><path stroke-width="2" stroke-linecap="round" d="M12 8h.01M12 12v4"/></svg>`,
+      color: "#3498db",
+    },
+  };
+
+  const icon = ICONS[type] || ICONS.info;
+
+  const alertOverlay = document.createElement("div");
+  alertOverlay.className = "dynamic-alert-overlay overlay";
+
+  const popup = document.createElement("div");
+  popup.className = "alert-popup";
+
+  const iconWrapper = document.createElement("div");
+  iconWrapper.className = "alert-popup-icon";
+  iconWrapper.innerHTML = icon.svg;
+  popup.appendChild(iconWrapper);
+
+  const content = document.createElement("div");
+  content.className = "popup-content";
+
+  const titleElement = document.createElement("h3");
+  titleElement.className = "popup-title";
+  titleElement.textContent = title;
+  titleElement.style.color = icon.color;
+  content.appendChild(titleElement);
+
+  if (message) {
+    const messageElement = document.createElement("p");
+    messageElement.className = "popup-message";
+    messageElement.textContent = message;
+    content.appendChild(messageElement);
+  }
+
+  const closeBtn = document.createElement("button");
+  closeBtn.className = "button button-secondary";
+  closeBtn.textContent = "×";
+  closeBtn.setAttribute("aria-label", "Close");
+  closeBtn.onclick = () => alertOverlay.remove();
+  popup.appendChild(closeBtn);
 
   popup.appendChild(content);
   alertOverlay.appendChild(popup);
