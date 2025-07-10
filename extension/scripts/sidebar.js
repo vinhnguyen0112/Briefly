@@ -12,7 +12,7 @@ import {
 import {
   renderToggleAccountPopupUI,
   setupEventListeners,
-  showPopupAlert,
+  showPopupDialog,
 } from "./components/event-handler.js";
 import {
   requestPageContent,
@@ -22,7 +22,7 @@ import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
 import { isUserAuthenticated } from "./components/auth-handler.js";
 import { getFingerprint, setupAnonSession } from "./components/anon-handler.js";
-import { injectChatHistoryElements } from "./components/ui-handler.js";
+import { configureChatHistoryElementsOnAuthState } from "./components/ui-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -34,7 +34,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (isAuth && !isValid) {
         console.log("User session is invalid, signing out user");
         clearUserSession();
-        showPopupAlert({
+        showPopupDialog({
           title: "Session Expired",
           message:
             "Your session has expired and we have signed you out for security reasons",
@@ -43,7 +43,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
       // Render UI on first load based on user authentication state
       renderToggleAccountPopupUI(isAuth);
-      injectChatHistoryElements(isAuth);
+      configureChatHistoryElementsOnAuthState(isAuth);
     })
     .catch((err) => {
       console.error("CocBot: Error validating user session", err);

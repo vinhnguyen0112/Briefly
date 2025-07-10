@@ -15,9 +15,8 @@ import {
 import {
   renderToggleAccountPopupUI,
   setupListenersForDynamicChatHistoryElements,
-  showPopupAlert,
+  showPopupDialog,
   showSignInAlertPopup,
-  toggleChatHistoryScreen,
 } from "./event-handler.js";
 
 // close all panels
@@ -259,14 +258,19 @@ export async function addMessageToChat(message, role) {
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 }
 
-// Clear all chat messages from the chat container
-export function clearMessagesFromChat() {
+/**
+ * Clear all messages from chat container
+ */
+export function clearMessagesFromChatContainer() {
   if (elements.chatContainer) {
     elements.chatContainer.innerHTML = "";
   }
 }
 
-export function clearChatHistory() {
+/**
+ * Clear chat history list
+ */
+export function clearChatHistoryList() {
   if (elements.chatHistoryList) {
     elements.chatHistoryList.innerHTML = "";
   }
@@ -577,7 +581,7 @@ export function handleContentMessage(message) {
       handleAuthStateChange(message.isAuth);
       break;
     case "session_expired":
-      showPopupAlert({
+      showPopupDialog({
         title: "Session Expired",
         message:
           "Your session has expired and you have been signed out for security reasons",
@@ -596,17 +600,20 @@ export function escapeHtml(text) {
   return div.innerHTML;
 }
 
-// Handle UI changes when authentication state changes
+/**
+ * Handle events when authentication state changes
+ * @param {boolean} isAuth Authentication state
+ */
 function handleAuthStateChange(isAuth) {
   // Reset UI
   renderToggleAccountPopupUI(isAuth);
-  clearMessagesFromChat();
-  clearChatHistory();
+  clearMessagesFromChatContainer();
+  clearChatHistoryList();
 
   state.isChatHistoryEventsInitialized = false;
 
-  // Inject or remove chat history screen based on user session state
-  injectChatHistoryElements(isAuth);
+  // Inject or remove dynamic chat history elements based on authentication state
+  configureChatHistoryElementsOnAuthState(isAuth);
 
   // Navigate back to welcome page
   state.welcomeMode = true;
@@ -623,7 +630,12 @@ function handleAuthStateChange(isAuth) {
   elements.chatHistoryScreen.style.display = "none";
 }
 
-export function injectChatHistoryElements(isAuth) {
+/**
+ * Inject or remove chat history elements based on authentication state.
+ * And attach reference to new elements
+ * @param {boolean} isAuth Authenticated state
+ */
+export function configureChatHistoryElementsOnAuthState(isAuth) {
   const sidebarContentWrapper = document.querySelector(
     ".sidebar-content-wrapper"
   );
@@ -666,13 +678,61 @@ export function injectChatHistoryElements(isAuth) {
       chatHistoryScreen.innerHTML = `
           <div class="chat-history-header">
             <h3 data-i18n="chatHistory">Chat History</h3>
-            <button
-              id="close-chat-history-button"
-              class="icon-button"
-              title="Close"
-            >
-              ×
-            </button>
+            <div class="chat-history-header-actions">
+              <button
+                id="clear-chat-history-button"
+                class="icon-button"
+                data-i18n-title="clearHistory"
+              >
+                <svg
+                  class="w-6 h-6 text-gray-800 dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"
+                  />
+                </svg>
+              </button>
+              <button
+                id="refresh-chat-history-button"
+                class="icon-button"
+                data-i18n-title="refreshHistory"
+              >
+                <svg
+                  class="w-6 h-6 text-gray-800 dark:text-white"
+                  aria-hidden="true"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    stroke="currentColor"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    stroke-width="2"
+                    d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"
+                  />
+                </svg>
+              </button>
+              <button
+                id="close-chat-history-button"
+                class="icon-button"
+                title="Close"
+              >
+                ×
+              </button>
+            </div>
           </div>
           <div id="chat-history-content">
             <div id="chat-history-list"></div>
@@ -684,6 +744,7 @@ export function injectChatHistoryElements(isAuth) {
 
       // Inject chat history screen
       sidebarContentWrapper.appendChild(chatHistoryScreen);
+
       // Reference to new chat history elements
       elements.chatHistoryScreen = chatHistoryScreen;
       elements.chatHistoryList =

@@ -601,14 +601,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     console.log("CocBot: Received request to authenticate with Google");
 
     authenticateWithGoogle()
-      .then((sessionData) => {
-        saveUserSession(sessionData)
-          .then(() => {
-            sendResponse({ success: true });
-          })
-          .catch((err) => {
-            throw err;
-          });
+      .then((response) => {
+        if (response.success) {
+          saveUserSession(response.data)
+            .then(() => {
+              sendResponse({ success: true });
+            })
+            .catch((err) => {
+              throw err;
+            });
+        } else {
+          sendResponse({ success: false });
+        }
       })
       .catch((err) => {
         console.error(err);
@@ -620,14 +624,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "facebook_login") {
     console.log("CocBot: Received request to authenticate with Facebook");
     authenticateWithFacebook()
-      .then((session) => {
-        saveUserSession(session)
-          .then(() => {
-            sendResponse({ success: true });
-          })
-          .catch((err) => {
-            throw err;
-          });
+      .then((response) => {
+        if (response.success) {
+          saveUserSession(response.data)
+            .then(() => {
+              sendResponse({ success: true });
+            })
+            .catch((err) => {
+              throw err;
+            });
+        } else {
+          sendResponse({ success: false });
+        }
       })
       .catch((error) => {
         console.error("Failed to handle captions", error);
@@ -654,25 +662,22 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.action === "fetch_chat_history") {
-    console.log("Current page: ", message.currentPage);
     chatHandler
       .getChatsForCurrentUser({
         offset: message.currentPage * CHAT_QUERY_LIMIT,
       })
-      .then((data) => {
-        console.log("Fetch chat history request's data: ", data);
+      .then((response) => {
         sendResponse({
-          success: true,
-          chats: data.chats,
-          hasMore: data.hasMore,
+          success: response.success,
+          chats: response.data.chats,
+          hasMore: response.data.hasMore,
         });
       });
 
     return true;
   }
   if (message.action === "fetch_chat_messages") {
-    chatHandler.getMessages(message.chatId).then((response) => {
-      console.log("fetch_chat_messages response: ", response);
+    chatHandler.getMessagesOfChat(message.chatId).then((response) => {
       sendResponse({
         success: response.success,
         messages: response.data.messages,
@@ -683,7 +688,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
   if (message.action === "clear_chat_history") {
     chatHandler.deleteAllChatsOfCurrentUser().then((response) => {
-      console.log("clear_chat_history response: ", response);
       sendResponse({ success: response.success });
     });
 

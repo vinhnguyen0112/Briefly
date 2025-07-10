@@ -4,10 +4,12 @@ const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const FACEBOOK_AUTH_URL = "https://www.facebook.com/v22.0/dialog/oauth";
 const SERVER_URL = "http://localhost:3000";
 
-// Check if user session still valid on server side
+/**
+ * Checks if the user is authenticated and if the session is valid.
+ * @returns {Promise<{isAuth: boolean, isValid: boolean}>}
+ */
 export const isUserAuthenticated = async () => {
   try {
-    // Check for ongoing session
     const session = await getUserSession();
     if (!session) {
       return {
@@ -15,8 +17,6 @@ export const isUserAuthenticated = async () => {
         isValid: false,
       };
     }
-
-    // Check for session validity
     const isValid = await isSessionValid(session.id);
     return {
       isAuth: true,
@@ -27,7 +27,11 @@ export const isUserAuthenticated = async () => {
   }
 };
 
-// Validate if the auth session is still valid
+/**
+ * Validates if the authentication session is still valid on the server.
+ * @param {string} sessionId The session ID to validate.
+ * @returns {Promise<boolean>} True if valid, false otherwise.
+ */
 export const isSessionValid = async (sessionId) => {
   try {
     const response = await fetch(`${SERVER_URL}/api/auth/session-validate`, {
@@ -38,12 +42,8 @@ export const isSessionValid = async (sessionId) => {
       },
     });
 
-    if (!response.ok) {
-      return false;
-    }
-
     const data = await response.json();
-    return data.success;
+    return data.success === true;
   } catch (err) {
     // If validation endpoint is unreachable, keep user authenticated
     // Further requests will invalidate them
@@ -57,7 +57,10 @@ export const isSessionValid = async (sessionId) => {
   }
 };
 
-// Check if user need to sign in to proceed their action
+/**
+ * Checks if the user needs to sign in to continue querying.
+ * @returns {Promise<boolean>}
+ */
 export const isSignInNeeded = async () => {
   const { anon_query_count } = await getAnonSession();
   const userSession = await getUserSession();
@@ -65,21 +68,23 @@ export const isSignInNeeded = async () => {
   return anon_query_count >= 3 && !userSession;
 };
 
-// Sign the user out
+/**
+ * Signs the user out and clears the session.
+ * @returns {Promise<void>}
+ */
 export const signOut = async () => {
   try {
     const session = await getUserSession();
-    // If no session, UI bugged, return true
+    // If there's no auth session on going, sign out anyway
     if (!session) {
       return await clearUserSession();
     }
 
-    const prefixedSessionId = `auth:${session.id}`;
     const response = await fetch(`${SERVER_URL}/api/auth/signout`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${prefixedSessionId}`,
+        Authorization: `Bearer auth:${session.id}`,
       },
     });
 
@@ -94,18 +99,19 @@ export const signOut = async () => {
   }
 };
 
+/**
+ * Initiates Facebook authentication flow and returns session data.
+ * @returns {Promise<Object>} The authenticated session data.
+ * @throws If authentication fails.
+ */
 export const authenticateWithFacebook = async () => {
   const manifest = chrome.runtime.getManifest();
 
   try {
     const authUrl = buildFacebookAuthUrl(manifest);
     const redirectedTo = await launchAuthFlow(authUrl);
-
-    console.log("Facebook redirected URL: ", redirectedTo);
-
     const accessToken = extractAccessToken(redirectedTo);
 
-    console.log("Access Token: ", accessToken);
     console.log(
       "Facebook authentication successful, sending access token to server"
     );
@@ -118,7 +124,11 @@ export const authenticateWithFacebook = async () => {
   }
 };
 
-// Configure the Faccebook authentication endpoints
+/**
+ * Builds the Facebook OAuth URL using manifest data.
+ * @param {Object} manifest The Chrome extension manifest.
+ * @returns {string} The Facebook OAuth URL.
+ */
 const buildFacebookAuthUrl = (manifest) => {
   const url = new URL(FACEBOOK_AUTH_URL);
   url.searchParams.set("client_id", manifest.oauth2.facebook_client_id);
@@ -130,7 +140,12 @@ const buildFacebookAuthUrl = (manifest) => {
   return url.href;
 };
 
-// Extract token from redirected URL
+/**
+ * Extracts the access token from the redirected Facebook OAuth URL.
+ * @param {string} redirectedTo The redirected URL after authentication.
+ * @returns {string} The access token.
+ * @throws If the access token is not found.
+ */
 const extractAccessToken = (redirectedTo) => {
   const redirectedUrl = new URL(redirectedTo);
   const params = new URLSearchParams(redirectedUrl.hash.replace("#", ""));
@@ -143,19 +158,17 @@ const extractAccessToken = (redirectedTo) => {
   return accessToken;
 };
 
-// Send token to server for verification & session
+/**
+ * Sends the Facebook access token to the server for verification and session creation.
+ * @param {string} accessToken The Facebook access token.
+ * @returns {Promise<Object>} The session data from the server.
+ * @throws If the server responds with an error.
+ */
 const sendAccessTokenToServer = async (accessToken) => {
-  const anonSession = await getAnonSession();
-
   const headers = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${accessToken}`,
   };
-
-  // If there's an anonymous session, append to header for promotion flow.
-  if (anonSession) {
-    headers["Promote"] = anonSession.id;
-  }
 
   const response = await fetch(`${SERVER_URL}/api/auth/facebook/callback`, {
     method: "POST",
@@ -167,7 +180,6 @@ const sendAccessTokenToServer = async (accessToken) => {
   }
 
   const data = await response.json();
-  console.log("Server response:", data);
 
   if (!data.success) {
     throw new Error(
@@ -175,12 +187,15 @@ const sendAccessTokenToServer = async (accessToken) => {
     );
   }
 
-  return data.data;
+  return data;
 };
 
-// Google authentication communication
+/**
+ * Initiates Google authentication flow and returns session data.
+ * @returns {Promise<Object>} The authenticated session data.
+ * @throws If authentication fails.
+ */
 export const authenticateWithGoogle = async () => {
-  console.log("Authenticating with Google function executed");
   const manifest = chrome.runtime.getManifest();
 
   try {
@@ -188,7 +203,6 @@ export const authenticateWithGoogle = async () => {
     const redirectedTo = await launchAuthFlow(authUrl);
     const idToken = extractIdToken(redirectedTo);
 
-    console.log("ID Token: ", idToken);
     console.log("Google authentication successful, sending ID token to server");
 
     const sessionData = await sendIdTokenToServer(idToken);
@@ -199,7 +213,11 @@ export const authenticateWithGoogle = async () => {
   }
 };
 
-// Configure Google authentication endpoints
+/**
+ * Builds the Google OAuth URL using manifest data.
+ * @param {Object} manifest The Chrome extension manifest.
+ * @returns {string} The Google OAuth URL.
+ */
 const buildGoogleAuthUrl = (manifest) => {
   const url = new URL(GOOGLE_AUTH_URL);
   url.searchParams.set("client_id", manifest.oauth2.client_id);
@@ -213,6 +231,11 @@ const buildGoogleAuthUrl = (manifest) => {
   return url.href;
 };
 
+/**
+ * Launches the Chrome identity WebAuthFlow for OAuth.
+ * @param {string} authUrl The OAuth URL to launch.
+ * @returns {Promise<string>} The redirected URL after authentication.
+ */
 const launchAuthFlow = (authUrl) => {
   return new Promise((resolve, reject) => {
     chrome.identity.launchWebAuthFlow(
@@ -235,7 +258,12 @@ const launchAuthFlow = (authUrl) => {
   });
 };
 
-// Extract ID token from redirectedURL
+/**
+ * Extracts the ID token from the redirected Google OAuth URL.
+ * @param {string} redirectedTo The redirected URL after authentication.
+ * @returns {string} The ID token.
+ * @throws If the ID token is not found.
+ */
 const extractIdToken = (redirectedTo) => {
   const redirectedUrl = new URL(redirectedTo);
   const params = new URLSearchParams(redirectedUrl.hash.replace("#", ""));
@@ -248,19 +276,17 @@ const extractIdToken = (redirectedTo) => {
   return idToken;
 };
 
-// Send ID token to server for verification & session
+/**
+ * Sends the Google ID token to the server for verification and session creation.
+ * @param {string} idToken The Google ID token.
+ * @returns {Promise<Object>} The session data from the server.
+ * @throws If the server responds with an error.
+ */
 const sendIdTokenToServer = async (idToken) => {
-  const anonSession = await getAnonSession();
-
   const headers = {
     "Content-Type": "application/json",
     Authorization: `Bearer ${idToken}`,
   };
-
-  // If there's an anonymous session, append to header for promotion flow.
-  if (anonSession) {
-    headers["Promote"] = anonSession.id;
-  }
 
   const response = await fetch(`${SERVER_URL}/api/auth/google/callback`, {
     method: "POST",
@@ -272,7 +298,6 @@ const sendIdTokenToServer = async (idToken) => {
   }
 
   const data = await response.json();
-  console.log("Server response:", data);
 
   if (!data.success) {
     throw new Error(
@@ -280,5 +305,5 @@ const sendIdTokenToServer = async (idToken) => {
     );
   }
 
-  return data.data;
+  return data;
 };
