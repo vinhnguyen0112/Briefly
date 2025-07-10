@@ -4,6 +4,7 @@ import {
   increaseAnonQueryCount,
   getUserSession,
   resetCurrentChatState,
+  sendRequest,
 } from "./state.js";
 import {
   addMessageToChat,
@@ -15,8 +16,10 @@ import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 
+const SERVER_URL = "http://localhost:3000";
+
 // Process a user query
-// Process a user query
+// TODO: Still response with error when db operations failed
 export async function processUserQuery(query) {
   // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
@@ -54,7 +57,7 @@ export async function processUserQuery(query) {
       state.currentConfig
     );
 
-    const response = await callOpenAI(apiKey, messages);
+    const response = await callOpenAI(messages);
 
     removeTypingIndicator(typingIndicator);
 
@@ -160,50 +163,23 @@ export async function processUserQuery(query) {
 }
 
 // openai api communication
-export async function callOpenAI(apiKey, messages) {
-  try {
-    // Estimate max tokens based on config maxWordCount if available
-    // Approximate tokens to be ~1.3x the number of words
-    const config = state.currentConfig || {};
-    const maxTokens = config.maxWordCount
-      ? Math.ceil(config.maxWordCount * 1.3)
-      : 1500;
+export async function callOpenAI(messages) {
+  const config = state.currentConfig || {};
+  const maxTokens = config.maxWordCount
+    ? Math.ceil(config.maxWordCount * 1.3)
+    : 1500;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: maxTokens,
-      }),
-    });
+  const res = await sendRequest(`${SERVER_URL}/api/query`, {
+    method: "POST",
+    body: {
+      messages,
+      max_tokens: maxTokens,
+    },
+  });
 
-    const data = await response.json();
+  console.log("Query response: ", res);
 
-    if (!response.ok) {
-      throw new Error(data.error?.message || "Unknown API error");
-    }
-
-    if (data.choices && data.choices.length > 0) {
-      return {
-        success: true,
-        message: data.choices[0].message.content,
-      };
-    } else {
-      throw new Error("No response from API");
-    }
-  } catch (error) {
-    console.error("CocBot: API error", error);
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
+  return { success: res.success, message: res.data.message };
 }
 
 export async function constructPromptWithPageContent(

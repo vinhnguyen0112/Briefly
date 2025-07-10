@@ -11,8 +11,7 @@ const anonRoutes = require("./routes/anonRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const testRoutes = require("./routes/testRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
-const { ERROR_CODES } = require("./errors");
-const AppError = require("./models/appError");
+const queryRoutes = require("./routes/queryRoutes");
 const {
   extractClientIp,
   extractVisitorId,
@@ -38,6 +37,7 @@ app.use("/api/captionize", captionRoutes);
 app.use("/api/anon", anonRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/query", queryRoutes);
 
 // health check
 app.get("/api/health", (req, res) => {
