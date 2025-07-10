@@ -617,7 +617,7 @@ body.sidebar-resizing * {
 #chat-screen {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  height: calc(100% - 58px); /*TODO: Temporary fix for off-screened chatbar*/
   width: 100%;
 }
 
