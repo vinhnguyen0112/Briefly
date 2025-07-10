@@ -102,7 +102,7 @@ export const signOut = async () => {
 /**
  * Initiates Facebook authentication flow and returns session data.
  * @returns {Promise<Object>} The authenticated session data.
- * @throws {Error} If authentication fails.
+ * @throws If authentication fails.
  */
 export const authenticateWithFacebook = async () => {
   const manifest = chrome.runtime.getManifest();
@@ -144,7 +144,7 @@ const buildFacebookAuthUrl = (manifest) => {
  * Extracts the access token from the redirected Facebook OAuth URL.
  * @param {string} redirectedTo The redirected URL after authentication.
  * @returns {string} The access token.
- * @throws {Error} If the access token is not found.
+ * @throws If the access token is not found.
  */
 const extractAccessToken = (redirectedTo) => {
   const redirectedUrl = new URL(redirectedTo);
@@ -162,7 +162,7 @@ const extractAccessToken = (redirectedTo) => {
  * Sends the Facebook access token to the server for verification and session creation.
  * @param {string} accessToken The Facebook access token.
  * @returns {Promise<Object>} The session data from the server.
- * @throws {Error} If the server responds with an error.
+ * @throws If the server responds with an error.
  */
 const sendAccessTokenToServer = async (accessToken) => {
   const headers = {
@@ -193,7 +193,7 @@ const sendAccessTokenToServer = async (accessToken) => {
 /**
  * Initiates Google authentication flow and returns session data.
  * @returns {Promise<Object>} The authenticated session data.
- * @throws {Error} If authentication fails.
+ * @throws If authentication fails.
  */
 export const authenticateWithGoogle = async () => {
   const manifest = chrome.runtime.getManifest();
@@ -262,7 +262,7 @@ const launchAuthFlow = (authUrl) => {
  * Extracts the ID token from the redirected Google OAuth URL.
  * @param {string} redirectedTo The redirected URL after authentication.
  * @returns {string} The ID token.
- * @throws {Error} If the ID token is not found.
+ * @throws If the ID token is not found.
  */
 const extractIdToken = (redirectedTo) => {
   const redirectedUrl = new URL(redirectedTo);
@@ -280,7 +280,7 @@ const extractIdToken = (redirectedTo) => {
  * Sends the Google ID token to the server for verification and session creation.
  * @param {string} idToken The Google ID token.
  * @returns {Promise<Object>} The session data from the server.
- * @throws {Error} If the server responds with an error.
+ * @throws If the server responds with an error.
  */
 const sendIdTokenToServer = async (idToken) => {
   const headers = {
