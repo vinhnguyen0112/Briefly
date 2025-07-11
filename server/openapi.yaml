@@ -669,70 +669,70 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /captionize:
-    post:
-      summary: Generate AI-powered image captions
-      description: >
-        Generates captions for one or more images using OpenAI, based on the provided content context.
-        Requires an array of image URLs and context for the images.
-      tags:
-        - Captionize
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              required:
-                - sources
-                - context
-              properties:
-                sources:
-                  type: array
-                  items:
-                    type: string
-                  description: Array of image sources (can be URLs or base64 strings)
-                context:
-                  type: string
-                  description: Contextual article/content for captioning
-      responses:
-        "200":
-          description: Captions generated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      captions:
-                        type: array
-                        items:
-                          type: string
-                      usage:
-                        type: object
-                        properties:
-                          prompt_tokens:
-                            type: integer
-                          completion_tokens:
-                            type: integer
-                          total_tokens:
-                            type: integer
-        "400":
-          description: Invalid input (e.g., missing or invalid sources/content)
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error or OpenAI failure
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+  # /captionize:
+  #   post:
+  #     summary: Generate AI-powered image captions
+  #     description: >
+  #       Generates captions for one or more images using OpenAI, based on the provided content context.
+  #       Requires an array of image URLs and context for the images.
+  #     tags:
+  #       - Captionize
+  #     requestBody:
+  #       required: true
+  #       content:
+  #         application/json:
+  #           schema:
+  #             type: object
+  #             required:
+  #               - sources
+  #               - context
+  #             properties:
+  #               sources:
+  #                 type: array
+  #                 items:
+  #                   type: string
+  #                 description: Array of image sources (can be URLs or base64 strings)
+  #               context:
+  #                 type: string
+  #                 description: Contextual article/content for captioning
+  #     responses:
+  #       "200":
+  #         description: Captions generated successfully
+  #         content:
+  #           application/json:
+  #             schema:
+  #               type: object
+  #               properties:
+  #                 success:
+  #                   type: boolean
+  #                 data:
+  #                   type: object
+  #                   properties:
+  #                     captions:
+  #                       type: array
+  #                       items:
+  #                         type: string
+  #                     usage:
+  #                       type: object
+  #                       properties:
+  #                         prompt_tokens:
+  #                           type: integer
+  #                         completion_tokens:
+  #                           type: integer
+  #                         total_tokens:
+  #                           type: integer
+  #       "400":
+  #         description: Invalid input (e.g., missing or invalid sources/content)
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: "#/components/schemas/ErrorResponse"
+  #       "500":
+  #         description: Internal server error or OpenAI failure
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: "#/components/schemas/ErrorResponse"
 
 components:
   securitySchemes:

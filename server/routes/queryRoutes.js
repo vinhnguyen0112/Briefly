@@ -1,12 +1,18 @@
 const express = require("express");
 const router = express.Router();
 const queryController = require("../controllers/queryController");
-const {
-  requireAuthenticatedSession,
-} = require("../middlewares/authMiddlewares");
+const { validateSession } = require("../middlewares/authMiddlewares");
+const { validateAndSanitizeBody } = require("../middlewares/commonMiddlewares");
+const { createImageCaptionSchema } = require("../schemas/yupSchemas");
 
-router.use(requireAuthenticatedSession);
+router.use(validateSession);
 
-router.post("/", queryController.handleUserQuery);
+router.post(
+  "/captionize",
+  validateAndSanitizeBody(createImageCaptionSchema),
+  queryController.captionize
+);
+router.post("/ask", queryController.handleUserQuery);
+router.post("/suggested-questions", queryController.generateSuggestedQuestions);
 
 module.exports = router;
