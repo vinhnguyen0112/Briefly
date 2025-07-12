@@ -169,6 +169,12 @@ export function switchToChat() {
   // remember generated questions so they appear when switching back
   const existingQuestions = state.generatedQuestions;
 
+  // inject chat actions container if not exists
+  if (!elements.chatContainer.querySelector(".chat-actions-container")) {
+    const chatActionsContainer = createChatActionsContainer();
+    elements.chatContainer.appendChild(chatActionsContainer);
+  }
+
   // store a reference to switch back
   const backButton = document.createElement("button");
   backButton.className = "back-button";
@@ -272,17 +278,36 @@ export async function addMessageToChat(message, role) {
 
 /**
  * Clear all messages from chat container
+ * and inject quick actions & suggested questions into chat container
  */
 export async function clearMessagesFromChatContainer() {
   if (!elements.chatContainer) return;
   elements.chatContainer.innerHTML = "";
 
   // Create a container for both quick actions and suggested questions
+  const chatActionsContainer = createChatActionsContainer();
+  elements.chatContainer.appendChild(chatActionsContainer);
+}
+
+/**
+ * Creates and returns the chat actions container with quick actions and suggested questions.
+ * @returns {HTMLElement} The chat actions container element.
+ */
+function createChatActionsContainer() {
   const actionsContainer = document.createElement("div");
   actionsContainer.className = "chat-actions-container";
-  elements.chatContainer.appendChild(actionsContainer);
 
-  // Create quick action elements
+  injectQuickActions(actionsContainer);
+  injectSuggestedQuestions(actionsContainer);
+
+  return actionsContainer;
+}
+
+/**
+ * Inject quick action buttons inside parent element.
+ * @param {HTMLElement} container Parent element
+ */
+function injectQuickActions(container) {
   const quickActions = document.createElement("div");
   quickActions.className = "quick-actions";
   quickActions.innerHTML = `
@@ -299,9 +324,8 @@ export async function clearMessagesFromChatContainer() {
       </button>
     </div>
   `;
-  actionsContainer.appendChild(quickActions);
+  container.appendChild(quickActions);
 
-  // Setup quick actions event listeners
   quickActions.querySelectorAll(".action-button").forEach((button) => {
     button.addEventListener("click", () => {
       const action = button.getAttribute("data-action");
@@ -322,8 +346,13 @@ export async function clearMessagesFromChatContainer() {
       }
     });
   });
+}
 
-  // Set up suggested questions elements
+/**
+ * Inject suggested questions inside parent element
+ * @param {HTMLElement} container Parent element
+ */
+function injectSuggestedQuestions(container) {
   const suggestedQuestionsContainer = document.createElement("div");
   suggestedQuestionsContainer.className = "suggested-questions-container";
   suggestedQuestionsContainer.innerHTML = `
@@ -336,7 +365,7 @@ export async function clearMessagesFromChatContainer() {
     </div>
     <div class="question-buttons-container" style="margin-top:12px;"></div>
   `;
-  actionsContainer.appendChild(suggestedQuestionsContainer);
+  container.appendChild(suggestedQuestionsContainer);
 
   const generateBtn = suggestedQuestionsContainer.querySelector(
     ".generate-questions-btn"
@@ -360,9 +389,7 @@ export async function clearMessagesFromChatContainer() {
         success: true,
         questions: state.generatedQuestions,
       };
-    }
-    // If not, call backend to generate
-    else {
+    } else {
       result = await generateQuestionsFromContent(state.pageContent);
     }
 
