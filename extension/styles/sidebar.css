@@ -1278,11 +1278,8 @@ input:checked + .slider:before {
   z-index: 10002;
   padding: 20px;
   width: calc(var(--sidebar-width) * 0.8);
-  /* Scale with sidebar width */
-  max-width: var(--sidebar-max-width);
-  /* Ensure it doesn't exceed max width */
-  min-width: var(--sidebar-min-width);
-  /* Ensure it doesn't go below min width */
+  max-width: calc(var(--sidebar-width) * 0.8);
+  min-width: calc(var(--sidebar-width) * 0.8);
   text-align: center;
 }
 
@@ -1984,4 +1981,43 @@ input:checked + .slider:before {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.chat-actions-container {
+  width: 100%;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.quick-actions-dropdown {
+  position: relative;
+  width: 100%;
+}
+
+.quick-actions-dropdown .dropdown-toggle {
+  width: 100%;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.quick-actions-dropdown .dropdown-menu {
+  position: absolute;
+  left: 0;
+  top: 100%;
+  width: 100%;
+  background: var(--background);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 8px 0;
 }

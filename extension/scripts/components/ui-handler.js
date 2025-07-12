@@ -18,6 +18,10 @@ import {
   showPopupDialog,
   showSignInAlertPopup,
 } from "./event-handler.js";
+import {
+  generateQuestionsFromContent,
+  processUserQuery,
+} from "./api-handler.js";
 
 // close all panels
 export function closeAllPanels() {
@@ -254,42 +258,51 @@ export async function addMessageToChat(message, role) {
     `;
   }
 
-  elements.chatContainer.appendChild(messageElement);
+  // Insert message before actions container so actions stay at the bottom
+  const actionsContainer = elements.chatContainer.querySelector(
+    ".chat-actions-container"
+  );
+  if (actionsContainer) {
+    elements.chatContainer.insertBefore(messageElement, actionsContainer);
+  } else {
+    elements.chatContainer.appendChild(messageElement);
+  }
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 }
 
 /**
  * Clear all messages from chat container
  */
-// TODO: After clearing, add quick actions and suggested questions as well
 export async function clearMessagesFromChatContainer() {
   if (!elements.chatContainer) return;
   elements.chatContainer.innerHTML = "";
 
-  // Create quick actions container (reference: sidebar.html)
-  const quickActionsContainer = document.createElement("div");
-  quickActionsContainer.className = "quick-actions";
-  quickActionsContainer.innerHTML = `
+  // Create a container for both quick actions and suggested questions
+  const actionsContainer = document.createElement("div");
+  actionsContainer.className = "chat-actions-container";
+  elements.chatContainer.appendChild(actionsContainer);
+
+  // Create quick action elements
+  const quickActions = document.createElement("div");
+  quickActions.className = "quick-actions";
+  quickActions.innerHTML = `
     <h3 data-i18n="quickActions">Quick Actions</h3>
     <div class="action-buttons-container">
       <button class="action-button" data-action="summarize">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" y1="6" x2="3" y2="6"></line><line x1="17" y1="12" x2="3" y2="12"></line><line x1="13" y1="18" x2="3" y2="18"></line></svg>
         <span data-i18n="summarize">Summarize</span>
       </button>
       <button class="action-button" data-action="keypoints">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"></path><line x1="4" y1="22" x2="4" y2="15"></line></svg>
         <span data-i18n="keyPoints">Key Points</span>
       </button>
       <button class="action-button" data-action="explain">
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
         <span data-i18n="explain">Explain</span>
       </button>
     </div>
   `;
-  elements.chatContainer.appendChild(quickActionsContainer);
+  actionsContainer.appendChild(quickActions);
 
   // Setup quick actions event listeners
-  quickActionsContainer.querySelectorAll(".action-button").forEach((button) => {
+  quickActions.querySelectorAll(".action-button").forEach((button) => {
     button.addEventListener("click", () => {
       const action = button.getAttribute("data-action");
       let query = "";
@@ -305,16 +318,12 @@ export async function clearMessagesFromChatContainer() {
           break;
       }
       if (query) {
-        switchToChat();
         processUserQuery(query);
-        // Remove quick actions after query
-        quickActionsContainer.remove();
-        suggestedQuestionsContainer?.remove();
       }
     });
   });
 
-  // Create suggested questions container
+  // Set up suggested questions elements
   const suggestedQuestionsContainer = document.createElement("div");
   suggestedQuestionsContainer.className = "suggested-questions-container";
   suggestedQuestionsContainer.innerHTML = `
@@ -327,7 +336,7 @@ export async function clearMessagesFromChatContainer() {
     </div>
     <div class="question-buttons-container" style="margin-top:12px;"></div>
   `;
-  elements.chatContainer.appendChild(suggestedQuestionsContainer);
+  actionsContainer.appendChild(suggestedQuestionsContainer);
 
   const generateBtn = suggestedQuestionsContainer.querySelector(
     ".generate-questions-btn"
@@ -343,27 +352,33 @@ export async function clearMessagesFromChatContainer() {
     loadingDiv.style.display = "flex";
     questionButtonsContainer.innerHTML = "";
 
-    // Call backend to generate questions
-    const result = await window.generateQuestionsFromContent?.(
-      state.pageContent
-    );
+    let result;
+
+    // Use generated questions if have
+    if (state.generatedQuestions) {
+      result = {
+        success: true,
+        questions: state.generatedQuestions,
+      };
+    }
+    // If not, call backend to generate
+    else {
+      result = await generateQuestionsFromContent(state.pageContent);
+    }
+
     loadingDiv.style.display = "none";
 
     if (result && result.success && Array.isArray(result.questions)) {
-      // Show question buttons
       questionButtonsContainer.innerHTML = "";
       result.questions.forEach((question) => {
-        const btn = document.createElement("button");
-        btn.className = "question-button";
-        btn.textContent = question;
-        btn.onclick = async () => {
-          switchToChat();
+        const questionButton = document.createElement("button");
+        questionButton.className = "question-button";
+        questionButton.textContent = question;
+        questionButton.onclick = async () => {
           processUserQuery(question);
-          // Remove suggested questions after click
-          suggestedQuestionsContainer.remove();
-          quickActionsContainer.remove();
+          questionButton.remove();
         };
-        questionButtonsContainer.appendChild(btn);
+        questionButtonsContainer.appendChild(questionButton);
       });
     } else {
       questionButtonsContainer.innerHTML = `<div style="color:#E53E3E;">Failed to generate questions.</div>`;
@@ -614,7 +629,15 @@ export function addTypingIndicator() {
   typingElement.className = "typing-indicator";
   typingElement.innerHTML = "<span></span><span></span><span></span>";
 
-  elements.chatContainer.appendChild(typingElement);
+  const actionsContainer = elements.chatContainer.querySelector(
+    ".chat-actions-container"
+  );
+  if (actionsContainer) {
+    elements.chatContainer.insertBefore(typingElement, actionsContainer);
+  } else {
+    elements.chatContainer.appendChild(typingElement);
+  }
+
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 
   return typingElement;

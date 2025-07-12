@@ -15,8 +15,11 @@ import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 
-// Process a user query
-// Process a user query
+/**
+ * Generate response for the input query and add messages into the chat container
+ * @param {String} query Query
+ * @returns
+ */
 export async function processUserQuery(query) {
   // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
