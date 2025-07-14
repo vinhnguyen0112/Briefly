@@ -44,7 +44,7 @@ const verifyGoogleToken = async (token) => {
  */
 const verifyFacebookToken = async (token) => {
   try {
-    const url = new URL(process.env.FACEBOOK_TOKEN_DEBUG_URL);
+    const url = new URL("https://graph.facebook.com/debug_token");
     url.searchParams.append("input_token", token);
     url.searchParams.append(
       "access_token",
@@ -52,13 +52,7 @@ const verifyFacebookToken = async (token) => {
     );
 
     const response = await fetch(url.href);
-    if (!response.ok) {
-      throw new AppError(
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        "Failed to verify Facebook access token",
-        401
-      );
-    }
+
     const data = await response.json();
     if (!data || data.data.error || !data.data.user_id) {
       throw new AppError(
@@ -73,12 +67,7 @@ const verifyFacebookToken = async (token) => {
       name: data.data.name || "",
     };
   } catch (error) {
-    if (error instanceof AppError) throw error;
-    throw new AppError(
-      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-      "Failed to verify Facebook token",
-      401
-    );
+    throw error;
   }
 };
 
