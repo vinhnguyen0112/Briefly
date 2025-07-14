@@ -1,18 +1,19 @@
 const { object, string, array, number } = require("yup");
+
 const createChatSchema = object({
-  id: string().strict().required(),
-  title: string().strict().required(),
-  page_url: string().strict().required(),
+  id: string().strict().trim().required(),
+  title: string().strict().trim().required(),
+  page_url: string().strict().trim().required(),
 });
 
 const updateChatSchema = object({
-  title: string().strict(),
+  title: string().strict().trim(),
 });
 
 const createMessageSchema = object({
-  role: string().strict().required(),
-  content: string().strict().required(),
-  model: string().strict().nullable(),
+  role: string().strict().trim().required(),
+  content: string().strict().trim().required(),
+  model: string().strict().trim().nullable(),
 });
 
 const createFeedbackSchema = object({
@@ -21,20 +22,45 @@ const createFeedbackSchema = object({
     .integer("Stars must be an integer between 1 and 5")
     .min(1, "Stars must be at least 1")
     .max(5, "Stars cannot be more than 5"),
-  comment: string().nullable(),
+  comment: string().strict().trim().nullable(),
   message_id: number().strict().required(),
 });
 
 const createImageCaptionSchema = object({
   sources: array()
-    .of(string().required())
+    .of(string().strict().trim().required())
     .required()
     .min(1, "At least one source is required"),
   context: string()
     .strict()
-    .required("Missing or invalid content context")
     .trim()
+    .required("Missing or invalid content context")
     .min(1, "Missing or invalid content context"),
+});
+
+const createPageSchema = object({
+  page_url: string().strict().trim().required("Page URL is required"),
+
+  title: string()
+    .strict()
+    .trim()
+    .max(255, "Title must be at most 255 characters"),
+
+  summary: string().strict().trim().required("Summary is required"),
+
+  suggested_questions: array().of(string().strict().trim()).nullable(),
+});
+
+const updatePageSchema = object({
+  title: string()
+    .strict()
+    .trim()
+    .max(255, "Title must be at most 255 characters")
+    .default("Untitled Page"),
+
+  summary: string().strict().trim(),
+
+  suggested_questions: array().of(string().strict().trim()).nullable(),
 });
 
 module.exports = {
@@ -43,4 +69,6 @@ module.exports = {
   createMessageSchema,
   createFeedbackSchema,
   createImageCaptionSchema,
+  createPageSchema,
+  updatePageSchema,
 };

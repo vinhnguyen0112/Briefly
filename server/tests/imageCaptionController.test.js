@@ -3,22 +3,6 @@ const { ERROR_CODES } = require("../errors");
 const {} = require("../services/imageCaptionService");
 const supertest = require("supertest");
 
-// Mock service before importing app
-// jest.mock("../services/imageCaptionService", () => ({
-//   generateCaptions: jest.fn().mockImplementation((sources, content) => {
-//     return Promise.resolve({
-//       captions: sources.map(
-//         (_, index) => `Generated caption ${index + 1} for ${content}`
-//       ),
-//       usage: {
-//         prompt_tokens: 100 + sources.length * 10,
-//         completion_tokens: 50 + sources.length * 5,
-//         total_tokens: 150 + sources.length * 15,
-//       },
-//     });
-//   }),
-// }));
-
 describe("POST /api/captionize", () => {
   const validImageSources = [
     "https://example.com/image1.jpg",
@@ -219,26 +203,4 @@ describe("POST /api/captionize", () => {
         expect(response.body).toHaveProperty("data");
       });
   });
-
-  // it("Should handle service errors gracefully", async () => {
-  //   imageCaptionService.generateCaptions.mockRejectedValueOnce(
-  //     new Error("OpenAI API error")
-  //   );
-
-  //   await supertest(app)
-  //     .post("/api/captionize")
-  //     .send({
-  //       sources: validImageSources,
-  //       context: validContent,
-  //     })
-  //     .expect(401)
-  //     .then((response) => {
-  //       expect(response.body).toMatchObject({
-  //         success: false,
-  //         error: {
-  //           code: ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-  //         },
-  //       });
-  //     });
-  // });
 });

@@ -44,6 +44,7 @@ async function clearTestDatabase() {
     await dbHelper.executeQuery("DELETE FROM users");
     await dbHelper.executeQuery("DELETE FROM chats");
     await dbHelper.executeQuery("DELETE FROM anon_sessions");
+    await dbHelper.executeQuery("DELETE FROM pages");
   } catch (err) {
     console.error("Error deleting test database: ", err);
   }
