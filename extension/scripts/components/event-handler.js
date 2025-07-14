@@ -385,7 +385,7 @@ export function setupEventListeners() {
 // set up quick action buttons
 function setupQuickActions() {
   elements.quickActionButtons.forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       const action = button.getAttribute("data-action");
       let query = "";
 
@@ -403,12 +403,13 @@ function setupQuickActions() {
 
       if (query) {
         switchToChat();
-        const response = processUserQuery(query);
+        const response = await processUserQuery(query);
+        console.log("processUserQuery response: ", response);
         if (action === "summarize" && response?.success && response.message) {
           chrome.runtime.sendMessage({
             action: "store_page_summary",
-            page_url: window.location.href,
-            title: document.title,
+            page_url: state.pageContent.url || window.location.href,
+            title: state.pageContent.title || document.title,
             summary: response.message,
             suggested_questions: [],
           });

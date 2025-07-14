@@ -189,6 +189,26 @@ async function getSessionTTL(sessionId, type) {
   return ttl >= 0 ? ttl : null;
 }
 
+/**
+ * Get page summary from Redis
+ * @param {string} pageId
+ * @returns {Promise<string|null>}
+ */
+async function getPageSummary(pageId) {
+  const key = applyPrefix(`page_summary:${pageId}`);
+  return await client.get(key);
+}
+
+/**
+ * Set page summary in Redis
+ * @param {string} pageId
+ * @param {string} summary
+ */
+async function setPageSummary(pageId, summary) {
+  const key = applyPrefix(`page_summary:${pageId}`);
+  await client.set(key, summary, { EX: process.env.SUMMARY_TTL });
+}
+
 const redisHelper = {
   client,
   createSession,
@@ -196,6 +216,8 @@ const redisHelper = {
   refreshSession,
   deleteSession,
   getSessionTTL,
+  getPageSummary,
+  setPageSummary,
 };
 
 module.exports = {

@@ -34,7 +34,11 @@ const createPage = async (req, res, next) => {
       ...body,
     });
 
-    res.json({ success: true, data: { id } });
+    res.json({
+      success: true,
+      message: "Page data inserted successfully",
+      data: { id },
+    });
   } catch (err) {
     next(err);
   }
