@@ -16,7 +16,6 @@ import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 
 // Process a user query
-// Process a user query
 export async function processUserQuery(query) {
   // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
@@ -143,11 +142,14 @@ export async function processUserQuery(query) {
         // Increase anon query count if not signed in
         await increaseAnonQueryCount();
       }
+
+      return { success: true, message: assistantMessage };
     } else {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");
       if (state.currentChat.history.length <= 0) {
         resetCurrentChatState();
       }
+      return { success: false, error: response.error };
     }
   } catch (error) {
     console.error("CocBot: Query error:", error);
@@ -156,6 +158,8 @@ export async function processUserQuery(query) {
     if (state.currentChat.history.length <= 0) {
       resetCurrentChatState();
     }
+
+    return { success: false, error: error.message };
   }
 }
 

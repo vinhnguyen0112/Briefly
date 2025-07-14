@@ -403,7 +403,16 @@ function setupQuickActions() {
 
       if (query) {
         switchToChat();
-        processUserQuery(query);
+        const response = processUserQuery(query);
+        if (action === "summarize" && response?.success && response.message) {
+          chrome.runtime.sendMessage({
+            action: "store_page_summary",
+            page_url: window.location.href,
+            title: document.title,
+            summary: response.message,
+            suggested_questions: [],
+          });
+        }
       }
     });
   });
