@@ -18,8 +18,11 @@ import chatHandler from "./chat-handler.js";
 
 const SERVER_URL = "http://localhost:3000";
 
-// Process a user query
-// TODO: Still response with error when db operations failed
+/**
+ * Generate response for query by sending a request to the backend server
+ * @param {String} query Query
+ * @returns
+ */
 export async function processUserQuery(query) {
   // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
@@ -38,18 +41,6 @@ export async function processUserQuery(query) {
   const typingIndicator = addTypingIndicator();
 
   try {
-    const apiKey = await getApiKey();
-
-    if (!apiKey) {
-      removeTypingIndicator(typingIndicator);
-      addMessageToChat(
-        "Hey, I need your OpenAI API key to work. Add it in settings.",
-        "assistant"
-      );
-      elements.apiKeyContainer.style.display = "flex";
-      return;
-    }
-
     const messages = await constructPromptWithPageContent(
       query,
       state.pageContent,
@@ -162,7 +153,11 @@ export async function processUserQuery(query) {
   }
 }
 
-// openai api communication
+/**
+ * Send a request to the backend server
+ * @param {Object} messages OpenAI instructions and query
+ * @returns
+ */
 export async function callOpenAI(messages) {
   const config = state.currentConfig || {};
   const maxTokens = config.maxWordCount
