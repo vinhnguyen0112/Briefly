@@ -19,7 +19,7 @@ class Page {
       .join(", ");
     const values = Object.values(pageData);
 
-    const query = `INSERT INTO pages (${columns}) VALUES (${placeholders})`;
+    const query = `INSERT IGNORE INTO pages (${columns}) VALUES (${placeholders})`;
     await dbHelper.executeQuery(query, values);
   }
 

@@ -1,4 +1,4 @@
-const { object, string, array, number } = require("yup");
+const { object, string, array, number, boolean } = require("yup");
 
 const createChatSchema = object({
   id: string().strict().trim().required(),
@@ -38,29 +38,42 @@ const createImageCaptionSchema = object({
     .min(1, "Missing or invalid content context"),
 });
 
-const createPageSchema = object({
-  page_url: string().strict().trim().required("Page URL is required"),
-
-  title: string()
-    .strict()
-    .trim()
-    .max(255, "Title must be at most 255 characters"),
-
-  summary: string().strict().trim().required("Summary is required"),
-
-  suggested_questions: array().of(string().strict().trim()).nullable(),
+const queryMessagesSchema = object({
+  role: string().oneOf(["user", "assistant", "system"]).required(),
+  content: string().trim().required("Message content is required"),
 });
 
-const updatePageSchema = object({
-  title: string()
-    .strict()
-    .trim()
-    .max(255, "Title must be at most 255 characters")
-    .default("Untitled Page"),
+const querySchema = object({
+  messages: array()
+    .of(queryMessagesSchema)
+    .min(1, "At least one message is required")
+    .required("Messages are required"),
 
-  summary: string().strict().trim(),
+  max_tokens: number()
+    .integer("Max tokens must be an integer")
+    .positive("Max tokens must be positive")
+    .max(4096, "Max tokens exceeds model limit")
+    .required("max_tokens is required"),
 
-  suggested_questions: array().of(string().strict().trim()).nullable(),
+  chat_meta: object({
+    chat_id: string().trim().nullable(),
+
+    page_url: string()
+      .trim()
+      .url("Invalid page URL")
+      .required("Page URL is required"),
+
+    title: string()
+      .trim()
+      .max(255, "Title must be at most 255 characters")
+      .default("Untitled Page"),
+
+    user_query: string().trim().required("User query is required"),
+
+    should_create_chat: boolean().default(false),
+
+    event: string().strict().default("ask"),
+  }).required("chat_meta is required"),
 });
 
 module.exports = {
@@ -69,6 +82,5 @@ module.exports = {
   createMessageSchema,
   createFeedbackSchema,
   createImageCaptionSchema,
-  createPageSchema,
-  updatePageSchema,
+  querySchema,
 };

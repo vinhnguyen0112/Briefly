@@ -1,7 +1,5 @@
 import {
   state,
-  getApiKey,
-  increaseAnonQueryCount,
   getUserSession,
   resetCurrentChatState,
   sendRequest,
@@ -11,36 +9,35 @@ import {
   addTypingIndicator,
   removeTypingIndicator,
 } from "./ui-handler.js";
-import { elements } from "./dom-elements.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
-import chatHandler from "./chat-handler.js";
 
 const SERVER_URL = "http://localhost:3000";
 
 /**
  * Generate response for query by sending a request to the backend server
  * @param {String} query Query
+ * @param {Object} options Options
  * @returns
  */
-export async function processUserQuery(query) {
-  // Anonymous user query limit check
+export async function processUserQuery(query, options = { event: "ask" }) {
+  // Check if user need to sign in to continue
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: "sign_in_required",
-        });
+        chrome.tabs.sendMessage(tabs[0].id, { action: "sign_in_required" });
       }
     });
     return;
   }
 
+  // Add user prompt into chat screen
   addMessageToChat(query, "user");
   const typingIndicator = addTypingIndicator();
 
   try {
+    // Build prompt
     const messages = await constructPromptWithPageContent(
       query,
       state.pageContent,
@@ -48,19 +45,71 @@ export async function processUserQuery(query) {
       state.currentConfig
     );
 
-    const response = await callOpenAI(messages);
+    // Prepare chat metadata for backend
+    const chatMeta = {
+      chat_id: state.currentChat.id || null,
+      page_url: state.pageContent?.url || window.location.href,
+      title: state.pageContent?.title || document.title,
+      user_query: query, // User prompt
+      should_create_chat: !state.currentChat.id, // true if new chat
+      event: options.event,
+    };
+
+    // Send everything to backend
+    const response = await callOpenAI(messages, chatMeta);
 
     removeTypingIndicator(typingIndicator);
 
-    const userSession = await getUserSession();
-
     if (response.success) {
+      // Add AI-generated response to chat screen
       const assistantMessage = response.message;
-
-      // Show assistant message immediately (before persistence)
       addMessageToChat(assistantMessage, "assistant");
 
-      // Update history stack
+      const authSession = await getUserSession();
+
+      // Only persist chat & messages for authenticated session
+      if (authSession && authSession.id) {
+        if (response.chat_id && !state.currentChat.id) {
+          // If backend response back with a newly created chat,
+          // update state & push it into history
+          state.currentChat.id = response.chat_id;
+          state.currentChat.title = chatMeta.title;
+          state.currentChat.pageUrl = chatMeta.page_url;
+          state.chatHistory.unshift({
+            id: response.chat_id,
+            title: chatMeta.title,
+            page_url: chatMeta.page_url,
+            created_at: Date.now(),
+          });
+
+          // Cache chat in IndexedDB
+          await idbHandler.upsertChat({
+            id: response.chat_id,
+            title: chatMeta.title,
+            page_url: chatMeta.page_url,
+          });
+        }
+
+        // Cache messages in IndexedDB
+        await idbHandler.addMessageToChat(
+          response.chat_id || state.currentChat.id,
+          {
+            role: "user",
+            content: query,
+          }
+        );
+
+        await idbHandler.addMessageToChat(
+          response.chat_id || state.currentChat.id,
+          {
+            role: "assistant",
+            content: response.message,
+            model: response.model,
+          }
+        );
+      }
+
+      // Update the chat's history stack regardless
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({
         role: "assistant",
@@ -68,92 +117,24 @@ export async function processUserQuery(query) {
       });
 
       if (state.currentChat.history.length > 6) {
-        state.currentChat.history = state.currentChat.history.slice(
-          state.currentChat.history.length - 6
-        );
+        state.currentChat.history = state.currentChat.history.slice(-6);
       }
 
-      // Persist if user is authenticated
-      if (userSession && userSession.id) {
-        try {
-          let chatId = state.currentChat.id;
-          let isNewChat = false;
-          if (!chatId) {
-            chatId = crypto.randomUUID();
-            const pageUrl = state.pageContent?.url || window.location.href;
-            const pageTitle = state.pageContent?.title || document.title;
-
-            state.currentChat.id = chatId;
-            state.currentChat.title = pageTitle;
-            state.currentChat.pageUrl = pageUrl;
-            state.currentChat.history = [];
-            isNewChat = true;
-          }
-
-          if (isNewChat) {
-            await chatHandler.createChat({
-              id: chatId,
-              page_url: state.currentChat.pageUrl,
-              title: state.currentChat.title,
-            });
-            await idbHandler.addChat({
-              id: chatId,
-              title: state.currentChat.title,
-              page_url: state.currentChat.pageUrl,
-            });
-
-            state.chatHistory.unshift({
-              id: chatId,
-              title: state.currentChat.title,
-              page_url: state.currentChat.pageUrl,
-              created_at: Date.now(),
-            });
-          }
-
-          // Save user and assistant messages
-          await chatHandler.addMessage(chatId, {
-            role: "user",
-            content: query,
-          });
-          await chatHandler.addMessage(chatId, {
-            role: "assistant",
-            content: assistantMessage,
-            model: "gpt-4o-mini",
-          });
-
-          await idbHandler.addMessageToChat(chatId, {
-            role: "user",
-            content: query,
-          });
-          await idbHandler.addMessageToChat(chatId, {
-            role: "assistant",
-            content: assistantMessage,
-          });
-        } catch (err) {
-          console.warn("Persistence failed:", err);
-          // Optionally handle persistence failure (retry/queue)
-        }
-      } else {
-        // Increase anon query count if not signed in
-        await increaseAnonQueryCount();
-      }
-
-      return { success: true, message: assistantMessage };
+      return {
+        success: true,
+        message: assistantMessage,
+        chat_id: response.chat_id,
+      };
     } else {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");
-      if (state.currentChat.history.length <= 0) {
-        resetCurrentChatState();
-      }
+      if (state.currentChat.history.length <= 0) resetCurrentChatState();
       return { success: false, error: response.error };
     }
   } catch (error) {
     console.error("CocBot: Query error:", error);
     removeTypingIndicator(typingIndicator);
     addMessageToChat("Something went wrong. Try again?", "assistant");
-    if (state.currentChat.history.length <= 0) {
-      resetCurrentChatState();
-    }
-
+    if (state.currentChat.history.length <= 0) resetCurrentChatState();
     return { success: false, error: error.message };
   }
 }
@@ -161,9 +142,8 @@ export async function processUserQuery(query) {
 /**
  * Send a request to the backend server
  * @param {Object} messages OpenAI instructions and query
- * @returns
  */
-export async function callOpenAI(messages) {
+export async function callOpenAI(messages, chatMeta) {
   const config = state.currentConfig || {};
   const maxTokens = config.maxWordCount
     ? Math.ceil(config.maxWordCount * 1.3)
@@ -174,12 +154,18 @@ export async function callOpenAI(messages) {
     body: {
       messages,
       max_tokens: maxTokens,
+      chat_meta: chatMeta,
     },
   });
 
   console.log("Query response: ", res);
 
-  return { success: res.success, message: res.data.message };
+  return {
+    success: res.success,
+    message: res.data.message,
+    chat_id: res.data.chat_id,
+    model: res.data.model,
+  };
 }
 
 export async function constructPromptWithPageContent(
@@ -277,6 +263,8 @@ ${styleInstructions}`,
     role: "user",
     content: query,
   });
+
+  console.log("Prompt messages: ", messages);
 
   return messages;
 }

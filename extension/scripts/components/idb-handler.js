@@ -47,30 +47,31 @@ function setupObjectStores(db) {
 }
 
 /**
- * Add a chat to IndexedDB
+ * Upsert (Insert, update if exists) a chat to IndexedDB
  * @param {Object} chat Chat object
+ * @param {String} chat.id
  * @param {String} chat.title
  * @param {String} chat.page_url
  * @param {Date} [chat.created_at]
  * @param {Date} [chat.updated_at]
  * @returns {Promise<String>} Inserted chat's ID
  */
-async function addChat(chat) {
+async function upsertChat(chat) {
   const { db } = await openIndexedDB();
   return await new Promise((resolve, reject) => {
     const transaction = db.transaction("chats", "readwrite");
     const store = transaction.objectStore("chats");
 
-    // If no id, generate one (UUID)
     if (!chat.id) {
-      chat.id = crypto.randomUUID();
+      reject(new Error("Chat id is required"));
+      return;
     }
     chat.title = chat.title || "Untitled";
     chat.page_url = chat.page_url || "";
     chat.created_at = chat.created_at || new Date();
     chat.updated_at = chat.updated_at || new Date();
 
-    const request = store.add(chat);
+    const request = store.put(chat); // Upsert
 
     request.onsuccess = () => {
       console.log("Chat added with ID:", chat.id);
@@ -375,7 +376,7 @@ async function clearChats() {
 // Add to the exported handler
 const idbHandler = {
   openIndexedDB,
-  addChat,
+  upsertChat,
   getChatById,
   addMessageToChat,
   overwriteChatMessages,

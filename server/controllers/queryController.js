@@ -1,7 +1,13 @@
 const { OpenAI } = require("openai");
 const AppError = require("../models/appError");
+const Chat = require("../models/chat");
+const Message = require("../models/message");
+const Page = require("../models/page");
 const { ERROR_CODES } = require("../errors");
 let pLimit = require("p-limit");
+const { v4: uuidv4 } = require("uuid");
+const commonHelper = require("../helpers/commonHelper");
+const { redisHelper } = require("../helpers/redisHelper");
 
 const limit = pLimit(5); // 5 concurrency
 
@@ -10,46 +16,216 @@ const openai = new OpenAI({
 });
 
 /**
- * Generate response for user query using OpenAI model
+ * Generate response for user query using OpenAI model.
+ * Optionally, store chats, user messages and assistant responses
  * @param {Object} req
  * @param {Object} res
  * @param {Function} next
  */
+// TODO: If found summary, should still check if need to create a new chat or not or else chatID will never be initialized (null)
 const handleUserQuery = async (req, res, next) => {
   try {
-    const { messages, max_tokens } = req.body;
+    const { messages, max_tokens, chat_meta } = req.body;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      max_tokens,
-      messages,
-    });
+    console.log("Chat meta: ", chat_meta);
 
-    if (
-      !completion ||
-      !completion.choices ||
-      !completion.choices[0] ||
-      !completion.choices[0].message
-    ) {
-      throw new AppError(
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        "Invalid OpenAI response"
-      );
+    // Look for cached summary first
+    if (chat_meta.event === "summarize") {
+      const normalizedPageUrl = commonHelper.processUrl(chat_meta.page_url);
+      if (!normalizedPageUrl)
+        throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+      const pageId = commonHelper.generateHash(normalizedPageUrl);
+
+      // Check for existing summary
+      const result = await getExistingPageSummary(pageId);
+
+      if (result.found) {
+        return res.json({
+          success: true,
+          data: {
+            message: result.summary,
+            usage: null,
+            model: result.source,
+            chat_id: null,
+            source: result.source,
+          },
+        });
+      }
     }
 
+    // Generate assistant response
+    const assistantMessage = await generateAssistantResponse(
+      messages,
+      max_tokens
+    );
+
+    // Prepare parallel tasks
+    let chatId = null;
+    const tasks = [];
+
+    // Only authenticated users can store chats/messages
+    if (req.session && req.sessionType === "auth" && req.session.user_id) {
+      const chatTask = storeChatAndMessages(
+        chat_meta,
+        assistantMessage,
+        req
+      ).then((id) => {
+        chatId = id;
+      });
+      tasks.push(chatTask);
+    }
+
+    // Store page summary
+    if (chat_meta.event === "summarize") {
+      tasks.push(storePageSummary(chat_meta, assistantMessage.content));
+    }
+
+    // Run both tasks in parallel
+    await Promise.all(tasks);
+
+    // Respond
     res.json({
       success: true,
       data: {
-        message: completion.choices[0].message.content,
-        usage: completion.usage,
-        model: completion.model,
+        message: assistantMessage.content,
+        usage: assistantMessage.usage,
+        model: assistantMessage.model,
+        chat_id: chatId,
       },
     });
   } catch (err) {
     next(err);
   }
 };
+
+/**
+ * Generates assistant response using OpenAI
+ * @param {Array} messages
+ * @param {number} max_tokens
+ * @returns {Promise<{content: string, usage: object, model: string}>}
+ */
+async function generateAssistantResponse(messages, max_tokens) {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.7,
+    max_tokens,
+    messages,
+  });
+
+  if (
+    !completion ||
+    !completion.choices ||
+    !completion.choices[0] ||
+    !completion.choices[0].message
+  ) {
+    throw new AppError(
+      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+      "Invalid OpenAI response"
+    );
+  }
+
+  return {
+    content: completion.choices[0].message.content,
+    usage: completion.usage,
+    model: completion.model,
+  };
+}
+
+/**
+ * Handles chat creation and message storage
+ * @param {Object} chat_meta
+ * @param {Object} assistantMessage
+ * @param {Object} req
+ * @returns {Promise<string>} chatId
+ */
+async function storeChatAndMessages(chat_meta, assistantMessage, req) {
+  let chatId = chat_meta?.chat_id;
+
+  // Create chat if requested
+  if (chat_meta?.should_create_chat) {
+    chatId = chatId || uuidv4();
+
+    // Normalize page_url and hash to get page ID
+    const normalizedPageUrl = commonHelper.processUrl(chat_meta.page_url);
+    if (!normalizedPageUrl) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+    const pageId = commonHelper.generateHash(normalizedPageUrl);
+
+    await Chat.create({
+      id: chatId,
+      user_id: req.session.user_id,
+      page_url: normalizedPageUrl,
+      page_id: pageId,
+      title: chat_meta.title,
+    });
+  }
+
+  // Insert user message
+  if (chatId && chat_meta?.user_query) {
+    await Message.create({
+      chat_id: chatId,
+      role: "user",
+      content: chat_meta.user_query,
+    });
+  }
+
+  // Insert assistant message
+  if (chatId) {
+    await Message.create({
+      chat_id: chatId,
+      role: "assistant",
+      content: assistantMessage.content,
+      model: assistantMessage.model,
+    });
+  }
+
+  return chatId;
+}
+
+/**
+ * Stores page summary in the database
+ * @param {Object} chat_meta
+ * @param {Object} assistantMessage
+ */
+async function storePageSummary(chat_meta, summary) {
+  const normalizedPageUrl = commonHelper.processUrl(chat_meta.page_url);
+  if (!normalizedPageUrl) return;
+  const pageId = commonHelper.generateHash(normalizedPageUrl);
+
+  await Page.create({
+    id: pageId,
+    page_url: normalizedPageUrl,
+    title: chat_meta.title,
+    summary,
+  });
+
+  await redisHelper.setPageSummary(pageId, summary);
+}
+
+/**
+ * Checks for an existing page summary in Redis or MySQL.
+ * If found, returns the summary and updates Redis cache if needed.
+ * @param {String} pageId
+ * @returns {Promise<{found: boolean, summary: string, source: string}>}
+ */
+async function getExistingPageSummary(pageId) {
+  // Try Redis cache first
+  let summary = await redisHelper.getPageSummary(pageId);
+  if (summary) {
+    return { found: true, summary, source: "redis" };
+  }
+
+  // Fallback to MySQL
+  const page = await Page.getById(pageId);
+  if (page && page.summary) {
+    // Update Redis cache for future requests
+    await redisHelper.setPageSummary(pageId, page.summary);
+    return { found: true, summary: page.summary, source: "mysql" };
+  }
+
+  return { found: false, summary: null, source: null };
+}
 
 /**
  * Generates 3 suggested questions based on provided content
