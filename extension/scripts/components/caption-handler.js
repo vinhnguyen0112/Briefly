@@ -44,7 +44,7 @@ async function callCaptionApi(images, content) {
   console.log("Sending to caption API:", { sources: images, content });
 
   try {
-    const response = await fetch("http://localhost:3000/api/captionize", {
+    const response = await fetch("http://localhost:3000/api/query/captionize", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ sources: images, context: content }),

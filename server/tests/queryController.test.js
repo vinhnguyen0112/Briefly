@@ -1,22 +1,29 @@
 const app = require("../app");
 const { ERROR_CODES } = require("../errors");
-const {} = require("../services/imageCaptionService");
 const supertest = require("supertest");
+const jestVariables = require("./jestVariables");
+const { redisHelper } = require("../helpers/redisHelper");
+const authHeader = `Bearer auth:${jestVariables.sessionId}`;
 
-describe("POST /api/captionize", () => {
+beforeAll(async () => {
+  await redisHelper.client.connect();
+});
+
+afterAll(async () => {
+  await redisHelper.client.quit();
+});
+
+describe("POST /api/query/captionize", () => {
   const validImageSources = [
     "https://example.com/image1.jpg",
     "https://example.com/image2.png",
   ];
   const validContent = "Generate marketing captions for these product images";
 
-  // beforeEach(() => {
-  //   jest.clearAllMocks();
-  // });
-
   it("Should successfully generate captions with valid data", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: validImageSources,
         context: validContent,
@@ -30,7 +37,8 @@ describe("POST /api/captionize", () => {
 
   it("Should successfully generate caption for single image", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: [validImageSources[0]],
         context: "Describe this product image",
@@ -51,7 +59,8 @@ describe("POST /api/captionize", () => {
     ];
 
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: multipleSources,
         context: "Generate captions for these images",
@@ -65,7 +74,8 @@ describe("POST /api/captionize", () => {
 
   it("Should fail if sources field is missing", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({ context: validContent })
       .expect(400)
       .then((response) => {
@@ -80,7 +90,8 @@ describe("POST /api/captionize", () => {
 
   it("Should fail if sources is not an array", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: "https://example.com/image.jpg",
         context: validContent,
@@ -98,7 +109,8 @@ describe("POST /api/captionize", () => {
 
   it("Should fail if sources array is empty", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: [],
         context: validContent,
@@ -116,7 +128,8 @@ describe("POST /api/captionize", () => {
 
   it("Should fail if context is missing", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({ sources: validImageSources })
       .expect(400)
       .then((response) => {
@@ -131,7 +144,8 @@ describe("POST /api/captionize", () => {
 
   it("Should fail if context is not a string", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: validImageSources,
         context: 123,
@@ -149,7 +163,8 @@ describe("POST /api/captionize", () => {
 
   it("Should fail if context is an empty string", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: validImageSources,
         context: "",
@@ -167,7 +182,8 @@ describe("POST /api/captionize", () => {
 
   it("Should fail if context contains only whitespace", async () => {
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: validImageSources,
         context: "   \t\n   ",
@@ -192,7 +208,8 @@ describe("POST /api/captionize", () => {
     ];
 
     await supertest(app)
-      .post("/api/captionize")
+      .post("/api/query/captionize")
+      .set("Authorization", authHeader)
       .send({
         sources: imageSources,
         context: "Describe these images",

@@ -377,7 +377,7 @@ export async function sendRequest(url, options = {}) {
     const data = await response.json();
     const { code, message } = data.error;
     // If user session is invalid, signed them out gracefully
-    if (code === "AUTH_SESSION_INVALID") {
+    if (code === "UNAUTHORIZED") {
       clearUserSession().then(() => {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           if (tabs[0]) {

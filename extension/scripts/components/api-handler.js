@@ -4,6 +4,7 @@ import {
   increaseAnonQueryCount,
   getUserSession,
   resetCurrentChatState,
+  sendRequest,
 } from "./state.js";
 import {
   addMessageToChat,
@@ -15,7 +16,13 @@ import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 
-// Process a user query
+const SERVER_URL = "http://localhost:3000";
+
+/**
+ * Generate response for query by sending a request to the backend server
+ * @param {String} query Query
+ * @returns
+ */
 export async function processUserQuery(query) {
   // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
@@ -34,18 +41,6 @@ export async function processUserQuery(query) {
   const typingIndicator = addTypingIndicator();
 
   try {
-    const apiKey = await getApiKey();
-
-    if (!apiKey) {
-      removeTypingIndicator(typingIndicator);
-      addMessageToChat(
-        "Hey, I need your OpenAI API key to work. Add it in settings.",
-        "assistant"
-      );
-      elements.apiKeyContainer.style.display = "flex";
-      return;
-    }
-
     const messages = await constructPromptWithPageContent(
       query,
       state.pageContent,
@@ -53,7 +48,7 @@ export async function processUserQuery(query) {
       state.currentConfig
     );
 
-    const response = await callOpenAI(apiKey, messages);
+    const response = await callOpenAI(messages);
 
     removeTypingIndicator(typingIndicator);
 
@@ -163,51 +158,28 @@ export async function processUserQuery(query) {
   }
 }
 
-// openai api communication
-export async function callOpenAI(apiKey, messages) {
-  try {
-    // Estimate max tokens based on config maxWordCount if available
-    // Approximate tokens to be ~1.3x the number of words
-    const config = state.currentConfig || {};
-    const maxTokens = config.maxWordCount
-      ? Math.ceil(config.maxWordCount * 1.3)
-      : 1500;
+/**
+ * Send a request to the backend server
+ * @param {Object} messages OpenAI instructions and query
+ * @returns
+ */
+export async function callOpenAI(messages) {
+  const config = state.currentConfig || {};
+  const maxTokens = config.maxWordCount
+    ? Math.ceil(config.maxWordCount * 1.3)
+    : 1500;
 
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: messages,
-        temperature: 0.7,
-        max_tokens: maxTokens,
-      }),
-    });
+  const res = await sendRequest(`${SERVER_URL}/api/query/ask`, {
+    method: "POST",
+    body: {
+      messages,
+      max_tokens: maxTokens,
+    },
+  });
 
-    const data = await response.json();
+  console.log("Query response: ", res);
 
-    if (!response.ok) {
-      throw new Error(data.error?.message || "Unknown API error");
-    }
-
-    if (data.choices && data.choices.length > 0) {
-      return {
-        success: true,
-        message: data.choices[0].message.content,
-      };
-    } else {
-      throw new Error("No response from API");
-    }
-  } catch (error) {
-    console.error("CocBot: API error", error);
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
+  return { success: res.success, message: res.data.message };
 }
 
 export async function constructPromptWithPageContent(
@@ -309,109 +281,44 @@ ${styleInstructions}`,
   return messages;
 }
 
+/**
+ *
+ * @param {string} pageContent Page content
+ * @returns {Promise<{success: boolean, questions: string[]}>}
+ */
 export async function generateQuestionsFromContent(pageContent) {
   if (!pageContent || !pageContent.content) {
     return { success: false, error: "No content available" };
   }
 
   try {
-    const apiKey = await getApiKey();
-    if (!apiKey) {
-      return { success: false, error: "No API key" };
-    }
-
+    // Call backend API instead of OpenAI directly
     const language = state.language || "en";
-
-    let systemPromptContent;
-    if (language === "vi") {
-      systemPromptContent = `Bạn là một AI tạo ra các câu hỏi thú vị về nội dung trang web.
-Hãy tạo 3 câu hỏi bằng tiếng Việt mà sẽ hữu ích cho người đọc trang này.
-Phản hồi của bạn CHỈ nên là một mảng gồm 3 câu hỏi tiếng Việt, định dạng dưới dạng mảng JSON các chuỗi.
-Ví dụ: ["Câu hỏi 1 bằng tiếng Việt?", "Câu hỏi 2 bằng tiếng Việt?", "Câu hỏi 3 bằng tiếng Việt?"]
-Không bao gồm bất kỳ thứ gì khác.`;
-    } else {
-      systemPromptContent = `You are an AI that generates 3 interesting questions about web page content. 
-Generate questions that would be useful to a reader of this page.
-Your response should be ONLY an array of 3 questions, formatted as a JSON array of strings.
-Do not include anything else, not even a JSON wrapper object.`;
-    }
-
-    const systemPrompt = {
-      role: "system",
-      content: systemPromptContent,
-    };
-
-    let contentPromptText = `Here is the web page content:
-Title: ${pageContent.title}
-${pageContent.content.substring(0, 3000)}`;
-
-    if (language === "vi") {
-      contentPromptText += `\n\nHãy tạo 3 câu hỏi bằng TIẾNG VIỆT về nội dung này.`;
-    } else {
-      contentPromptText += `\n\nGenerate 3 questions in ENGLISH about this content.`;
-    }
-
-    const contentPrompt = {
-      role: "user",
-      content: contentPromptText,
-    };
-
-    const temperature = language === "vi" ? 0.3 : 0.7;
-
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gpt-4o-mini",
-        messages: [systemPrompt, contentPrompt],
-        temperature: temperature,
-        max_tokens: 500,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      throw new Error(data.error?.message || "Unknown API error");
-    }
-
-    if (data.choices && data.choices.length > 0) {
-      const content = data.choices[0].message.content.trim();
-      let questions = [];
-
-      try {
-        questions = JSON.parse(content);
-      } catch (parseError) {
-        console.log(
-          "Failed to parse JSON, trying to extract questions directly"
-        );
-
-        const questionMatches = content.match(/"([^"]+)"/g);
-        if (questionMatches && questionMatches.length > 0) {
-          questions = questionMatches.map((q) => q.replace(/"/g, ""));
-        } else {
-          const lines = content
-            .split("\n")
-            .filter((line) => line.trim().length > 0);
-          if (lines.length > 0) {
-            questions = lines.slice(0, 3);
-          }
-        }
+    const res = await sendRequest(
+      `${SERVER_URL}/api/query/suggested-questions`,
+      {
+        method: "POST",
+        body: {
+          pageContent,
+          language,
+        },
       }
+    );
 
-      if (questions.length > 0) {
-        return {
-          success: true,
-          questions: questions.slice(0, 3),
-        };
-      } else {
-        return { success: false, error: "Failed to extract questions" };
-      }
+    if (
+      res.success &&
+      Array.isArray(res.data.questions) &&
+      res.data.questions.length > 0
+    ) {
+      return {
+        success: true,
+        questions: res.data.questions.slice(0, 3),
+      };
     } else {
-      throw new Error("No response from API");
+      return {
+        success: false,
+        error: res.error.message || "Failed to extract questions",
+      };
     }
   } catch (error) {
     console.error("CocBot: Error generating questions", error);

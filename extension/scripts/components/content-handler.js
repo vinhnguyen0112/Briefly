@@ -391,6 +391,8 @@ export async function generateAndDisplayQuestions() {
     // generate questions
     const result = await generateQuestionsFromContent(state.pageContent);
 
+    console.log("Generated questions result: ", result);
+
     // clear the loading indicator
     buttonContainer.innerHTML = "";
 

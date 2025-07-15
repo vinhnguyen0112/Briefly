@@ -6,11 +6,11 @@ const yaml = require("js-yaml");
 const swaggerUi = require("swagger-ui-express");
 
 const authRoutes = require("./routes/authRoutes");
-const captionRoutes = require("./routes/captionRoutes");
 const anonRoutes = require("./routes/anonRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const testRoutes = require("./routes/testRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
+const queryRoutes = require("./routes/queryRoutes");
 const pageRoutes = require("./routes/pageRoutes");
 const {
   extractClientIp,
@@ -33,10 +33,10 @@ app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 app.use("/api", extractClientIp, extractVisitorId);
 app.use("/api/test", testRoutes);
 app.use("/api/auth", authRoutes);
-app.use("/api/captionize", captionRoutes);
 app.use("/api/anon", anonRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/feedback", feedbackRoutes);
+app.use("/api/query", queryRoutes);
 app.use("/api/pages", pageRoutes);
 
 // health check
