@@ -668,71 +668,97 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /pages:
+    post:
+      summary: Create a new page
+      description: Inserts a new page record into the database.
+      tags:
+        - Page
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePageRequest"
+      responses:
+        "200":
+          description: Page created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+        "400":
+          description: Invalid input or SQL errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
-  # /captionize:
-  #   post:
-  #     summary: Generate AI-powered image captions
-  #     description: >
-  #       Generates captions for one or more images using OpenAI, based on the provided content context.
-  #       Requires an array of image URLs and context for the images.
-  #     tags:
-  #       - Captionize
-  #     requestBody:
-  #       required: true
-  #       content:
-  #         application/json:
-  #           schema:
-  #             type: object
-  #             required:
-  #               - sources
-  #               - context
-  #             properties:
-  #               sources:
-  #                 type: array
-  #                 items:
-  #                   type: string
-  #                 description: Array of image sources (can be URLs or base64 strings)
-  #               context:
-  #                 type: string
-  #                 description: Contextual article/content for captioning
-  #     responses:
-  #       "200":
-  #         description: Captions generated successfully
-  #         content:
-  #           application/json:
-  #             schema:
-  #               type: object
-  #               properties:
-  #                 success:
-  #                   type: boolean
-  #                 data:
-  #                   type: object
-  #                   properties:
-  #                     captions:
-  #                       type: array
-  #                       items:
-  #                         type: string
-  #                     usage:
-  #                       type: object
-  #                       properties:
-  #                         prompt_tokens:
-  #                           type: integer
-  #                         completion_tokens:
-  #                           type: integer
-  #                         total_tokens:
-  #                           type: integer
-  #       "400":
-  #         description: Invalid input (e.g., missing or invalid sources/content)
-  #         content:
-  #           application/json:
-  #             schema:
-  #               $ref: "#/components/schemas/ErrorResponse"
-  #       "500":
-  #         description: Internal server error or OpenAI failure
-  #         content:
-  #           application/json:
-  #             schema:
-  #               $ref: "#/components/schemas/ErrorResponse"
+    put:
+      summary: Update a page by ID
+      description: Updates a page record by its ID.
+      tags:
+        - Page
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: Page ID (SHA256 hash of normalized page_url)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePageRequest"
+      responses:
+        "200":
+          description: Page updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      affectedRows:
+                        type: number
+        "400":
+          description: Invalid input or SQL errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   securitySchemes:
@@ -775,15 +801,36 @@ components:
           type: string
         model:
           type: string
-    CreateChatRequest:
+    Page:
       type: object
-      required:
-        - id
-        - page_url
-        - title
       properties:
         id:
           type: string
+        page_url:
+          type: string
+        title:
+          type: string
+        summary:
+          type: string
+        suggested_questions:
+          type: array
+          items:
+            type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+        freshness:
+          type: string
+          format: date-time
+    CreateChatRequest:
+      type: object
+      required:
+        - page_url
+        - title
+      properties:
         page_url:
           type: string
         title:
@@ -798,7 +845,6 @@ components:
       required:
         - role
         - content
-        - model
       properties:
         role:
           type: string
@@ -823,6 +869,34 @@ components:
         message_id:
           type: number
           description: Required message ID of the feedback
+    CreatePageRequest:
+      type: object
+      required:
+        - page_url
+        - summary
+      properties:
+        page_url:
+          type: string
+        title:
+          type: string
+          default: Untitled Page
+        summary:
+          type: string
+        suggested_questions:
+          type: array
+          items:
+            type: string
+    UpdatePageRequest:
+      type: object
+      properties:
+        title:
+          type: string
+        summary:
+          type: string
+        suggested_questions:
+          type: array
+          items:
+            type: string
     ErrorResponse:
       type: object
       properties:

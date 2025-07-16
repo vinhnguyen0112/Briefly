@@ -11,7 +11,6 @@ import {
   addTypingIndicator,
   removeTypingIndicator,
 } from "./ui-handler.js";
-import { elements } from "./dom-elements.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
@@ -21,9 +20,10 @@ const SERVER_URL = "http://localhost:3000";
 /**
  * Generate response for query by sending a request to the backend server
  * @param {String} query Query
+ * @param {Object} metadata Metadata
  * @returns
  */
-export async function processUserQuery(query) {
+export async function processUserQuery(query, metadata = {}) {
   // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
@@ -48,8 +48,9 @@ export async function processUserQuery(query) {
       state.currentConfig
     );
 
-    const response = await callOpenAI(messages);
-
+    metadata.page_url = state.pageContent.url || window.location.href;
+    const response = await callOpenAI(messages, metadata);
+    console.log("callOpenAI response: ", response);
     removeTypingIndicator(typingIndicator);
 
     const userSession = await getUserSession();
@@ -60,7 +61,7 @@ export async function processUserQuery(query) {
       // Show assistant message immediately (before persistence)
       addMessageToChat(assistantMessage, "assistant");
 
-      // Update history stack
+      // Update in-memory history
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({
         role: "assistant",
@@ -68,49 +69,49 @@ export async function processUserQuery(query) {
       });
 
       if (state.currentChat.history.length > 6) {
-        state.currentChat.history = state.currentChat.history.slice(
-          state.currentChat.history.length - 6
-        );
+        state.currentChat.history = state.currentChat.history.slice(-6);
       }
 
-      // Persist if user is authenticated
       if (userSession && userSession.id) {
         try {
           let chatId = state.currentChat.id;
-          let isNewChat = false;
-          if (!chatId) {
-            chatId = crypto.randomUUID();
-            const pageUrl = state.pageContent?.url || window.location.href;
-            const pageTitle = state.pageContent?.title || document.title;
+          const pageUrl = state.pageContent?.url || window.location.href;
+          const pageTitle = state.pageContent?.title || document.title;
 
+          // Create a new chat if no current chat id
+          if (!chatId) {
+            const result = await chatHandler.createChat({
+              page_url: pageUrl,
+              title: pageTitle,
+            });
+
+            if (!result?.success || !result?.data.id) {
+              throw new Error("Failed to create chat");
+            }
+
+            chatId = result.data.id;
             state.currentChat.id = chatId;
             state.currentChat.title = pageTitle;
             state.currentChat.pageUrl = pageUrl;
             state.currentChat.history = [];
-            isNewChat = true;
-          }
 
-          if (isNewChat) {
-            await chatHandler.createChat({
+            // Cache in IndexedDB
+            await idbHandler.upsertChat({
               id: chatId,
-              page_url: state.currentChat.pageUrl,
-              title: state.currentChat.title,
-            });
-            await idbHandler.addChat({
-              id: chatId,
-              title: state.currentChat.title,
-              page_url: state.currentChat.pageUrl,
+              title: pageTitle,
+              page_url: pageUrl,
             });
 
+            // Update chat history
             state.chatHistory.unshift({
               id: chatId,
-              title: state.currentChat.title,
-              page_url: state.currentChat.pageUrl,
+              title: pageTitle,
+              page_url: pageUrl,
               created_at: Date.now(),
             });
           }
 
-          // Save user and assistant messages
+          // Store messages
           await chatHandler.addMessage(chatId, {
             role: "user",
             content: query,
@@ -118,9 +119,10 @@ export async function processUserQuery(query) {
           await chatHandler.addMessage(chatId, {
             role: "assistant",
             content: assistantMessage,
-            model: "gpt-4o-mini",
+            model: response.model,
           });
 
+          // Cache messages
           await idbHandler.addMessageToChat(chatId, {
             role: "user",
             content: query,
@@ -131,17 +133,19 @@ export async function processUserQuery(query) {
           });
         } catch (err) {
           console.warn("Persistence failed:", err);
-          // Optionally handle persistence failure (retry/queue)
         }
       } else {
-        // Increase anon query count if not signed in
+        // TODO: Update anon_query_count from response
         await increaseAnonQueryCount();
       }
+
+      return { success: true, message: assistantMessage };
     } else {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");
       if (state.currentChat.history.length <= 0) {
         resetCurrentChatState();
       }
+      return { success: false, error: response.error };
     }
   } catch (error) {
     console.error("CocBot: Query error:", error);
@@ -150,31 +154,39 @@ export async function processUserQuery(query) {
     if (state.currentChat.history.length <= 0) {
       resetCurrentChatState();
     }
+    return { success: false, error: error.message };
   }
 }
 
 /**
  * Send a request to the backend server
  * @param {Object} messages OpenAI instructions and query
- * @returns
+ * @param {Object} metadata Metadata
+ * @returns {Promise<{success: Boolean, message: String, model: String}>}
  */
-export async function callOpenAI(messages) {
+export async function callOpenAI(messages, metadata) {
   const config = state.currentConfig || {};
   const maxTokens = config.maxWordCount
     ? Math.ceil(config.maxWordCount * 1.3)
     : 1500;
 
+  metadata.max_tokens = maxTokens;
+
   const res = await sendRequest(`${SERVER_URL}/api/query/ask`, {
     method: "POST",
     body: {
       messages,
-      max_tokens: maxTokens,
+      metadata,
     },
   });
 
   console.log("Query response: ", res);
 
-  return { success: res.success, message: res.data.message };
+  return {
+    success: res.success,
+    message: res.data.message,
+    model: res.data.model,
+  };
 }
 
 export async function constructPromptWithPageContent(

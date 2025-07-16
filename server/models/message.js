@@ -4,9 +4,9 @@ class Message {
   /**
    * Insert a message into a chat
    * @param {Object} messageData Message data object
-   * @param {String} [messageData.chat_id]
-   * @param {String} [messageData.role]
-   * @param {String} [messageData.content]
+   * @param {String} messageData.chat_id
+   * @param {String} messageData.role
+   * @param {String} messageData.content
    * @param {String} [messageData.model]
    * @returns {Promise<number>} Created chat's ID
    */

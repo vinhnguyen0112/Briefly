@@ -385,25 +385,40 @@ export function setupEventListeners() {
 // set up quick action buttons
 function setupQuickActions() {
   elements.quickActionButtons.forEach((button) => {
-    button.addEventListener("click", () => {
+    button.addEventListener("click", async () => {
       const action = button.getAttribute("data-action");
       let query = "";
+      const metadata = {};
 
       switch (action) {
         case "summarize":
           query = "Summarize this page in a concise way.";
+          metadata.event = "summarize";
           break;
         case "keypoints":
           query = "What are the key points of this page?";
+          metadata.event = "keypoints";
           break;
         case "explain":
           query = "Explain the content of this page as if I'm a beginner.";
+          metadata.event = "explain";
           break;
+        default:
+          metadata.event = "ask";
       }
 
       if (query) {
         switchToChat();
-        processUserQuery(query);
+        const response = await processUserQuery(query, metadata);
+        if (action === "summarize" && response?.success && response.message) {
+          chrome.runtime.sendMessage({
+            action: "store_page_summary",
+            page_url: state.pageContent.url || window.location.href,
+            title: state.pageContent.title || document.title,
+            summary: response.message,
+            suggested_questions: [],
+          });
+        }
       }
     });
   });
