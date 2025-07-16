@@ -1,6 +1,5 @@
 import {
   state,
-  getApiKey,
   increaseAnonQueryCount,
   getUserSession,
   resetCurrentChatState,

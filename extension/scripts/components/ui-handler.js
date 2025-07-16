@@ -15,6 +15,7 @@ import {
 import {
   renderToggleAccountPopupUI,
   setupListenersForDynamicChatHistoryElements,
+  setupQuickActionsEvent,
   showPopupDialog,
   showSignInAlertPopup,
 } from "./event-handler.js";
@@ -25,20 +26,10 @@ import {
 
 // close all panels
 export function closeAllPanels() {
-  // hide settings
-  elements.apiKeyContainer.style.display = "none";
-  elements.settingsButton.classList.remove("active");
-  state.isSettingsOpen = false;
-
   // hide config
   elements.configContainer.style.display = "none";
   elements.configButton.classList.remove("active");
   state.isConfigOpen = false;
-
-  // hide content viewer
-  elements.contentViewerScreen.style.display = "none";
-  elements.viewContentButton.classList.remove("active");
-  state.isContentViewerOpen = false;
 
   // hide notes
   elements.notesScreen.style.display = "none";
@@ -49,40 +40,7 @@ export function closeAllPanels() {
   elements.signInAlertOverlay.style.display = "none";
 
   // show main screen
-  if (state.welcomeMode) {
-    elements.welcomeScreen.style.display = "flex";
-  } else {
-    elements.chatScreen.style.display = "flex";
-  }
-}
-
-// set up quick action buttons
-export function setupQuickActions() {
-  // hook up each button
-  elements.quickActionButtons.forEach((button) => {
-    button.addEventListener("click", () => {
-      const action = button.getAttribute("data-action");
-      let query = "";
-
-      switch (action) {
-        case "summarize":
-          query = "Summarize this page in a concise way.";
-          break;
-        case "keypoints":
-          query = "What are the key points of this page?";
-          break;
-        case "explain":
-          query = "Explain the content of this page as if I'm a beginner.";
-          break;
-      }
-
-      if (query) {
-        // jump to chat and fire the query
-        switchToChat();
-        processUserQuery(query);
-      }
-    });
-  });
+  elements.chatScreen.style.display = "flex";
 }
 
 // handle resize events
@@ -150,13 +108,6 @@ export function stopResize() {
 
 // switch from welcome to chat view
 export function switchToChat() {
-  if (!state.welcomeMode) return;
-
-  state.welcomeMode = false;
-
-  // hide welcome
-  elements.welcomeScreen.style.display = "none";
-
   // hide chat history
   elements.chatHistoryScreen.style.display = "none";
 
@@ -166,71 +117,10 @@ export function switchToChat() {
   // focus input
   elements.userInput.focus();
 
-  // remember generated questions so they appear when switching back
-  const existingQuestions = state.generatedQuestions;
-
   // inject chat actions container if not exists
   if (!elements.chatContainer.querySelector(".chat-actions-container")) {
     const chatActionsContainer = createChatActionsContainer();
     elements.chatContainer.appendChild(chatActionsContainer);
-  }
-
-  // store a reference to switch back
-  const backButton = document.createElement("button");
-  backButton.className = "back-button";
-  backButton.textContent = "← Back";
-  backButton.onclick = () => {
-    // Hide chat screen
-    elements.chatScreen.style.display = "none";
-
-    console.log("Current stack: ", state.screenStack);
-    // Check screen stack
-    if (state.screenStack[state.screenStack.length - 1] === "history") {
-      elements.chatHistoryScreen.style.display = "flex";
-      // If we only history screen is in the stack (excluding welcome screen)
-      // Render welcome screen
-      if (state.screenStack.length <= 1) {
-        renderWelcomeScreen(existingQuestions);
-      }
-    } else {
-      renderWelcomeScreen(existingQuestions);
-    }
-
-    backButton.remove();
-  };
-
-  if (!document.querySelector(".back-button")) {
-    document.querySelector(".sidebar-content").prepend(backButton);
-  }
-}
-
-function renderWelcomeScreen(existingQuestions) {
-  state.welcomeMode = true;
-  elements.welcomeScreen.style.display = "flex";
-  // restore questions if we had them
-  if (existingQuestions && existingQuestions.length > 0) {
-    state.generatedQuestions = existingQuestions;
-    const questionsContainer = document.querySelector(".generated-questions");
-    const buttonContainer = document.querySelector(
-      ".question-buttons-container"
-    );
-
-    if (questionsContainer && buttonContainer) {
-      questionsContainer.style.display = "block";
-      buttonContainer.innerHTML = "";
-
-      existingQuestions.forEach((question) => {
-        const questionButton = document.createElement("button");
-        questionButton.className = "question-button";
-        questionButton.textContent = question;
-        questionButton.onclick = () => {
-          switchToChat();
-          processUserQuery(question);
-        };
-
-        buttonContainer.appendChild(questionButton);
-      });
-    }
   }
 }
 
@@ -314,35 +204,56 @@ function injectQuickActions(container) {
     <h3 data-i18n="quickActions">Quick Actions</h3>
     <div class="action-buttons-container">
       <button class="action-button" data-action="summarize">
-        <span data-i18n="summarize">Summarize</span>
+        <span data-i18n="summarize">Summarize this page for me.</span>
       </button>
       <button class="action-button" data-action="keypoints">
-        <span data-i18n="keyPoints">Key Points</span>
+        <span data-i18n="keyPoints">What are the key points of this page?</span>
       </button>
       <button class="action-button" data-action="explain">
-        <span data-i18n="explain">Explain</span>
+        <span data-i18n="explain">Explain this page to me as if I'm a beginner.</span>
       </button>
     </div>
   `;
   container.appendChild(quickActions);
 
-  quickActions.querySelectorAll(".action-button").forEach((button) => {
-    button.addEventListener("click", () => {
+  const quickActionButtons = quickActions.querySelectorAll(".action-button");
+
+  quickActionButtons.forEach((button) => {
+    button.addEventListener("click", async () => {
+      console.log("Button clicked");
       const action = button.getAttribute("data-action");
       let query = "";
+      const metadata = {};
+
       switch (action) {
         case "summarize":
           query = "Summarize this page in a concise way.";
+          metadata.event = "summarize";
           break;
         case "keypoints":
           query = "What are the key points of this page?";
+          metadata.event = "keypoints";
           break;
         case "explain":
           query = "Explain the content of this page as if I'm a beginner.";
+          metadata.event = "explain";
           break;
+        default:
+          metadata.event = "ask";
       }
+
       if (query) {
-        processUserQuery(query);
+        switchToChat();
+        const response = await processUserQuery(query, metadata);
+        if (action === "summarize" && response?.success && response.message) {
+          chrome.runtime.sendMessage({
+            action: "store_page_summary",
+            page_url: state.pageContent.url || window.location.href,
+            title: state.pageContent.title || document.title,
+            summary: response.message,
+            suggested_questions: [],
+          });
+        }
       }
     });
   });
@@ -355,9 +266,10 @@ function injectQuickActions(container) {
 function injectSuggestedQuestions(container) {
   const suggestedQuestionsContainer = document.createElement("div");
   suggestedQuestionsContainer.className = "suggested-questions-container";
+  suggestedQuestionsContainer.style.width = "100%";
   suggestedQuestionsContainer.innerHTML = `
-    <button class="button generate-questions-btn" style="margin-top:16px;">
-      <span>Generate questions about this page</span>
+    <button class="action-button generate-questions-button" style="width:100%">
+      <span data-i18n="generate-questions">Generate questions about this page</span>
     </button>
     <div class="question-loading" style="display:none;margin-top:12px;">
       <div class="spinner-small"></div>
@@ -367,8 +279,8 @@ function injectSuggestedQuestions(container) {
   `;
   container.appendChild(suggestedQuestionsContainer);
 
-  const generateBtn = suggestedQuestionsContainer.querySelector(
-    ".generate-questions-btn"
+  const generateQuestionsButton = suggestedQuestionsContainer.querySelector(
+    ".generate-questions-button"
   );
   const loadingDiv =
     suggestedQuestionsContainer.querySelector(".question-loading");
@@ -376,8 +288,8 @@ function injectSuggestedQuestions(container) {
     ".question-buttons-container"
   );
 
-  generateBtn.addEventListener("click", async () => {
-    generateBtn.style.display = "none";
+  generateQuestionsButton.addEventListener("click", async () => {
+    generateQuestionsButton.style.display = "none";
     loadingDiv.style.display = "flex";
     questionButtonsContainer.innerHTML = "";
 
@@ -409,7 +321,7 @@ function injectSuggestedQuestions(container) {
       });
     } else {
       questionButtonsContainer.innerHTML = `<div style="color:#E53E3E;">Failed to generate questions.</div>`;
-      generateBtn.style.display = "block";
+      generateQuestionsButton.style.display = "block";
     }
   });
 }
@@ -687,11 +599,6 @@ export function handleContentMessage(message) {
       // update ui
       updateContentStatus();
 
-      // update viewer if open
-      if (elements.contentViewerScreen.style.display !== "none") {
-        renderContentInSidebar(state.pageContent);
-      }
-
       // if notes panel is open, refresh notes for new URL
       if (state.isNotesOpen && state.pageContent.url !== state.currentPageUrl) {
         state.currentPageUrl = state.pageContent.url;
@@ -710,25 +617,12 @@ export function handleContentMessage(message) {
       requestPageContent();
 
       // If in welcome mode, reset any generated questions
-      if (state.welcomeMode) {
-        state.generatedQuestions = null;
-        const questionsContainer = document.querySelector(
-          ".generated-questions"
-        );
-        if (questionsContainer) {
-          questionsContainer.style.display = "none";
-        }
+      state.generatedQuestions = null;
+      const questionsContainer = document.querySelector(".generated-questions");
+      if (questionsContainer) {
+        questionsContainer.style.display = "none";
       }
 
-      // Show loading indicator if content viewer is open
-      if (elements.contentViewerScreen.style.display !== "none") {
-        elements.contentDisplay.innerHTML = `
-          <div class="content-viewer-loading">
-            <div class="spinner"></div>
-            <p>Loading content for new page...</p>
-          </div>
-        `;
-      }
       break;
 
     case "auth_session_changed":
@@ -771,7 +665,6 @@ function handleAuthStateChange(isAuth) {
   configureChatHistoryElementsOnAuthState(isAuth);
 
   // Navigate back to welcome page
-  state.welcomeMode = true;
   closeAllPanels();
 
   // Reset state
@@ -799,10 +692,11 @@ export function configureChatHistoryElementsOnAuthState(isAuth) {
 
   // Helper function to create chat history button
   function createChatHistoryButton() {
-    const btn = document.createElement("button");
-    btn.id = "chat-history-button";
-    btn.setAttribute("data-i18n-title", "chatHistory");
-    btn.innerHTML = `
+    const button = document.createElement("button");
+    button.id = "chat-history-button";
+    button.className = "icon-button";
+    button.setAttribute("data-i18n-title", "chatHistory");
+    button.innerHTML = `
       <svg
         aria-hidden="true"
         xmlns="http://www.w3.org/2000/svg"
@@ -820,7 +714,7 @@ export function configureChatHistoryElementsOnAuthState(isAuth) {
         />
       </svg>
     `;
-    return btn;
+    return button;
   }
 
   if (isAuth) {

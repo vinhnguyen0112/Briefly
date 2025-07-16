@@ -21,16 +21,6 @@ export function requestPageContent() {
   // track attempts
   state.contentFetchAttempts++;
 
-  // Show content loading message in the content viewer if it's open
-  if (elements.contentViewerScreen.style.display !== "none") {
-    elements.contentDisplay.innerHTML = `
-      <div class="content-viewer-loading">
-        <div class="spinner"></div>
-        <p>Refreshing page content...</p>
-      </div>
-    `;
-  }
-
   // Clear the previous content to force a fresh extraction
   state.pageContent = null;
 
@@ -52,11 +42,6 @@ export function requestPageContent() {
         // update ui
         updateContentStatus();
 
-        // If content viewer is open, update it
-        if (elements.contentViewerScreen.style.display !== "none") {
-          renderContentInSidebar(state.pageContent);
-        }
-
         // reset counter on success
         state.contentFetchAttempts = 0;
       } else {
@@ -71,18 +56,6 @@ export function requestPageContent() {
           state.pageContent = response.content;
           state.pageContent.extractionSuccess = false;
           updateContentStatus();
-
-          // If content viewer is open, update it with the partial content
-          if (elements.contentViewerScreen.style.display !== "none") {
-            renderContentInSidebar(state.pageContent);
-          }
-        } else {
-          // Show error in content viewer if it's open
-          if (elements.contentViewerScreen.style.display !== "none") {
-            showContentError(
-              response?.error || "Failed to extract page content"
-            );
-          }
         }
 
         // retry up to max attempts
@@ -104,26 +77,6 @@ export function requestPageContent() {
       }
     }
   );
-}
-
-// Helper function to show content extraction errors
-function showContentError(errorMessage) {
-  if (elements.contentViewerScreen.style.display !== "none") {
-    elements.contentDisplay.innerHTML = `
-      <div class="content-viewer-ui-error">
-        <p>${errorMessage}</p>
-        <button id="retry-content-extraction" class="button" style="margin-top: 15px;">Retry Extraction</button>
-      </div>
-    `;
-
-    // Add event listener for retry button
-    document
-      .getElementById("retry-content-extraction")
-      ?.addEventListener("click", () => {
-        state.contentFetchAttempts = 0;
-        requestPageContent();
-      });
-  }
 }
 
 // display content in sidebar
@@ -157,173 +110,10 @@ export function renderContentInSidebar(content) {
   }
 }
 
-// open content viewer popup
-export function openContentViewerPopup() {
-  console.log("CocBot: Showing content viewer");
-
-  // hide other screens
-  elements.welcomeScreen.style.display = "none";
-  elements.chatScreen.style.display = "none";
-
-  // show viewer
-  elements.contentViewerScreen.style.display = "flex";
-  elements.contentViewerScreen.style.flexDirection = "column";
-  elements.contentViewerScreen.style.height = "100%";
-  elements.contentDisplay.style.flex = "1";
-  elements.contentDisplay.style.overflowY = "auto";
-
-  // show spinner
-  elements.contentDisplay.innerHTML = `
-    <div class="content-viewer-loading">
-      <div class="spinner"></div>
-      <p>Processing page content...</p>
-    </div>
-  `;
-
-  const maxRetries = 2;
-  let retryCount = 0;
-
-  const tryExtractContent = () => {
-    if (
-      !state.pageContent ||
-      (state.pageContent && state.pageContent.extractionSuccess === false)
-    ) {
-      console.log(
-        `CocBot: No valid content yet, getting it (attempt ${retryCount + 1})`
-      );
-
-      // try to extract content
-      chrome.runtime.sendMessage(
-        { action: "extract_page_content", forceRefresh: retryCount > 0 },
-        (response) => {
-          if (response && response.success) {
-            console.log("CocBot: Got the content!");
-            state.pageContent = response.content;
-            renderContentInSidebar(state.pageContent);
-          } else {
-            if (retryCount < maxRetries) {
-              retryCount++;
-              console.log(
-                `CocBot: Content extraction failed, retrying (${retryCount}/${maxRetries})...`
-              );
-
-              // Show retrying message
-              elements.contentDisplay.innerHTML = `
-              <div class="content-viewer-loading">
-                <div class="spinner"></div>
-                <p>Retry ${retryCount}/${maxRetries}: Processing page content...</p>
-              </div>
-            `;
-
-              // Wait 1.5 seconds before retrying
-              setTimeout(tryExtractContent, 1500);
-            } else {
-              console.error(
-                "CocBot: Failed to get content after retries",
-                response?.error
-              );
-
-              // If we have a partial content result, still use it
-              if (response && response.content && response.content.title) {
-                console.log("CocBot: Using partial content result");
-                state.pageContent = response.content;
-                state.pageContent.extractionSuccess = false;
-                renderContentInSidebar(state.pageContent);
-              } else {
-                // Show error if all retries failed
-                elements.contentDisplay.innerHTML = `
-                <div class="content-viewer-ui-error">
-                  <p>Couldn't get page content: ${
-                    response?.error || "Unknown error"
-                  }</p>
-                  <button id="retry-content-extraction" class="button" style="margin-top: 15px;">Retry Extraction</button>
-                </div>
-              `;
-
-                // Add event listener for retry button
-                document
-                  .getElementById("retry-content-extraction")
-                  ?.addEventListener("click", () => {
-                    state.contentFetchAttempts = 0;
-                    requestPageContent();
-                  });
-              }
-            }
-          }
-        }
-      );
-      return;
-    }
-
-    // already have content, show it
-    renderContentInSidebar(state.pageContent);
-  };
-
-  tryExtractContent();
-}
-
 // update page context in welcome screen
 export function updateContentStatus() {
-  // existing welcome screen indicator
-  if (state.pageContent) {
-    const welcomeFooter = document.querySelector(".welcome-footer");
-    if (welcomeFooter) {
-      // remove any existing indicator first to avoid duplicates
-      const existingIndicator = document.querySelector(
-        ".page-context-indicator"
-      );
-      if (existingIndicator) {
-        existingIndicator.remove();
-      }
-
-      const pageContextIndicator = document.createElement("div");
-      pageContextIndicator.className = "page-context-indicator";
-      pageContextIndicator.style.fontSize = "12px";
-      pageContextIndicator.style.color = "var(--muted-foreground)";
-      pageContextIndicator.style.marginTop = "10px";
-      pageContextIndicator.style.textAlign = "center";
-
-      if (state.pageContent.extractionSuccess === false) {
-        pageContextIndicator.textContent = `Content extraction issue - using limited context`;
-        pageContextIndicator.style.backgroundColor = "#fff4e5";
-        pageContextIndicator.style.color = "#b54708";
-      } else {
-        pageContextIndicator.textContent = `Page context: ${state.pageContent.title.substring(
-          0,
-          30
-        )}${state.pageContent.title.length > 30 ? "..." : ""}`;
-      }
-
-      welcomeFooter.appendChild(pageContextIndicator);
-
-      // add a small refresh button next to indicator
-      const refreshButton = document.createElement("button");
-      refreshButton.className = "refresh-content-button";
-      refreshButton.innerHTML = "↻";
-      refreshButton.title = "Refresh page content";
-      refreshButton.style.border = "none";
-      refreshButton.style.background = "transparent";
-      refreshButton.style.cursor = "pointer";
-      refreshButton.style.fontSize = "12px";
-      refreshButton.style.marginLeft = "5px";
-      refreshButton.onclick = () => {
-        state.contentFetchAttempts = 0;
-        requestPageContent();
-
-        // reset questions
-        state.generatedQuestions = null;
-        document.querySelector(".generated-questions").style.display = "none";
-      };
-
-      pageContextIndicator.appendChild(refreshButton);
-
-      // generate questions based on content
-      generateAndDisplayQuestions();
-    }
-  }
-
   // also update chat ui if already in chat mode
-  if (!state.welcomeMode && state.pageContent) {
+  if (state.pageContent) {
     // add a small indicator at the top of chat
     const chatContainer = document.getElementById("chat-container");
     if (chatContainer) {

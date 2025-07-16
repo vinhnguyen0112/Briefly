@@ -134,61 +134,6 @@ export async function processQueryWithServer(pageContent, query) {
   }
 }
 
-// Save API key to the server (if authenticated)
-export async function saveApiKeyToServer(apiKey) {
-  try {
-    // Check if we have an auth token
-    const { token } = await chrome.storage.local.get("authToken");
-
-    if (!token) {
-      return {
-        success: false,
-        error: "Authentication required",
-        requiresAuth: true,
-      };
-    }
-
-    // Send request to server
-    const response = await fetch(`${SERVER_URL}/api/auth/api-key`, {
-      method: "PUT",
-      headers: {
-        Authorization: `Bearer ${token}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        apiKey,
-      }),
-    });
-
-    if (!response.ok) {
-      // If unauthorized, clear token
-      if (response.status === 401) {
-        await chrome.storage.local.remove("authToken");
-        return {
-          success: false,
-          error: "Authentication required",
-          requiresAuth: true,
-        };
-      }
-
-      throw new Error("Failed to save API key");
-    }
-
-    const data = await response.json();
-
-    return {
-      success: true,
-      message: data.message,
-    };
-  } catch (error) {
-    console.error("CocBot: Save API key error:", error);
-    return {
-      success: false,
-      error: error.message,
-    };
-  }
-}
-
 // Get user query history
 export async function getQueryHistory(page = 1, limit = 20) {
   try {

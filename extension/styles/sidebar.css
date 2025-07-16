@@ -743,9 +743,9 @@ body.sidebar-resizing * {
 
 .action-buttons-container {
   display: flex;
+  flex-direction: column;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: center;
 }
 
 .action-button {

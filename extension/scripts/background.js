@@ -424,30 +424,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === "saveApiKey") {
-    // API key to chrome storage
-    chrome.storage.sync.set({ openaiApiKey: message.apiKey }, () => {
-      console.log("API key saved");
-
-      if (sender.tab) {
-        chrome.action.setPopup({
-          popup: "",
-          tabId: sender.tab.id,
-        });
-      }
-
-      sendResponse({ success: true });
-    });
-    return true; //async response
-  }
-
-  if (message.action === "getApiKey") {
-    chrome.storage.sync.get(["openaiApiKey"], (result) => {
-      sendResponse({ apiKey: result.openaiApiKey || "" });
-    });
-    return true; // async response
-  }
-
   if (message.action === "extract_page_content") {
     console.log(
       "CocBot: Received extract_page_content request",

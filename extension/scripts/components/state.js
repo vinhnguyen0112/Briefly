@@ -2,15 +2,12 @@
 // Only persist in IDB when user click to view a chat
 
 export const state = {
-  welcomeMode: true,
   pageContent: {},
   isAnimating: false,
   history: [],
   currentConfig: null,
   isResizing: false,
-  isSettingsOpen: false,
   isConfigOpen: false,
-  isContentViewerOpen: false,
   contentFetchAttempts: 0,
   maxContentFetchAttempts: 5,
   isGeneratingQuestions: false,
@@ -160,23 +157,6 @@ export async function removeVisitorId() {
     chrome.storage.local.remove("visitor_id", () => {
       console.log("CocBot: Visitor ID removed");
       resolve(true);
-    });
-  });
-}
-
-// API key management
-export async function getApiKey() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["openai_api_key"], (result) => {
-      resolve(result.openai_api_key);
-    });
-  });
-}
-
-export async function saveApiKey(apiKey) {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ openai_api_key: apiKey }, () => {
-      resolve();
     });
   });
 }

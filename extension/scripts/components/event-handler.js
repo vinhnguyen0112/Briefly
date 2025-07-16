@@ -1,12 +1,8 @@
 import { elements } from "./dom-elements.js";
 import {
   state,
-  getApiKey,
-  saveApiKey,
   getConfig,
   saveConfig,
-  getLanguage,
-  saveLanguage,
   resetCurrentChatState,
   setCurrentChatState,
   addToScreenStack,
@@ -16,8 +12,6 @@ import {
   handleResize,
   stopResize,
   addMessageToChat,
-  addTypingIndicator,
-  removeTypingIndicator,
   closeAllPanels,
   switchToChat,
   handleContentMessage,
@@ -26,17 +20,7 @@ import {
   removeFeedbackIconsForAssistantMessages,
   clearChatHistoryList,
 } from "./ui-handler.js";
-import {
-  requestPageContent,
-  openContentViewerPopup,
-  renderContentInSidebar,
-  setupContentExtractionReliability,
-} from "./content-handler.js";
-import {
-  callOpenAI,
-  constructPromptWithPageContent,
-  processUserQuery,
-} from "./api-handler.js";
+import { processUserQuery } from "./api-handler.js";
 import {
   openNotesPanel,
   openNoteEditor,
@@ -57,83 +41,16 @@ export function setupEventListeners() {
   elements.cocbotTitle.addEventListener("click", () => {
     elements.chatScreen.style.display = "none";
     elements.chatHistoryScreen.style.display = "none";
-    elements.contentViewerScreen.style.display = "none";
     elements.configContainer.style.display = "none";
-    elements.apiKeyContainer.style.display = "none";
     elements.notesScreen.style.display = "none";
 
     elements.configButton.classList.remove("active");
-    elements.settingsButton.classList.remove("active");
-    elements.viewContentButton.classList.remove("active");
     elements.notesButton.classList.remove("active");
-
-    elements.welcomeScreen.style.display = "flex";
-    state.welcomeMode = true;
-
-    state.screenStack = []; // Reset screen stack
   });
 
   setupAuthenticationButtons();
 
-  setupQuickActions();
-
-  elements.viewContentButton.addEventListener("click", () => {
-    // Close content viewer
-    if (state.isContentViewerOpen) {
-      elements.contentViewerScreen.style.display = "none";
-      elements.viewContentButton.classList.remove("active");
-      state.isContentViewerOpen = false;
-
-      // If still in welcome mode, show welcome screen
-      if (state.welcomeMode) {
-        elements.welcomeScreen.style.display = "flex";
-      }
-      // Show chat screen if not in welcome mode
-      else {
-        elements.chatScreen.style.display = "flex";
-      }
-    }
-    // Close all other panels and open content viewer
-    else {
-      closeAllPanels();
-
-      openContentViewerPopup();
-      elements.viewContentButton.classList.add("active");
-      state.isContentViewerOpen = true;
-    }
-  });
-
-  elements.saveApiKeyButton.addEventListener("click", () => {
-    const apiKey = elements.apiKeyInput.value.trim();
-    if (apiKey) {
-      saveApiKey(apiKey).then(() => {
-        console.log("CocBot: API key saved");
-        elements.apiKeyContainer.style.display = "none";
-        elements.settingsButton.classList.remove("active");
-        state.isSettingsOpen = false;
-      });
-    }
-  });
-
-  elements.settingsButton.addEventListener("click", () => {
-    if (state.isSettingsOpen) {
-      elements.apiKeyContainer.style.display = "none";
-      elements.settingsButton.classList.remove("active");
-      state.isSettingsOpen = false;
-
-      if (state.welcomeMode) {
-        elements.welcomeScreen.style.display = "flex";
-      } else {
-        elements.chatScreen.style.display = "flex";
-      }
-    } else {
-      closeAllPanels();
-
-      elements.apiKeyContainer.style.display = "flex";
-      elements.settingsButton.classList.add("active");
-      state.isSettingsOpen = true;
-    }
-  });
+  setupQuickActionsEvent();
 
   elements.configButton.addEventListener("click", () => {
     if (state.isConfigOpen) {
@@ -141,11 +58,7 @@ export function setupEventListeners() {
       elements.configButton.classList.remove("active");
       state.isConfigOpen = false;
 
-      if (state.welcomeMode) {
-        elements.welcomeScreen.style.display = "flex";
-      } else {
-        elements.chatScreen.style.display = "flex";
-      }
+      elements.chatScreen.style.display = "flex";
     } else {
       closeAllPanels();
 
@@ -170,12 +83,7 @@ export function setupEventListeners() {
     elements.configContainer.style.display = "none";
     elements.configButton.classList.remove("active");
     state.isConfigOpen = false;
-
-    if (state.welcomeMode) {
-      elements.welcomeScreen.style.display = "flex";
-    } else {
-      elements.chatScreen.style.display = "flex";
-    }
+    elements.chatScreen.style.display = "flex";
   });
 
   elements.resizeHandle.addEventListener("mousedown", (e) => {
@@ -185,31 +93,6 @@ export function setupEventListeners() {
     document.body.classList.add("sidebar-resizing");
     document.addEventListener("mousemove", handleResize);
     document.addEventListener("mouseup", stopResize);
-  });
-
-  elements.welcomeForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const query = elements.welcomeInput.value.trim();
-    if (!query) return;
-
-    switchToChat();
-
-    processUserQuery(query);
-
-    elements.welcomeInput.value = "";
-  });
-
-  elements.welcomeInput.addEventListener("keydown", function (e) {
-    if (e.key === "Enter") {
-      e.preventDefault();
-
-      const query = elements.welcomeInput.value.trim();
-      if (query) {
-        switchToChat();
-        processUserQuery(query);
-        elements.welcomeInput.value = "";
-      }
-    }
   });
 
   elements.chatForm.addEventListener("submit", (e) => {
@@ -247,40 +130,13 @@ export function setupEventListeners() {
     }
   });
 
-  elements.refreshContentButton.addEventListener("click", () => {
-    requestPageContent();
-
-    elements.contentDisplay.innerHTML = `
-      <div class="content-viewer-loading">
-        <div class="spinner"></div>
-        <p>Refreshing page content...</p>
-      </div>
-    `;
-  });
-
-  elements.closeContentButton.addEventListener("click", () => {
-    elements.contentViewerScreen.style.display = "none";
-    elements.viewContentButton.classList.remove("active");
-    state.isContentViewerOpen = false;
-
-    if (state.welcomeMode) {
-      elements.welcomeScreen.style.display = "flex";
-    } else {
-      elements.chatScreen.style.display = "flex";
-    }
-  });
-
   elements.notesButton.addEventListener("click", () => {
     if (state.isNotesOpen) {
       elements.notesScreen.style.display = "none";
       elements.notesButton.classList.remove("active");
       state.isNotesOpen = false;
 
-      if (state.welcomeMode) {
-        elements.welcomeScreen.style.display = "flex";
-      } else {
-        elements.chatScreen.style.display = "flex";
-      }
+      elements.chatScreen.style.display = "flex";
     } else {
       closeAllPanels();
 
@@ -295,11 +151,7 @@ export function setupEventListeners() {
     elements.notesButton.classList.remove("active");
     state.isNotesOpen = false;
 
-    if (state.welcomeMode) {
-      elements.welcomeScreen.style.display = "flex";
-    } else {
-      elements.chatScreen.style.display = "flex";
-    }
+    elements.chatScreen.style.display = "flex";
   });
 
   elements.addNoteButton.addEventListener("click", () => {
@@ -383,9 +235,11 @@ export function setupEventListeners() {
 }
 
 // set up quick action buttons
-function setupQuickActions() {
-  elements.quickActionButtons.forEach((button) => {
+export function setupQuickActionsEvent() {
+  const quickActionButtons = document.querySelectorAll(".action-button");
+  quickActionButtons.forEach((button) => {
     button.addEventListener("click", async () => {
+      console.log("Button clicked");
       const action = button.getAttribute("data-action");
       let query = "";
       const metadata = {};
