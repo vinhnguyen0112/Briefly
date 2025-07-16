@@ -18,6 +18,10 @@ import {
   showPopupDialog,
   showSignInAlertPopup,
 } from "./event-handler.js";
+import {
+  generateQuestionsFromContent,
+  processUserQuery,
+} from "./api-handler.js";
 
 // close all panels
 export function closeAllPanels() {
@@ -165,6 +169,12 @@ export function switchToChat() {
   // remember generated questions so they appear when switching back
   const existingQuestions = state.generatedQuestions;
 
+  // inject chat actions container if not exists
+  if (!elements.chatContainer.querySelector(".chat-actions-container")) {
+    const chatActionsContainer = createChatActionsContainer();
+    elements.chatContainer.appendChild(chatActionsContainer);
+  }
+
   // store a reference to switch back
   const backButton = document.createElement("button");
   backButton.className = "back-button";
@@ -254,17 +264,154 @@ export async function addMessageToChat(message, role) {
     `;
   }
 
-  elements.chatContainer.appendChild(messageElement);
+  // Insert message before actions container so actions stay at the bottom
+  const actionsContainer = elements.chatContainer.querySelector(
+    ".chat-actions-container"
+  );
+  if (actionsContainer) {
+    elements.chatContainer.insertBefore(messageElement, actionsContainer);
+  } else {
+    elements.chatContainer.appendChild(messageElement);
+  }
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 }
 
 /**
  * Clear all messages from chat container
+ * and inject quick actions & suggested questions into chat container
  */
-export function clearMessagesFromChatContainer() {
-  if (elements.chatContainer) {
-    elements.chatContainer.innerHTML = "";
-  }
+export async function clearMessagesFromChatContainer() {
+  if (!elements.chatContainer) return;
+  elements.chatContainer.innerHTML = "";
+
+  // Create a container for both quick actions and suggested questions
+  const chatActionsContainer = createChatActionsContainer();
+  elements.chatContainer.appendChild(chatActionsContainer);
+}
+
+/**
+ * Creates and returns the chat actions container with quick actions and suggested questions.
+ * @returns {HTMLElement} The chat actions container element.
+ */
+function createChatActionsContainer() {
+  const actionsContainer = document.createElement("div");
+  actionsContainer.className = "chat-actions-container";
+
+  injectQuickActions(actionsContainer);
+  injectSuggestedQuestions(actionsContainer);
+
+  return actionsContainer;
+}
+
+/**
+ * Inject quick action buttons inside parent element.
+ * @param {HTMLElement} container Parent element
+ */
+function injectQuickActions(container) {
+  const quickActions = document.createElement("div");
+  quickActions.className = "quick-actions";
+  quickActions.innerHTML = `
+    <h3 data-i18n="quickActions">Quick Actions</h3>
+    <div class="action-buttons-container">
+      <button class="action-button" data-action="summarize">
+        <span data-i18n="summarize">Summarize</span>
+      </button>
+      <button class="action-button" data-action="keypoints">
+        <span data-i18n="keyPoints">Key Points</span>
+      </button>
+      <button class="action-button" data-action="explain">
+        <span data-i18n="explain">Explain</span>
+      </button>
+    </div>
+  `;
+  container.appendChild(quickActions);
+
+  quickActions.querySelectorAll(".action-button").forEach((button) => {
+    button.addEventListener("click", () => {
+      const action = button.getAttribute("data-action");
+      let query = "";
+      switch (action) {
+        case "summarize":
+          query = "Summarize this page in a concise way.";
+          break;
+        case "keypoints":
+          query = "What are the key points of this page?";
+          break;
+        case "explain":
+          query = "Explain the content of this page as if I'm a beginner.";
+          break;
+      }
+      if (query) {
+        processUserQuery(query);
+      }
+    });
+  });
+}
+
+/**
+ * Inject suggested questions inside parent element
+ * @param {HTMLElement} container Parent element
+ */
+function injectSuggestedQuestions(container) {
+  const suggestedQuestionsContainer = document.createElement("div");
+  suggestedQuestionsContainer.className = "suggested-questions-container";
+  suggestedQuestionsContainer.innerHTML = `
+    <button class="button generate-questions-btn" style="margin-top:16px;">
+      <span>Generate questions about this page</span>
+    </button>
+    <div class="question-loading" style="display:none;margin-top:12px;">
+      <div class="spinner-small"></div>
+      <span>Generating questions...</span>
+    </div>
+    <div class="question-buttons-container" style="margin-top:12px;"></div>
+  `;
+  container.appendChild(suggestedQuestionsContainer);
+
+  const generateBtn = suggestedQuestionsContainer.querySelector(
+    ".generate-questions-btn"
+  );
+  const loadingDiv =
+    suggestedQuestionsContainer.querySelector(".question-loading");
+  const questionButtonsContainer = suggestedQuestionsContainer.querySelector(
+    ".question-buttons-container"
+  );
+
+  generateBtn.addEventListener("click", async () => {
+    generateBtn.style.display = "none";
+    loadingDiv.style.display = "flex";
+    questionButtonsContainer.innerHTML = "";
+
+    let result;
+
+    // Use generated questions if have
+    if (state.generatedQuestions) {
+      result = {
+        success: true,
+        questions: state.generatedQuestions,
+      };
+    } else {
+      result = await generateQuestionsFromContent(state.pageContent);
+    }
+
+    loadingDiv.style.display = "none";
+
+    if (result && result.success && Array.isArray(result.questions)) {
+      questionButtonsContainer.innerHTML = "";
+      result.questions.forEach((question) => {
+        const questionButton = document.createElement("button");
+        questionButton.className = "question-button";
+        questionButton.textContent = question;
+        questionButton.onclick = async () => {
+          processUserQuery(question);
+          questionButton.remove();
+        };
+        questionButtonsContainer.appendChild(questionButton);
+      });
+    } else {
+      questionButtonsContainer.innerHTML = `<div style="color:#E53E3E;">Failed to generate questions.</div>`;
+      generateBtn.style.display = "block";
+    }
+  });
 }
 
 /**
@@ -509,7 +656,15 @@ export function addTypingIndicator() {
   typingElement.className = "typing-indicator";
   typingElement.innerHTML = "<span></span><span></span><span></span>";
 
-  elements.chatContainer.appendChild(typingElement);
+  const actionsContainer = elements.chatContainer.querySelector(
+    ".chat-actions-container"
+  );
+  if (actionsContainer) {
+    elements.chatContainer.insertBefore(typingElement, actionsContainer);
+  } else {
+    elements.chatContainer.appendChild(typingElement);
+  }
+
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 
   return typingElement;

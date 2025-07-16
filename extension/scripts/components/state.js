@@ -1,8 +1,9 @@
 // Global state object
 // Only persist in IDB when user click to view a chat
+
 export const state = {
   welcomeMode: true,
-  pageContent: null,
+  pageContent: {},
   isAnimating: false,
   history: [],
   currentConfig: null,

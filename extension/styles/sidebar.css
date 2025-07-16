@@ -1228,11 +1228,8 @@ input:checked + .slider:before {
   z-index: 10002;
   padding: 20px;
   width: calc(var(--sidebar-width) * 0.8);
-  /* Scale with sidebar width */
-  max-width: var(--sidebar-max-width);
-  /* Ensure it doesn't exceed max width */
-  min-width: var(--sidebar-min-width);
-  /* Ensure it doesn't go below min width */
+  max-width: calc(var(--sidebar-width) * 0.8);
+  min-width: calc(var(--sidebar-width) * 0.8);
   text-align: center;
 }
 
@@ -1934,4 +1931,13 @@ input:checked + .slider:before {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.chat-actions-container {
+  width: 100%;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
 }
