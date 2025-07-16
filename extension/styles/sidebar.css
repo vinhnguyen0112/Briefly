@@ -144,26 +144,6 @@ body.sidebar-resizing * {
   color: var(--primary-foreground);
 }
 
-/* settings button */
-#settings-button {
-  background-color: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 18px;
-  border: none;
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  transition: background-color 0.2s, color 0.2s;
-}
-
-#settings-button:hover {
-  opacity: 0.8;
-}
-
-#settings-button.active {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
-}
-
 /* account button */
 #account-button {
   background-color: var(--muted);
@@ -299,8 +279,7 @@ body.sidebar-resizing * {
   opacity: 0.9;
 }
 
-.button,
-.icon-button {
+.button {
   background-color: var(--primary);
   color: var(--primary-foreground);
   border: none;
@@ -314,21 +293,8 @@ body.sidebar-resizing * {
   justify-content: center;
 }
 
-.button:hover,
-.icon-button:hover {
-  opacity: 0.9;
-}
-
-.icon-button {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-}
-
-#close-sidebar {
-  background: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 18px;
+.button:hover {
+  opacity: 0.8;
 }
 
 /* chat messages */
@@ -968,22 +934,6 @@ body.sidebar-resizing * {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-/* notes button */
-#notes-button {
-  background-color: var(--muted);
-  color: var(--muted-foreground);
-  transition: background-color 0.2s, color 0.2s;
-}
-
-#notes-button:hover {
-  opacity: 0.8;
-}
-
-#notes-button.active {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
 }
 
 /* Notes screen */
