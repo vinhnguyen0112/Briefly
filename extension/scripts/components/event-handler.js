@@ -388,28 +388,37 @@ function setupQuickActions() {
     button.addEventListener("click", async () => {
       const action = button.getAttribute("data-action");
       let query = "";
-      let options = {};
+      const metadata = {};
 
       switch (action) {
         case "summarize":
           query = "Summarize this page in a concise way.";
-          options.event = "summarize";
+          metadata.event = "summarize";
           break;
         case "keypoints":
           query = "What are the key points of this page?";
-          options.event = "keypoints";
+          metadata.event = "keypoints";
           break;
         case "explain":
           query = "Explain the content of this page as if I'm a beginner.";
-          options.event = "explain";
+          metadata.event = "explain";
           break;
         default:
-          options.event = "ask"; // Normal chat
+          metadata.event = "ask";
       }
 
       if (query) {
         switchToChat();
-        processUserQuery(query, options);
+        const response = await processUserQuery(query, metadata);
+        if (action === "summarize" && response?.success && response.message) {
+          chrome.runtime.sendMessage({
+            action: "store_page_summary",
+            page_url: state.pageContent.url || window.location.href,
+            title: state.pageContent.title || document.title,
+            summary: response.message,
+            suggested_questions: [],
+          });
+        }
       }
     });
   });
@@ -812,7 +821,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
     });
     messages = response.messages || [];
     const found = await idbHandler.getChatById(chat.id);
-    if (!found) await idbHandler.upsertChat(chat);
+    if (!found) await idbHandler.addChat(chat);
     await idbHandler.overwriteChatMessages(chat.id, messages);
   } else {
     messages = await idbHandler.getMessagesForChat(chat.id);

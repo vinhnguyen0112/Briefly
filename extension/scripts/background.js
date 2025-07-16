@@ -695,6 +695,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+  if (message.action === "store_page_summary") {
+    sendRequest(`${SERVER_URL}/api/pages`, {
+      method: "POST",
+      body: {
+        page_url: message.page_url,
+        title: message.title,
+        summary: message.summary,
+        suggested_questions: message.suggested_questions || [],
+      },
+    })
+      .then((res) => {
+        console.log("store_page_summary response: ", res);
+      })
+      .catch((err) => {
+        console.error("Failed to store page summary:", err);
+      });
+
+    return false;
+  }
   if (message.action === "process_images") {
     resetProcessedImages();
     handleCaptionImages(message.images, message.content)

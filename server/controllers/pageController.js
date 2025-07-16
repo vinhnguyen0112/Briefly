@@ -12,9 +12,9 @@ const Page = require("../models/page");
 const createPage = async (req, res, next) => {
   try {
     const body = {};
-
     const { page_url, title, summary, suggested_questions } = req.body;
 
+    // Filtering
     if (page_url) body.page_url = page_url;
     if (title) body.title = title;
     if (summary) body.summary = summary;

@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require("uuid");
 const { redisHelper } = require("../helpers/redisHelper");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
-const sampleChatId = uuidv4();
+let sampleChatId;
 let sampleMessageId;
 
 beforeAll(async () => {
@@ -23,11 +23,16 @@ beforeAll(async () => {
     .post("/api/chats")
     .set("Authorization", authHeader)
     .send({
-      id: sampleChatId,
       title: "Test Chat",
       page_url: "www.example.com",
     })
-    .expect(200);
+    .expect(200)
+    .then((response) => {
+      expect(response.body).toHaveProperty("success", true);
+      expect(response.body).toHaveProperty("data");
+      expect(response.body.data).toHaveProperty("id");
+      sampleChatId = response.body.data.id;
+    });
 
   await supertest(app)
     .post(`/api/chats/${sampleChatId}/messages`)

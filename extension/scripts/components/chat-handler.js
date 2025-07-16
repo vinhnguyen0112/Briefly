@@ -5,15 +5,14 @@ const API_BASE = "http://localhost:3000/api/chats";
 /**
  * Create a new chat.
  * @param {Object} chatData Chat data.
- * @param {string} chatData.id Chat ID.
  * @param {string} chatData.page_url Page URL.
  * @param {string} chatData.title Chat title.
  * @returns {Promise<Object>} The created chat response.
  */
-async function createChat({ id, page_url, title }) {
+async function createChat({ page_url, title }) {
   const response = await sendRequest(API_BASE, {
     method: "POST",
-    body: { id, page_url, title },
+    body: { page_url, title },
   });
 
   return response;

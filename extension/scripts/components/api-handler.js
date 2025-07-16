@@ -1,5 +1,7 @@
 import {
   state,
+  getApiKey,
+  increaseAnonQueryCount,
   getUserSession,
   resetCurrentChatState,
   sendRequest,
@@ -11,33 +13,34 @@ import {
 } from "./ui-handler.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
+import chatHandler from "./chat-handler.js";
 
 const SERVER_URL = "http://localhost:3000";
 
 /**
  * Generate response for query by sending a request to the backend server
  * @param {String} query Query
- * @param {Object} options Options
+ * @param {Object} metadata Metadata
  * @returns
  */
-export async function processUserQuery(query, options = { event: "ask" }) {
-  // Check if user need to sign in to continue
+export async function processUserQuery(query, metadata = {}) {
+  // Anonymous user query limit check
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, { action: "sign_in_required" });
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "sign_in_required",
+        });
       }
     });
     return;
   }
 
-  // Add user prompt into chat screen
   addMessageToChat(query, "user");
   const typingIndicator = addTypingIndicator();
 
   try {
-    // Build prompt
     const messages = await constructPromptWithPageContent(
       query,
       state.pageContent,
@@ -45,71 +48,20 @@ export async function processUserQuery(query, options = { event: "ask" }) {
       state.currentConfig
     );
 
-    // Prepare chat metadata for backend
-    const chatMeta = {
-      chat_id: state.currentChat.id || null,
-      page_url: state.pageContent?.url || window.location.href,
-      title: state.pageContent?.title || document.title,
-      user_query: query, // User prompt
-      should_create_chat: !state.currentChat.id, // true if new chat
-      event: options.event,
-    };
-
-    // Send everything to backend
-    const response = await callOpenAI(messages, chatMeta);
-
+    metadata.page_url = state.pageContent.url || window.location.href;
+    const response = await callOpenAI(messages, metadata);
+    console.log("callOpenAI response: ", response);
     removeTypingIndicator(typingIndicator);
 
+    const userSession = await getUserSession();
+
     if (response.success) {
-      // Add AI-generated response to chat screen
       const assistantMessage = response.message;
+
+      // Show assistant message immediately (before persistence)
       addMessageToChat(assistantMessage, "assistant");
 
-      const authSession = await getUserSession();
-
-      // Only persist chat & messages for authenticated session
-      if (authSession && authSession.id) {
-        if (response.chat_id && !state.currentChat.id) {
-          // If backend response back with a newly created chat,
-          // update state & push it into history
-          state.currentChat.id = response.chat_id;
-          state.currentChat.title = chatMeta.title;
-          state.currentChat.pageUrl = chatMeta.page_url;
-          state.chatHistory.unshift({
-            id: response.chat_id,
-            title: chatMeta.title,
-            page_url: chatMeta.page_url,
-            created_at: Date.now(),
-          });
-
-          // Cache chat in IndexedDB
-          await idbHandler.upsertChat({
-            id: response.chat_id,
-            title: chatMeta.title,
-            page_url: chatMeta.page_url,
-          });
-        }
-
-        // Cache messages in IndexedDB
-        await idbHandler.addMessageToChat(
-          response.chat_id || state.currentChat.id,
-          {
-            role: "user",
-            content: query,
-          }
-        );
-
-        await idbHandler.addMessageToChat(
-          response.chat_id || state.currentChat.id,
-          {
-            role: "assistant",
-            content: response.message,
-            model: response.model,
-          }
-        );
-      }
-
-      // Update the chat's history stack regardless
+      // Update in-memory history
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({
         role: "assistant",
@@ -120,21 +72,88 @@ export async function processUserQuery(query, options = { event: "ask" }) {
         state.currentChat.history = state.currentChat.history.slice(-6);
       }
 
-      return {
-        success: true,
-        message: assistantMessage,
-        chat_id: response.chat_id,
-      };
+      if (userSession && userSession.id) {
+        try {
+          let chatId = state.currentChat.id;
+          const pageUrl = state.pageContent?.url || window.location.href;
+          const pageTitle = state.pageContent?.title || document.title;
+
+          // Create a new chat if no current chat id
+          if (!chatId) {
+            const result = await chatHandler.createChat({
+              page_url: pageUrl,
+              title: pageTitle,
+            });
+
+            if (!result?.success || !result?.data.id) {
+              throw new Error("Failed to create chat");
+            }
+
+            chatId = result.data.id;
+            state.currentChat.id = chatId;
+            state.currentChat.title = pageTitle;
+            state.currentChat.pageUrl = pageUrl;
+            state.currentChat.history = [];
+
+            // Cache in IndexedDB
+            await idbHandler.upsertChat({
+              id: chatId,
+              title: pageTitle,
+              page_url: pageUrl,
+            });
+
+            // Update chat history
+            state.chatHistory.unshift({
+              id: chatId,
+              title: pageTitle,
+              page_url: pageUrl,
+              created_at: Date.now(),
+            });
+          }
+
+          // Store messages
+          await chatHandler.addMessage(chatId, {
+            role: "user",
+            content: query,
+          });
+          await chatHandler.addMessage(chatId, {
+            role: "assistant",
+            content: assistantMessage,
+            model: response.model,
+          });
+
+          // Cache messages
+          await idbHandler.addMessageToChat(chatId, {
+            role: "user",
+            content: query,
+          });
+          await idbHandler.addMessageToChat(chatId, {
+            role: "assistant",
+            content: assistantMessage,
+          });
+        } catch (err) {
+          console.warn("Persistence failed:", err);
+        }
+      } else {
+        // TODO: Update anon_query_count from response
+        await increaseAnonQueryCount();
+      }
+
+      return { success: true, message: assistantMessage };
     } else {
       addMessageToChat("Oops, got an error: " + response.error, "assistant");
-      if (state.currentChat.history.length <= 0) resetCurrentChatState();
+      if (state.currentChat.history.length <= 0) {
+        resetCurrentChatState();
+      }
       return { success: false, error: response.error };
     }
   } catch (error) {
     console.error("CocBot: Query error:", error);
     removeTypingIndicator(typingIndicator);
     addMessageToChat("Something went wrong. Try again?", "assistant");
-    if (state.currentChat.history.length <= 0) resetCurrentChatState();
+    if (state.currentChat.history.length <= 0) {
+      resetCurrentChatState();
+    }
     return { success: false, error: error.message };
   }
 }
@@ -142,19 +161,22 @@ export async function processUserQuery(query, options = { event: "ask" }) {
 /**
  * Send a request to the backend server
  * @param {Object} messages OpenAI instructions and query
+ * @param {Object} metadata Metadata
+ * @returns {Promise<{success: Boolean, message: String, model: String}>}
  */
-export async function callOpenAI(messages, chatMeta) {
+export async function callOpenAI(messages, metadata) {
   const config = state.currentConfig || {};
   const maxTokens = config.maxWordCount
     ? Math.ceil(config.maxWordCount * 1.3)
     : 1500;
 
+  metadata.max_tokens = maxTokens;
+
   const res = await sendRequest(`${SERVER_URL}/api/query/ask`, {
     method: "POST",
     body: {
       messages,
-      max_tokens: maxTokens,
-      chat_meta: chatMeta,
+      metadata,
     },
   });
 
@@ -163,7 +185,6 @@ export async function callOpenAI(messages, chatMeta) {
   return {
     success: res.success,
     message: res.data.message,
-    chat_id: res.data.chat_id,
     model: res.data.model,
   };
 }
@@ -263,8 +284,6 @@ ${styleInstructions}`,
     role: "user",
     content: query,
   });
-
-  console.log("Prompt messages: ", messages);
 
   return messages;
 }

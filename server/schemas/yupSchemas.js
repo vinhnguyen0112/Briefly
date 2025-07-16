@@ -1,7 +1,6 @@
 const { object, string, array, number, boolean } = require("yup");
 
 const createChatSchema = object({
-  id: string().strict().trim().required(),
   title: string().strict().trim().required(),
   page_url: string().strict().trim().required(),
 });
@@ -49,31 +48,33 @@ const querySchema = object({
     .min(1, "At least one message is required")
     .required("Messages are required"),
 
-  max_tokens: number()
-    .integer("Max tokens must be an integer")
-    .positive("Max tokens must be positive")
-    .max(4096, "Max tokens exceeds model limit")
-    .required("max_tokens is required"),
-
-  chat_meta: object({
-    chat_id: string().trim().nullable(),
-
+  metadata: object({
     page_url: string()
       .trim()
       .url("Invalid page URL")
       .required("Page URL is required"),
 
-    title: string()
-      .trim()
-      .max(255, "Title must be at most 255 characters")
-      .default("Untitled Page"),
+    max_tokens: number()
+      .integer("Max tokens must be an integer")
+      .positive("Max tokens must be positive")
+      .max(4096, "Max tokens exceeds model limit")
+      .required("max_tokens is required"),
 
-    user_query: string().trim().required("User query is required"),
+    event: string().trim().default("ask"),
+  }).required("metadata is required"),
+});
 
-    should_create_chat: boolean().default(false),
+const createPageSchema = object({
+  page_url: string().strict().trim().required(),
+  title: string().strict().trim().default("Untitled Page"),
+  summary: string().strict().trim().required(),
+  generated_questions: array().of(string().strict().trim()).nullable(),
+});
 
-    event: string().strict().default("ask"),
-  }).required("chat_meta is required"),
+const updatePageSchema = object({
+  title: string().strict().trim().nullable(),
+  summary: string().strict().trim().nullable(),
+  generated_questions: array().of(string().strict().trim()).nullable(),
 });
 
 module.exports = {
@@ -83,4 +84,6 @@ module.exports = {
   createFeedbackSchema,
   createImageCaptionSchema,
   querySchema,
+  createPageSchema,
+  updatePageSchema,
 };
