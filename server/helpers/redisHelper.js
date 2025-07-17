@@ -7,7 +7,7 @@ let client;
 if (process.env.NODE_ENV === "test") {
   // Single-node Redis for testing
   client = redis.createClient({
-    url: `redis://${process.env.REDIS_HOST}:${process.env.REDIS_PORT}`,
+    url: `redis://${process.env.REDIS_HOST}`,
   });
 
   client.on("error", (err) => console.error("Redis Client Error", err));
@@ -15,7 +15,7 @@ if (process.env.NODE_ENV === "test") {
   // client Redis for dev/prod
   client = redis.createCluster({
     rootNodes: process.env.REDIS_HOST.split(",").map((host) => ({
-      url: `redis://${host}:${process.env.REDIS_PORT}`,
+      url: `redis://${host}`,
     })),
     defaults: {
       username: process.env.REDIS_USERNAME,
