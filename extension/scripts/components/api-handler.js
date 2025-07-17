@@ -15,7 +15,7 @@ import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { RequestQueue } from "../../components/RequestQueue.js";
 
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
 const persistenceQueue = new RequestQueue(); // Create a request queue
 
 /**

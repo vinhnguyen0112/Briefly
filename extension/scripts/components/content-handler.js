@@ -67,9 +67,6 @@ export function requestPageContent() {
           console.error(
             "CocBot: Max content fetch attempts reached, giving up"
           );
-          showContentError(
-            "Failed to extract page content after multiple attempts. Please try refreshing the page."
-          );
         }
       }
     }

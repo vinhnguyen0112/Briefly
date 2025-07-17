@@ -470,14 +470,17 @@ async function showFeedbackModal() {
     const sessionId = "auth:" + userSession?.id;
 
     try {
-      const res = await fetch("http://localhost:3000/api/feedback", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${sessionId}`,
-        },
-        body: JSON.stringify({ stars, comment }),
-      });
+      const res = await fetch(
+        "https://dev-capstone-2025.coccoc.com/api/feedback",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${sessionId}`,
+          },
+          body: JSON.stringify({ stars, comment }),
+        }
+      );
       const data = await res.json();
       if (data.success) {
         showToast("Feedback received!");
