@@ -27,7 +27,7 @@ build_dev:
         - branches
         - triggers
     script:
-        - docker build -t $IMAGE_NAME:$CI_COMMIT_TAG -f ./server/Dockerfile .
+        - docker build -t $IMAGE_NAME:$CI_COMMIT_TAG -f ./server/Dockerfile ./server
         - docker push $IMAGE_NAME:$CI_COMMIT_TAG
         - echo "Pushed image $IMAGE_NAME:$CI_COMMIT_TAG"
 
@@ -60,6 +60,6 @@ build_prod:
         - branches
         - triggers
     script:
-        - docker build -t $IMAGE_NAME:$CI_COMMIT_TAG -f ./Dockerfile .
+        - docker build -t $IMAGE_NAME:$CI_COMMIT_TAG -f ./server/Dockerfile ./server
         - docker push $IMAGE_NAME:$CI_COMMIT_TAG
         - echo "Pushed image $IMAGE_NAME:$CI_COMMIT_TAG"
