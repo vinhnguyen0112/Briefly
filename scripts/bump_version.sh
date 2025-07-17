@@ -19,7 +19,7 @@ fi
 version="$1"
 message="$2"
 
-version_file="$ROOT_FOLDER/server/routes/healthCheckRouts.js"
+version_file="$ROOT_FOLDER/server/routes/healthCheckRoutes.js"
 sed -i -e "s/version\: '.*'/version\: '${version}'/g" $version_file
 
 git add ${version_file}
