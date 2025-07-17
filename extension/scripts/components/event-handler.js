@@ -30,6 +30,7 @@ import {
 import { switchLanguage } from "./i18n.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
+import { updateContentStatus } from "./content-handler.js";
 
 // wires up all the event listeners in the app
 export function setupEventListeners() {
@@ -37,15 +38,18 @@ export function setupEventListeners() {
     window.parent.postMessage({ action: "close_sidebar" }, "*");
   });
 
-  // CocBot title click to return to welcome screen
+  // Title click
   elements.cocbotTitle.addEventListener("click", () => {
-    elements.chatScreen.style.display = "none";
+    // Close all non-chat screens & panels
     elements.chatHistoryScreen.style.display = "none";
     elements.configContainer.style.display = "none";
     elements.notesScreen.style.display = "none";
 
     elements.configButton.classList.remove("active");
     elements.notesButton.classList.remove("active");
+
+    // Scroll to bottom of chat
+    elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
   });
 
   setupAuthenticationButtons();
@@ -675,7 +679,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
     });
     messages = response.messages || [];
     const found = await idbHandler.getChatById(chat.id);
-    if (!found) await idbHandler.addChat(chat);
+    if (!found) await idbHandler.upsertChat(chat);
     await idbHandler.overwriteChatMessages(chat.id, messages);
   } else {
     messages = await idbHandler.getMessagesForChat(chat.id);

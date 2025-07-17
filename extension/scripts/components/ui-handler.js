@@ -177,6 +177,8 @@ export async function clearMessagesFromChatContainer() {
   // Create a container for both quick actions and suggested questions
   const chatActionsContainer = createChatActionsContainer();
   elements.chatContainer.appendChild(chatActionsContainer);
+
+  updateContentStatus();
 }
 
 /**
@@ -204,12 +206,21 @@ function injectQuickActions(container) {
     <h3 data-i18n="quickActions">Quick Actions</h3>
     <div class="action-buttons-container">
       <button class="action-button" data-action="summarize">
+        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 6H6m12 4H6m12 4H6m12 4H6"/>
+        </svg>
         <span data-i18n="summarize">Summarize this page for me.</span>
       </button>
       <button class="action-button" data-action="keypoints">
+        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6h8m-8 6h8m-8 6h8M4 16a2 2 0 1 1 3.321 1.5L4 20h5M4 5l2-1v6m-2 0h4"/>
+        </svg>
         <span data-i18n="keyPoints">What are the key points of this page?</span>
       </button>
       <button class="action-button" data-action="explain">
+      <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.529 9.988a2.502 2.502 0 1 1 5 .191A2.441 2.441 0 0 1 12 12.582V14m-.01 3.008H12M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z"/>
+      </svg>
         <span data-i18n="explain">Explain this page to me as if I'm a beginner.</span>
       </button>
     </div>
@@ -269,6 +280,10 @@ function injectSuggestedQuestions(container) {
   suggestedQuestionsContainer.style.width = "100%";
   suggestedQuestionsContainer.innerHTML = `
     <button class="action-button generate-questions-button" style="width:100%">
+    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7.556 8.5h8m-8 3.5H12m7.111-7H4.89a.896.896 0 0 0-.629.256.868.868 0 0 0-.26.619v9.25c0 .232.094.455.26.619A.896.896 0 0 0 4.89 16H9l3 4 3-4h4.111a.896.896 0 0 0 .629-.256.868.868 0 0 0 .26-.619v-9.25a.868.868 0 0 0-.26-.619.896.896 0 0 0-.63-.256Z"/>
+    </svg>
+
       <span data-i18n="generate-questions">Generate questions about this page</span>
     </button>
     <div class="question-loading" style="display:none;margin-top:12px;">
@@ -312,7 +327,9 @@ function injectSuggestedQuestions(container) {
       result.questions.forEach((question) => {
         const questionButton = document.createElement("button");
         questionButton.className = "question-button";
-        questionButton.textContent = question;
+        questionButton.innerHTML = `
+          <span>${question}</span>
+        `;
         questionButton.onclick = async () => {
           processUserQuery(question);
           questionButton.remove();
@@ -672,10 +689,10 @@ function handleAuthStateChange(isAuth) {
   resetPaginationState();
   state.chatHistory = [];
 
-  // Close chat screen
-  elements.chatScreen.style.display = "none";
   // hide chat history
   elements.chatHistoryScreen.style.display = "none";
+
+  updateContentStatus();
 }
 
 /**

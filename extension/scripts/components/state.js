@@ -4,6 +4,7 @@
 export const state = {
   pageContent: {},
   isAnimating: false,
+  isProcessingQuery: false,
   history: [],
   currentConfig: null,
   isResizing: false,

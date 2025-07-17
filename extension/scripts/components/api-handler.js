@@ -13,8 +13,10 @@ import {
 import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
+import { RequestQueue } from "../../components/RequestQueue.js";
 
 const SERVER_URL = "http://localhost:3000";
+const persistenceQueue = new RequestQueue(); // Create a request queue
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -23,7 +25,9 @@ const SERVER_URL = "http://localhost:3000";
  * @returns
  */
 export async function processUserQuery(query, metadata = {}) {
-  // Anonymous user query limit check
+  // Prevent spams
+  if (state.isProcessingQuery) return;
+
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -39,6 +43,8 @@ export async function processUserQuery(query, metadata = {}) {
   addMessageToChat(query, "user");
   const typingIndicator = addTypingIndicator();
 
+  state.isProcessingQuery = true;
+
   try {
     const messages = await constructPromptWithPageContent(
       query,
@@ -47,20 +53,17 @@ export async function processUserQuery(query, metadata = {}) {
       state.currentConfig
     );
 
-    metadata.page_url = state.pageContent.url || window.location.href;
-    const response = await callOpenAI(messages, metadata);
-    console.log("callOpenAI response: ", response);
-    removeTypingIndicator(typingIndicator);
+    metadata.page_url = state.pageContent?.url || window.location.href;
 
-    const userSession = await getUserSession();
+    const response = await callOpenAI(messages, metadata);
+    removeTypingIndicator(typingIndicator);
 
     if (response.success) {
       const assistantMessage = response.message;
 
-      // Show assistant message immediately (before persistence)
+      // Show assistant response immediately
       addMessageToChat(assistantMessage, "assistant");
 
-      // Update in-memory history
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({
         role: "assistant",
@@ -71,72 +74,8 @@ export async function processUserQuery(query, metadata = {}) {
         state.currentChat.history = state.currentChat.history.slice(-6);
       }
 
-      if (userSession && userSession.id) {
-        try {
-          let chatId = state.currentChat.id;
-          const pageUrl = state.pageContent?.url || window.location.href;
-          const pageTitle = state.pageContent?.title || document.title;
-
-          // Create a new chat if no current chat id
-          if (!chatId) {
-            const result = await chatHandler.createChat({
-              page_url: pageUrl,
-              title: pageTitle,
-            });
-
-            if (!result?.success || !result?.data.id) {
-              throw new Error("Failed to create chat");
-            }
-
-            chatId = result.data.id;
-            state.currentChat.id = chatId;
-            state.currentChat.title = pageTitle;
-            state.currentChat.pageUrl = pageUrl;
-            state.currentChat.history = [];
-
-            // Cache in IndexedDB
-            await idbHandler.upsertChat({
-              id: chatId,
-              title: pageTitle,
-              page_url: pageUrl,
-            });
-
-            // Update chat history
-            state.chatHistory.unshift({
-              id: chatId,
-              title: pageTitle,
-              page_url: pageUrl,
-              created_at: Date.now(),
-            });
-          }
-
-          // Store messages
-          await chatHandler.addMessage(chatId, {
-            role: "user",
-            content: query,
-          });
-          await chatHandler.addMessage(chatId, {
-            role: "assistant",
-            content: assistantMessage,
-            model: response.model,
-          });
-
-          // Cache messages
-          await idbHandler.addMessageToChat(chatId, {
-            role: "user",
-            content: query,
-          });
-          await idbHandler.addMessageToChat(chatId, {
-            role: "assistant",
-            content: assistantMessage,
-          });
-        } catch (err) {
-          console.warn("Persistence failed:", err);
-        }
-      } else {
-        // TODO: Update anon_query_count from response
-        await increaseAnonQueryCount();
-      }
+      // Queue persistence separately
+      persistChatAndMessages(query, assistantMessage, response.model);
 
       return { success: true, message: assistantMessage };
     } else {
@@ -154,7 +93,78 @@ export async function processUserQuery(query, metadata = {}) {
       resetCurrentChatState();
     }
     return { success: false, error: error.message };
+  } finally {
+    state.isProcessingQuery = false;
   }
+}
+
+async function persistChatAndMessages(userQuery, assistantMessage, model) {
+  const userSession = await getUserSession();
+  if (!userSession || !userSession.id) {
+    await increaseAnonQueryCount();
+    return;
+  }
+
+  const pageUrl = state.pageContent?.url || window.location.href;
+  const pageTitle = state.pageContent?.title || document.title;
+
+  const currentChatId = state.currentChat.id;
+  const isNewChat = !currentChatId;
+  const queueKey = currentChatId || "__new__";
+
+  await persistenceQueue.enqueue(queueKey, async () => {
+    let chatId = currentChatId;
+
+    // Create a new chat if needed
+    if (isNewChat) {
+      const result = await chatHandler.createChat({
+        page_url: pageUrl,
+        title: pageTitle,
+      });
+      if (!result?.success || !result?.data.id)
+        throw new Error("Failed to create chat");
+
+      chatId = result.data.id;
+
+      // Update state if not already set (to avoid race)
+      if (!state.currentChat.id) {
+        state.currentChat.id = chatId;
+        state.currentChat.title = pageTitle;
+        state.currentChat.pageUrl = pageUrl;
+        state.currentChat.history = [];
+
+        await idbHandler.upsertChat({
+          id: chatId,
+          title: pageTitle,
+          page_url: pageUrl,
+        });
+
+        state.chatHistory.unshift({
+          id: chatId,
+          title: pageTitle,
+          page_url: pageUrl,
+          created_at: Date.now(),
+        });
+      }
+    }
+
+    // Store + cache messages
+    await chatHandler.addMessage(chatId, { role: "user", content: userQuery });
+    await chatHandler.addMessage(chatId, {
+      role: "assistant",
+      content: assistantMessage,
+      model,
+    });
+
+    await idbHandler.addMessageToChat(chatId, {
+      role: "user",
+      content: userQuery,
+    });
+    await idbHandler.addMessageToChat(chatId, {
+      role: "assistant",
+      content: assistantMessage,
+    });
+  });
 }
 
 /**

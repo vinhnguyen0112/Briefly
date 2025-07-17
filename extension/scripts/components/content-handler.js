@@ -12,11 +12,11 @@ export function requestPageContent() {
   console.log("CocBot: Requesting page content");
 
   // reset questions
-  state.generatedQuestions = null;
-  const questionsContainer = document.querySelector(".generated-questions");
-  if (questionsContainer) {
-    questionsContainer.style.display = "none";
-  }
+  // state.generatedQuestions = null;
+  // const questionsContainer = document.querySelector(".generated-questions");
+  // if (questionsContainer) {
+  //   questionsContainer.style.display = "none";
+  // }
 
   // track attempts
   state.contentFetchAttempts++;
@@ -29,9 +29,6 @@ export function requestPageContent() {
     (response) => {
       if (!response) {
         console.error("CocBot: No response from background script");
-        showContentError(
-          "Communication error with extension background. Please refresh the page and try again."
-        );
         return;
       }
 
@@ -112,42 +109,72 @@ export function renderContentInSidebar(content) {
 
 // update page context in welcome screen
 export function updateContentStatus() {
-  // also update chat ui if already in chat mode
-  if (state.pageContent) {
-    // add a small indicator at the top of chat
-    const chatContainer = document.getElementById("chat-container");
-    if (chatContainer) {
-      // remove any existing indicator first
-      const existingChatIndicator = chatContainer.querySelector(
-        ".chat-context-indicator"
-      );
-      if (existingChatIndicator) {
-        existingChatIndicator.remove();
-      }
+  const chatContainer = document.getElementById("chat-container");
+  if (!chatContainer) return;
 
-      // only add if we don't already have messages
-      if (chatContainer.querySelectorAll(".chat-message").length === 0) {
-        const chatContextIndicator = document.createElement("div");
-        chatContextIndicator.className = "chat-context-indicator";
-        chatContextIndicator.style.fontSize = "12px";
-        chatContextIndicator.style.opacity = "0.7";
-        chatContextIndicator.style.textAlign = "center";
-        chatContextIndicator.style.marginBottom = "10px";
-        chatContextIndicator.style.padding = "5px";
+  // Remove existing indicator
+  const existingIndicator = chatContainer.querySelector(
+    ".chat-context-indicator"
+  );
+  if (existingIndicator) existingIndicator.remove();
 
-        if (state.pageContent.extractionSuccess === false) {
-          chatContextIndicator.innerHTML = `⚠️ Limited page context available`;
-        } else {
-          chatContextIndicator.innerHTML = `✓ Page context loaded: <span style="font-style:italic">${state.pageContent.title.substring(
-            0,
-            25
-          )}${state.pageContent.title.length > 25 ? "..." : ""}</span>`;
-        }
+  const indicator = document.createElement("div");
+  indicator.className = "chat-context-indicator";
 
-        chatContainer.prepend(chatContextIndicator);
-      }
-    }
+  if (!state.pageContent) {
+    indicator.textContent = "Loading page context...";
+    chatContainer.prepend(indicator);
+    return;
   }
+
+  if (state.pageContent.extractionSuccess === false) {
+    indicator.innerHTML = `⚠️ Limited page context available`;
+    chatContainer.prepend(indicator);
+    return;
+  }
+
+  const pageTitle = state.pageContent.title || "Untitled Page";
+  const domain = (() => {
+    try {
+      const url = new URL(state.pageContent.url || window.location.href);
+      return url.hostname;
+    } catch {
+      return "";
+    }
+  })();
+
+  const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+
+  // Favicon
+  const favicon = document.createElement("img");
+  favicon.src = faviconUrl;
+  favicon.alt = "Page icon";
+  favicon.className = "chat-context-favicon";
+
+  // Title
+  const title = document.createElement("span");
+  title.className = "chat-context-title";
+  title.textContent = pageTitle;
+
+  // Refresh button
+  const refreshBtn = document.createElement("button");
+  refreshBtn.className = "chat-context-refresh-btn";
+  refreshBtn.innerHTML = `\
+    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
+    </svg>
+  `;
+  refreshBtn.title = "Refresh page context";
+
+  refreshBtn.addEventListener("click", async () => {
+    requestPageContent();
+  });
+
+  indicator.appendChild(favicon);
+  indicator.appendChild(title);
+  indicator.appendChild(refreshBtn);
+
+  chatContainer.prepend(indicator);
 }
 
 // generate and display questions about the content

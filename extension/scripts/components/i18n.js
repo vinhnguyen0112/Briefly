@@ -209,12 +209,6 @@ export async function switchLanguage(language) {
     questionsContainer.style.display = "block";
   }
 
-  if (state.pageContent && state.welcomeMode) {
-    // dynamically to avoid circular dependencies
-    const contentHandler = await import("./content-handler.js");
-    contentHandler.generateAndDisplayQuestions();
-  }
-
   return translate("languageChanged");
 }
 
