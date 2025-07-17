@@ -27,7 +27,6 @@ build_dev:
         - branches
         - triggers
     script:
-        - mv .env.development .env.production
         - docker build -t $IMAGE_NAME:$CI_COMMIT_TAG -f ./server/Dockerfile .
         - docker push $IMAGE_NAME:$CI_COMMIT_TAG
         - echo "Pushed image $IMAGE_NAME:$CI_COMMIT_TAG"
