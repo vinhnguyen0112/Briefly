@@ -710,55 +710,55 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-    put:
-      summary: Update a page by ID
-      description: Updates a page record by its ID.
-      tags:
-        - Page
-      security:
-        - bearerAuth: []
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          description: Page ID (SHA256 hash of normalized page_url)
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/UpdatePageRequest"
-      responses:
-        "200":
-          description: Page updated successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      affectedRows:
-                        type: number
-        "400":
-          description: Invalid input or SQL errors
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Unauthorized
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
+    # put:
+    #   summary: Update a page by ID
+    #   description: Updates a page record by its ID.
+    #   tags:
+    #     - Page
+    #   security:
+    #     - bearerAuth: []
+    #   parameters:
+    #     - in: path
+    #       name: id
+    #       required: true
+    #       schema:
+    #         type: string
+    #       description: Page ID (SHA256 hash of normalized page_url)
+    #   requestBody:
+    #     required: true
+    #     content:
+    #       application/json:
+    #         schema:
+    #           $ref: "#/components/schemas/UpdatePageRequest"
+    #   responses:
+    #     "200":
+    #       description: Page updated successfully
+    #       content:
+    #         application/json:
+    #           schema:
+    #             type: object
+    #             properties:
+    #               success:
+    #                 type: boolean
+    #               message:
+    #                 type: string
+    #               data:
+    #                 type: object
+    #                 properties:
+    #                   affectedRows:
+    #                     type: number
+    #     "400":
+    #       description: Invalid input or SQL errors
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: "#/components/schemas/ErrorResponse"
+    #     "401":
+    #       description: Unauthorized
+    #       content:
+    #         application/json:
+    #           schema:
+    #             $ref: "#/components/schemas/ErrorResponse"
 
 components:
   securitySchemes:
