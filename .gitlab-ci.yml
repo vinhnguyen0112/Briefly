@@ -1,0 +1,65 @@
+image: docker:26.1.1
+
+variables:
+    PROJECT_NAME: 'capstone-2025'
+    IMAGE_NAME: 'ccr.itim.vn/product-backend/$PROJECT_NAME'
+    DEFECTDOJO_PRODUCT_TYPENAME: 'product-backend'
+    SAST_EXCLUDED_ANALYZERS: 'spotbugs,nodejs-scan,security-code-scan,gosec,pmd-apex,flawfinder,bandit,brakeman,eslint'
+
+include:
+    - template: Security/SAST.gitlab-ci.yml
+    - remote: 'https://git.itim.vn/public-repos/gitlab-ci-templates/-/raw/main/sast/upload_to_dedo.yml'
+    - remote: 'https://git.itim.vn/public-repos/gitlab-ci-templates/-/raw/main/sast/custom_config.yml'
+
+stages:
+    - test
+    - sast-report
+    - build
+    - deploy
+
+build_dev:
+    stage: build
+    services:
+        - docker:26.1.1-dind
+    only:
+        - /^[0-9]+\.[0-9]+\.[0-9]+\-dev$/
+    except:
+        - branches
+        - triggers
+    script:
+        - docker build -t $IMAGE_NAME:$CI_COMMIT_TAG -f ./server/Dockerfile ./server
+        - docker push $IMAGE_NAME:$CI_COMMIT_TAG
+        - echo "Pushed image $IMAGE_NAME:$CI_COMMIT_TAG"
+
+deploy_dev:
+    stage: deploy
+    image: ccr.itim.vn/product-backend/handy-scripts:1.1.1
+    only:
+        - /^[0-9]+\.[0-9]+\.[0-9]+\-dev$/
+    except:
+        - branches
+        - triggers
+    script:
+        - |
+            export COMMAND=deploy \
+              && export JENKINS_TOKEN=$JENKINS_TOKEN \
+              && export JENKINS_JOB=DEV-build-k8s \
+              && export JENKINS_NAMESPACE=product-backend \
+              && export JENKINS_OVERLAYS=dev \
+              && export JENKINS_PROJECT=$PROJECT_NAME \
+              && export JENKINS_IMAGES=$IMAGE_NAME:$CI_COMMIT_TAG \
+              && start
+
+build_prod:
+    stage: build
+    services:
+        - docker:26.1.1-dind
+    only:
+        - /^[0-9]+\.[0-9]+\.[0-9]+$/
+    except:
+        - branches
+        - triggers
+    script:
+        - docker build -t $IMAGE_NAME:$CI_COMMIT_TAG -f ./server/Dockerfile ./server
+        - docker push $IMAGE_NAME:$CI_COMMIT_TAG
+        - echo "Pushed image $IMAGE_NAME:$CI_COMMIT_TAG"

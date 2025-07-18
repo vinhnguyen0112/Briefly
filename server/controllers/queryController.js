@@ -215,12 +215,16 @@ ${pageContent.content.substring(0, 3000)}`;
     }
 
     if (questions.length > 0) {
-      return res.json({
+      const result = {
         success: true,
         data: {
           questions: questions.slice(0, 3),
+          usage: completion.usage || null,
         },
-      });
+      };
+
+      console.log("Generated questions result: ", result);
+      return res.json(result);
     } else {
       throw new AppError(
         ERROR_CODES.INTERNAL_ERROR,
@@ -284,7 +288,7 @@ const captionize = async (req, res, next) => {
           const raw = response.choices?.[0]?.message?.content?.trim() || "";
           const clean = raw.replace(/^['"]+|['"]+$/g, "").split(/\r?\n/)[0];
 
-          return {
+          const result = {
             caption: clean,
             usage: response.usage || {
               prompt_tokens: 0,
@@ -292,6 +296,10 @@ const captionize = async (req, res, next) => {
               total_tokens: 0,
             },
           };
+
+          console.log("Generated questions response: ", result);
+
+          return res.json(result);
         } catch (err) {
           console.error(`Caption error for image ${idx}:`, err);
           return {
