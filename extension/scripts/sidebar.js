@@ -1,6 +1,5 @@
 import {
   loadSidebarWidth,
-  getApiKey,
   getConfig,
   getLanguage,
   clearUserSession,
@@ -22,7 +21,10 @@ import { processUserQuery } from "./components/api-handler.js";
 import { initializeLanguage } from "./components/i18n.js";
 import { isUserAuthenticated } from "./components/auth-handler.js";
 import { getFingerprint, setupAnonSession } from "./components/anon-handler.js";
-import { configureChatHistoryElementsOnAuthState } from "./components/ui-handler.js";
+import {
+  clearMessagesFromChatContainer,
+  configureChatHistoryElementsOnAuthState,
+} from "./components/ui-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -68,13 +70,6 @@ document.addEventListener("DOMContentLoaded", () => {
         "CocBot: No anon session found, requesting new session from server"
       );
       setupAnonSession();
-    }
-  });
-
-  // check for api key
-  getApiKey().then((key) => {
-    if (key) {
-      document.getElementById("api-key").value = key;
     }
   });
 
@@ -143,6 +138,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // make sure content extraction is reliable
   setupContentExtractionReliability();
+
+  clearMessagesFromChatContainer();
 });
 
 // expose certain functions to the global scope that might be needed by inline event handlers

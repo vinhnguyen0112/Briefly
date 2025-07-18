@@ -144,26 +144,6 @@ body.sidebar-resizing * {
   color: var(--primary-foreground);
 }
 
-/* settings button */
-#settings-button {
-  background-color: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 18px;
-  border: none;
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  transition: background-color 0.2s, color 0.2s;
-}
-
-#settings-button:hover {
-  opacity: 0.8;
-}
-
-#settings-button.active {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
-}
-
 /* account button */
 #account-button {
   background-color: var(--muted);
@@ -299,8 +279,7 @@ body.sidebar-resizing * {
   opacity: 0.9;
 }
 
-.button,
-.icon-button {
+.button {
   background-color: var(--primary);
   color: var(--primary-foreground);
   border: none;
@@ -314,21 +293,8 @@ body.sidebar-resizing * {
   justify-content: center;
 }
 
-.button:hover,
-.icon-button:hover {
-  opacity: 0.9;
-}
-
-.icon-button {
-  width: 28px;
-  height: 28px;
-  padding: 0;
-}
-
-#close-sidebar {
-  background: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 18px;
+.button:hover {
+  opacity: 0.8;
 }
 
 /* chat messages */
@@ -617,7 +583,7 @@ body.sidebar-resizing * {
 #chat-screen {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 58px); /*TODO: Temporary fix for off-screened chatbar*/
+  height: calc(100% - 38px); /*TODO: Temporary fix for off-screened chatbar*/
   width: 100%;
 }
 
@@ -691,7 +657,7 @@ body.sidebar-resizing * {
   font-size: 14px;
 }
 
-.spinner {
+/* .spinner {
   border: 3px solid rgba(0, 0, 0, 0.1);
   border-radius: 50%;
   border-top: 3px solid #3498db;
@@ -708,7 +674,7 @@ body.sidebar-resizing * {
   100% {
     transform: rotate(365deg);
   }
-}
+} */
 
 /* error message */
 .content-viewer-ui-error {
@@ -777,15 +743,16 @@ body.sidebar-resizing * {
 
 .action-buttons-container {
   display: flex;
+  flex-direction: column;
   flex-wrap: wrap;
   gap: 8px;
-  justify-content: center;
 }
 
 .action-button {
   display: flex;
   align-items: center;
-  gap: 6px;
+  text-align: left;
+  gap: 4px;
   padding: 8px 12px;
   background-color: var(--muted);
   border: 1px solid var(--border);
@@ -968,22 +935,6 @@ body.sidebar-resizing * {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-}
-
-/* notes button */
-#notes-button {
-  background-color: var(--muted);
-  color: var(--muted-foreground);
-  transition: background-color 0.2s, color 0.2s;
-}
-
-#notes-button:hover {
-  opacity: 0.8;
-}
-
-#notes-button.active {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
 }
 
 /* Notes screen */
@@ -1278,11 +1229,8 @@ input:checked + .slider:before {
   z-index: 10002;
   padding: 20px;
   width: calc(var(--sidebar-width) * 0.8);
-  /* Scale with sidebar width */
-  max-width: var(--sidebar-max-width);
-  /* Ensure it doesn't exceed max width */
-  min-width: var(--sidebar-min-width);
-  /* Ensure it doesn't go below min width */
+  max-width: calc(var(--sidebar-width) * 0.8);
+  min-width: calc(var(--sidebar-width) * 0.8);
   text-align: center;
 }
 
@@ -1984,4 +1932,58 @@ input:checked + .slider:before {
   100% {
     transform: rotate(360deg);
   }
+}
+
+.chat-actions-container {
+  width: 100%;
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+}
+
+.chat-context-indicator {
+  font-size: 12px;
+  opacity: 0.85;
+  text-align: center;
+  margin-bottom: 10px;
+  padding: 6px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background-color: #f4f4f4;
+  border-radius: 6px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.chat-context-favicon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+.chat-context-title {
+  flex-grow: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-style: italic;
+  text-align: left;
+}
+
+.chat-context-refresh-btn {
+  border: none;
+  background: none;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 4px;
+  opacity: 0.8;
+  transition: opacity 0.2s ease;
+}
+
+.chat-context-refresh-btn:hover {
+  opacity: 1.1;
 }

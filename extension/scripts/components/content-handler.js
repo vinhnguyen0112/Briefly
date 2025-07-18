@@ -12,24 +12,14 @@ export function requestPageContent() {
   console.log("CocBot: Requesting page content");
 
   // reset questions
-  state.generatedQuestions = null;
-  const questionsContainer = document.querySelector(".generated-questions");
-  if (questionsContainer) {
-    questionsContainer.style.display = "none";
-  }
+  // state.generatedQuestions = null;
+  // const questionsContainer = document.querySelector(".generated-questions");
+  // if (questionsContainer) {
+  //   questionsContainer.style.display = "none";
+  // }
 
   // track attempts
   state.contentFetchAttempts++;
-
-  // Show content loading message in the content viewer if it's open
-  if (elements.contentViewerScreen.style.display !== "none") {
-    elements.contentDisplay.innerHTML = `
-      <div class="content-viewer-loading">
-        <div class="spinner"></div>
-        <p>Refreshing page content...</p>
-      </div>
-    `;
-  }
 
   // Clear the previous content to force a fresh extraction
   state.pageContent = null;
@@ -39,9 +29,6 @@ export function requestPageContent() {
     (response) => {
       if (!response) {
         console.error("CocBot: No response from background script");
-        showContentError(
-          "Communication error with extension background. Please refresh the page and try again."
-        );
         return;
       }
 
@@ -51,11 +38,6 @@ export function requestPageContent() {
 
         // update ui
         updateContentStatus();
-
-        // If content viewer is open, update it
-        if (elements.contentViewerScreen.style.display !== "none") {
-          renderContentInSidebar(state.pageContent);
-        }
 
         // reset counter on success
         state.contentFetchAttempts = 0;
@@ -71,18 +53,6 @@ export function requestPageContent() {
           state.pageContent = response.content;
           state.pageContent.extractionSuccess = false;
           updateContentStatus();
-
-          // If content viewer is open, update it with the partial content
-          if (elements.contentViewerScreen.style.display !== "none") {
-            renderContentInSidebar(state.pageContent);
-          }
-        } else {
-          // Show error in content viewer if it's open
-          if (elements.contentViewerScreen.style.display !== "none") {
-            showContentError(
-              response?.error || "Failed to extract page content"
-            );
-          }
         }
 
         // retry up to max attempts
@@ -97,33 +67,10 @@ export function requestPageContent() {
           console.error(
             "CocBot: Max content fetch attempts reached, giving up"
           );
-          showContentError(
-            "Failed to extract page content after multiple attempts. Please try refreshing the page."
-          );
         }
       }
     }
   );
-}
-
-// Helper function to show content extraction errors
-function showContentError(errorMessage) {
-  if (elements.contentViewerScreen.style.display !== "none") {
-    elements.contentDisplay.innerHTML = `
-      <div class="content-viewer-ui-error">
-        <p>${errorMessage}</p>
-        <button id="retry-content-extraction" class="button" style="margin-top: 15px;">Retry Extraction</button>
-      </div>
-    `;
-
-    // Add event listener for retry button
-    document
-      .getElementById("retry-content-extraction")
-      ?.addEventListener("click", () => {
-        state.contentFetchAttempts = 0;
-        requestPageContent();
-      });
-  }
 }
 
 // display content in sidebar
@@ -157,207 +104,74 @@ export function renderContentInSidebar(content) {
   }
 }
 
-// open content viewer popup
-export function openContentViewerPopup() {
-  console.log("CocBot: Showing content viewer");
-
-  // hide other screens
-  elements.welcomeScreen.style.display = "none";
-  elements.chatScreen.style.display = "none";
-
-  // show viewer
-  elements.contentViewerScreen.style.display = "flex";
-  elements.contentViewerScreen.style.flexDirection = "column";
-  elements.contentViewerScreen.style.height = "100%";
-  elements.contentDisplay.style.flex = "1";
-  elements.contentDisplay.style.overflowY = "auto";
-
-  // show spinner
-  elements.contentDisplay.innerHTML = `
-    <div class="content-viewer-loading">
-      <div class="spinner"></div>
-      <p>Processing page content...</p>
-    </div>
-  `;
-
-  const maxRetries = 2;
-  let retryCount = 0;
-
-  const tryExtractContent = () => {
-    if (
-      !state.pageContent ||
-      (state.pageContent && state.pageContent.extractionSuccess === false)
-    ) {
-      console.log(
-        `CocBot: No valid content yet, getting it (attempt ${retryCount + 1})`
-      );
-
-      // try to extract content
-      chrome.runtime.sendMessage(
-        { action: "extract_page_content", forceRefresh: retryCount > 0 },
-        (response) => {
-          if (response && response.success) {
-            console.log("CocBot: Got the content!");
-            state.pageContent = response.content;
-            renderContentInSidebar(state.pageContent);
-          } else {
-            if (retryCount < maxRetries) {
-              retryCount++;
-              console.log(
-                `CocBot: Content extraction failed, retrying (${retryCount}/${maxRetries})...`
-              );
-
-              // Show retrying message
-              elements.contentDisplay.innerHTML = `
-              <div class="content-viewer-loading">
-                <div class="spinner"></div>
-                <p>Retry ${retryCount}/${maxRetries}: Processing page content...</p>
-              </div>
-            `;
-
-              // Wait 1.5 seconds before retrying
-              setTimeout(tryExtractContent, 1500);
-            } else {
-              console.error(
-                "CocBot: Failed to get content after retries",
-                response?.error
-              );
-
-              // If we have a partial content result, still use it
-              if (response && response.content && response.content.title) {
-                console.log("CocBot: Using partial content result");
-                state.pageContent = response.content;
-                state.pageContent.extractionSuccess = false;
-                renderContentInSidebar(state.pageContent);
-              } else {
-                // Show error if all retries failed
-                elements.contentDisplay.innerHTML = `
-                <div class="content-viewer-ui-error">
-                  <p>Couldn't get page content: ${
-                    response?.error || "Unknown error"
-                  }</p>
-                  <button id="retry-content-extraction" class="button" style="margin-top: 15px;">Retry Extraction</button>
-                </div>
-              `;
-
-                // Add event listener for retry button
-                document
-                  .getElementById("retry-content-extraction")
-                  ?.addEventListener("click", () => {
-                    state.contentFetchAttempts = 0;
-                    requestPageContent();
-                  });
-              }
-            }
-          }
-        }
-      );
-      return;
-    }
-
-    // already have content, show it
-    renderContentInSidebar(state.pageContent);
-  };
-
-  tryExtractContent();
-}
-
 // update page context in welcome screen
 export function updateContentStatus() {
-  // existing welcome screen indicator
-  if (state.pageContent) {
-    const welcomeFooter = document.querySelector(".welcome-footer");
-    if (welcomeFooter) {
-      // remove any existing indicator first to avoid duplicates
-      const existingIndicator = document.querySelector(
-        ".page-context-indicator"
-      );
-      if (existingIndicator) {
-        existingIndicator.remove();
-      }
+  const chatContainer = document.getElementById("chat-container");
+  if (!chatContainer) return;
 
-      const pageContextIndicator = document.createElement("div");
-      pageContextIndicator.className = "page-context-indicator";
-      pageContextIndicator.style.fontSize = "12px";
-      pageContextIndicator.style.color = "var(--muted-foreground)";
-      pageContextIndicator.style.marginTop = "10px";
-      pageContextIndicator.style.textAlign = "center";
+  // Remove existing indicator
+  const existingIndicator = chatContainer.querySelector(
+    ".chat-context-indicator"
+  );
+  if (existingIndicator) existingIndicator.remove();
 
-      if (state.pageContent.extractionSuccess === false) {
-        pageContextIndicator.textContent = `Content extraction issue - using limited context`;
-        pageContextIndicator.style.backgroundColor = "#fff4e5";
-        pageContextIndicator.style.color = "#b54708";
-      } else {
-        pageContextIndicator.textContent = `Page context: ${state.pageContent.title.substring(
-          0,
-          30
-        )}${state.pageContent.title.length > 30 ? "..." : ""}`;
-      }
+  const indicator = document.createElement("div");
+  indicator.className = "chat-context-indicator";
 
-      welcomeFooter.appendChild(pageContextIndicator);
-
-      // add a small refresh button next to indicator
-      const refreshButton = document.createElement("button");
-      refreshButton.className = "refresh-content-button";
-      refreshButton.innerHTML = "↻";
-      refreshButton.title = "Refresh page content";
-      refreshButton.style.border = "none";
-      refreshButton.style.background = "transparent";
-      refreshButton.style.cursor = "pointer";
-      refreshButton.style.fontSize = "12px";
-      refreshButton.style.marginLeft = "5px";
-      refreshButton.onclick = () => {
-        state.contentFetchAttempts = 0;
-        requestPageContent();
-
-        // reset questions
-        state.generatedQuestions = null;
-        document.querySelector(".generated-questions").style.display = "none";
-      };
-
-      pageContextIndicator.appendChild(refreshButton);
-
-      // generate questions based on content
-      generateAndDisplayQuestions();
-    }
+  if (!state.pageContent) {
+    indicator.textContent = "Loading page context...";
+    chatContainer.prepend(indicator);
+    return;
   }
 
-  // also update chat ui if already in chat mode
-  if (!state.welcomeMode && state.pageContent) {
-    // add a small indicator at the top of chat
-    const chatContainer = document.getElementById("chat-container");
-    if (chatContainer) {
-      // remove any existing indicator first
-      const existingChatIndicator = chatContainer.querySelector(
-        ".chat-context-indicator"
-      );
-      if (existingChatIndicator) {
-        existingChatIndicator.remove();
-      }
-
-      // only add if we don't already have messages
-      if (chatContainer.querySelectorAll(".chat-message").length === 0) {
-        const chatContextIndicator = document.createElement("div");
-        chatContextIndicator.className = "chat-context-indicator";
-        chatContextIndicator.style.fontSize = "12px";
-        chatContextIndicator.style.opacity = "0.7";
-        chatContextIndicator.style.textAlign = "center";
-        chatContextIndicator.style.marginBottom = "10px";
-        chatContextIndicator.style.padding = "5px";
-
-        if (state.pageContent.extractionSuccess === false) {
-          chatContextIndicator.innerHTML = `⚠️ Limited page context available`;
-        } else {
-          chatContextIndicator.innerHTML = `✓ Page context loaded: <span style="font-style:italic">${state.pageContent.title.substring(
-            0,
-            25
-          )}${state.pageContent.title.length > 25 ? "..." : ""}</span>`;
-        }
-
-        chatContainer.prepend(chatContextIndicator);
-      }
-    }
+  if (state.pageContent.extractionSuccess === false) {
+    indicator.innerHTML = `⚠️ Limited page context available`;
+    chatContainer.prepend(indicator);
+    return;
   }
+
+  const pageTitle = state.pageContent.title || "Untitled Page";
+  const domain = (() => {
+    try {
+      const url = new URL(state.pageContent.url || window.location.href);
+      return url.hostname;
+    } catch {
+      return "";
+    }
+  })();
+
+  const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+
+  // Favicon
+  const favicon = document.createElement("img");
+  favicon.src = faviconUrl;
+  favicon.alt = "Page icon";
+  favicon.className = "chat-context-favicon";
+
+  // Title
+  const title = document.createElement("span");
+  title.className = "chat-context-title";
+  title.textContent = pageTitle;
+
+  // Refresh button
+  const refreshBtn = document.createElement("button");
+  refreshBtn.className = "chat-context-refresh-btn";
+  refreshBtn.innerHTML = `\
+    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
+    </svg>
+  `;
+  refreshBtn.title = "Refresh page context";
+
+  refreshBtn.addEventListener("click", async () => {
+    requestPageContent();
+  });
+
+  indicator.appendChild(favicon);
+  indicator.appendChild(title);
+  indicator.appendChild(refreshBtn);
+
+  chatContainer.prepend(indicator);
 }
 
 // generate and display questions about the content
@@ -408,8 +222,6 @@ export async function generateAndDisplayQuestions() {
         questionButton.className = "question-button";
         questionButton.textContent = question;
         questionButton.onclick = () => {
-          // use the question as a query
-          switchToChat();
           processUserQuery(question);
         };
 
