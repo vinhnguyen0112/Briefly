@@ -1,4 +1,9 @@
-require("dotenv").config();
+require("dotenv").config({
+  path:
+    process.env.NODE_ENV === "test" || process.env.NODE_ENV === "dev-test"
+      ? ".env.test"
+      : ".env",
+});
 
 const app = require("./app");
 const { redisHelper } = require("./helpers/redisHelper");

@@ -2,12 +2,26 @@ const { OpenAI } = require("openai");
 const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 let pLimit = require("p-limit");
+const commonHelper = require("../helpers/commonHelper");
+const { redisHelper } = require("../helpers/redisHelper");
+const Page = require("../models/page");
 
 const limit = pLimit(5); // 5 concurrency
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+/**
+ * Helper function to get normalized page url & page ID (hash value)
+ * @param {String} pageUrl
+ */
+function getNormalizedPageMeta(pageUrl) {
+  const normalizedPageUrl = commonHelper.processUrl(pageUrl);
+  if (!normalizedPageUrl) return null;
+  const pageId = commonHelper.generateHash(normalizedPageUrl);
+  return { pageId, normalizedPageUrl };
+}
 
 /**
  * Generate response for user query using OpenAI model
@@ -17,39 +31,98 @@ const openai = new OpenAI({
  */
 const handleUserQuery = async (req, res, next) => {
   try {
-    const { messages, max_tokens } = req.body;
+    const { messages, metadata } = req.body;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      max_tokens,
-      messages,
-    });
+    const pageMeta = getNormalizedPageMeta(metadata.page_url);
+    if (!pageMeta) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
 
-    if (
-      !completion ||
-      !completion.choices ||
-      !completion.choices[0] ||
-      !completion.choices[0].message
-    ) {
-      throw new AppError(
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        "Invalid OpenAI response"
+    let assistantMessage;
+    // Get stored summary
+    if (metadata.event === "summarize") {
+      assistantMessage = await getStoredPageSummary(pageMeta.pageId);
+    }
+    if (!assistantMessage) {
+      // If not a summarize event or if no cached || stored summary
+      // Generate response
+      assistantMessage = await generateAssistantResponse(
+        messages,
+        metadata.max_tokens
       );
     }
 
-    res.json({
+    return res.json({
       success: true,
       data: {
-        message: completion.choices[0].message.content,
-        usage: completion.usage,
-        model: completion.model,
+        message: assistantMessage.message,
+        usage: assistantMessage.usage,
+        model: assistantMessage.model,
       },
     });
   } catch (err) {
     next(err);
   }
 };
+
+/**
+ * Generates assistant response using OpenAI
+ * @param {Array} messages
+ * @param {number} max_tokens
+ * @returns {Promise<{message: string, usage: Object, model: string}>}
+ */
+async function generateAssistantResponse(messages, max_tokens) {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.7,
+    max_tokens,
+    messages,
+  });
+
+  if (
+    !completion ||
+    !completion.choices ||
+    !completion.choices[0] ||
+    !completion.choices[0].message
+  ) {
+    throw new AppError(
+      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+      "Invalid OpenAI response"
+    );
+  }
+
+  return {
+    message: completion.choices[0].message.content,
+    usage: completion.usage,
+    model: completion.model,
+  };
+}
+
+/**
+ * Try to get cached or stored page summary.
+ * Returns null if not found
+ * @param {String} pageId page ID
+ * @returns {Promise<String>}
+ */
+async function getStoredPageSummary(pageId) {
+  const cached = await redisHelper.getPageSummary(pageId);
+  if (cached)
+    return {
+      message: cached,
+      usage: null,
+      model: "cached",
+    };
+
+  const stored = await Page.getById(pageId);
+  if (stored && stored.summary)
+    return {
+      message: stored.summary,
+      usage: null,
+      model: "cached",
+    };
+
+  return null;
+}
 
 /**
  * Generates 3 suggested questions based on provided content
@@ -251,13 +324,7 @@ const captionize = async (req, res, next) => {
 
     res.json({ success: true, data: { captions, usage } });
   } catch (err) {
-    next(
-      new AppError(
-        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-        "Failed to generate captions using OpenAI",
-        401
-      )
-    );
+    next(err);
   }
 };
 

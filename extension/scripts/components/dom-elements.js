@@ -1,10 +1,8 @@
 // DOM elements module - contains all references to DOM elements
 export const elements = {
   // Screens
-  welcomeScreen: document.getElementById("welcome-screen"),
   chatScreen: document.getElementById("chat-screen"),
   chatHistoryScreen: document.getElementById("chat-history-screen"),
-  contentViewerScreen: document.getElementById("content-viewer-screen"),
   notesScreen: document.getElementById("notes-screen"),
 
   // Header elements
@@ -22,22 +20,10 @@ export const elements = {
   signInAlertOverlay: document.getElementById("sign-in-alert-overlay"),
   closeSignInAlertButton: document.getElementById("close-sign-in-alert-button"),
 
-  // Content viewer elements
-  contentDisplay: document.getElementById("content-display"),
-
-  // Welcome screen elements
-  welcomeForm: document.getElementById("welcome-form"),
-  welcomeInput: document.getElementById("welcome-input"),
-
   // Chat elements
   chatForm: document.getElementById("chat-form"),
   userInput: document.getElementById("user-input"),
   chatContainer: document.getElementById("chat-container"),
-
-  // API key elements
-  apiKeyInput: document.getElementById("api-key"),
-  saveApiKeyButton: document.getElementById("save-api-key"),
-  apiKeyContainer: document.querySelector(".api-key-container"),
 
   // Sidebar elements
   closeSidebarButton: document.getElementById("close-sidebar"),
@@ -48,16 +34,6 @@ export const elements = {
   configButton: document.getElementById("config-button"),
   configCloseButton: document.getElementById("config-close"),
   configContainer: document.getElementById("config-container"),
-
-  // Content viewer buttons
-  viewContentButton: document.getElementById("view-content-button"),
-  refreshContentButton: document.getElementById("refresh-content-button"),
-  closeContentButton: document.getElementById("close-content-button"),
-
-  // Settings button
-  settingsButton: document.getElementById("settings-button"),
-
-  settingsButton: document.getElementById("settings-button"),
 
   // Language toggle
   languageToggle: document.getElementById("language-toggle"),

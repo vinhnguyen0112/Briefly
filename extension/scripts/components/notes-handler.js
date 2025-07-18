@@ -10,7 +10,6 @@ import { escapeHtml } from "./ui-handler.js";
 
 // notes panel management
 export function openNotesPanel() {
-  elements.welcomeScreen.style.display = "none";
   elements.chatScreen.style.display = "none";
 
   elements.notesScreen.style.display = "flex";

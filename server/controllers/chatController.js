@@ -3,7 +3,7 @@ const commonHelper = require("../helpers/commonHelper");
 const AppError = require("../models/appError");
 const Chat = require("../models/chat");
 const Message = require("../models/message");
-const { validate } = require("uuid");
+const { v4: uuidv4 } = require("uuid");
 
 /**
  * Creates a new chat for an authenticated user.
@@ -15,7 +15,7 @@ const { validate } = require("uuid");
  */
 const createChat = async (req, res, next) => {
   try {
-    const { id, page_url, title } = req.body;
+    const { page_url, title } = req.body;
 
     if (!req.body || Object.keys(req.body).length === 0) {
       return res.json({
@@ -25,23 +25,22 @@ const createChat = async (req, res, next) => {
       });
     }
 
-    if (!validate(id)) {
-      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid chat ID");
-    }
-
     const normalizedPageUrl = commonHelper.processUrl(page_url);
     if (!normalizedPageUrl) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
     }
     const pageId = commonHelper.generateHash(normalizedPageUrl);
+
+    const chatId = uuidv4();
+
     await Chat.create({
-      id,
+      id: chatId,
       user_id: req.session.user_id,
       page_url: normalizedPageUrl,
       page_id: pageId,
       title,
     });
-    res.json({ success: true, data: { id } });
+    res.json({ success: true, data: { id: chatId } });
   } catch (err) {
     next(err);
   }

@@ -21,12 +21,10 @@ describe("POST /chats", () => {
   const pageUrl = "https://www.example.com/";
 
   it("Should create a new chat if all parameters are correctly provided", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
       .send({
-        id: chatId,
         title: chatTitle,
         page_url: pageUrl,
       })
@@ -37,11 +35,10 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if title is missing", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl })
+      .send({ page_url: pageUrl })
       .expect(400)
       .then((response) => {
         expect(response.body).toMatchObject({
@@ -52,11 +49,10 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if title is empty", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: "" })
+      .send({ page_url: pageUrl, title: "" })
       .expect(400)
       .then((response) => {
         expect(response.body).toMatchObject({
@@ -67,11 +63,10 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if title is null", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: null })
+      .send({ page_url: pageUrl, title: null })
       .expect(400)
       .then((response) => {
         expect(response.body).toMatchObject({
@@ -82,12 +77,10 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if title is not a string", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
       .send({
-        id: chatId,
         title: 123,
         page_url: pageUrl,
       })
@@ -101,12 +94,10 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if title is too long", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
       .send({
-        id: chatId,
         title: "".padEnd(257, "a"),
         page_url: pageUrl,
       })
@@ -120,83 +111,10 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if missing 'page_url'", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
-      .send({ id: chatId, title: chatTitle })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
-        });
-      });
-  });
-
-  it("Should fail if id is not a string", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .set("Authorization", authHeader)
-      .send({
-        id: 123,
-        title: chatTitle,
-        page_url: pageUrl,
-      })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
-        });
-      });
-  });
-
-  it("Should fail if id is null", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .set("Authorization", authHeader)
-      .send({
-        id: null,
-        title: chatTitle,
-        page_url: pageUrl,
-      })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
-        });
-      });
-  });
-
-  it("Should fail if id is empty", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .set("Authorization", authHeader)
-      .send({
-        id: "",
-        title: chatTitle,
-        page_url: pageUrl,
-      })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.INVALID_INPUT },
-        });
-      });
-  });
-
-  it("Should fail if id is not an uuid", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .set("Authorization", authHeader)
-      .send({
-        id: "not-an-uuid",
-        title: chatTitle,
-        page_url: pageUrl,
-      })
+      .send({ title: chatTitle })
       .expect(400)
       .then((response) => {
         expect(response.body).toMatchObject({
@@ -207,12 +125,10 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if page's url is an invalid url", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
       .send({
-        id: chatId,
         title: chatTitle,
         page_url: "invalid page url",
       })
@@ -226,12 +142,10 @@ describe("POST /chats", () => {
   });
 
   it("Should fail if page's url is not a string", async () => {
-    const chatId = uuiv4();
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
       .send({
-        id: chatId,
         title: chatTitle,
         page_url: 123456,
       })
@@ -364,7 +278,7 @@ describe("GET /chats", () => {
 });
 
 describe("GET /chats/:id", () => {
-  const chatId = uuiv4();
+  let chatId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com/";
 
@@ -373,8 +287,14 @@ describe("GET /chats/:id", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
-      .expect(200);
+      .send({ page_url: pageUrl, title: chatTitle })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("id");
+        chatId = response.body.data.id;
+      });
   });
 
   it("Should get a chat by ID", async () => {
@@ -403,7 +323,7 @@ describe("GET /chats/:id", () => {
 });
 
 describe("PUT /chats/:id", () => {
-  const chatId = uuiv4();
+  let chatId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com";
 
@@ -412,8 +332,14 @@ describe("PUT /chats/:id", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
-      .expect(200);
+      .send({ page_url: pageUrl, title: chatTitle })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("id");
+        chatId = response.body.data.id;
+      });
   });
 
   it("Should update a chat's title", async () => {
@@ -514,7 +440,7 @@ describe("PUT /chats/:id", () => {
 });
 
 describe("DELETE /chats/:id", () => {
-  const chatId = uuiv4();
+  let chatId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com";
 
@@ -523,8 +449,14 @@ describe("DELETE /chats/:id", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
-      .expect(200);
+      .send({ page_url: pageUrl, title: chatTitle })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("id");
+        chatId = response.body.data.id;
+      });
   });
 
   it("Should delete a chat", async () => {
@@ -560,7 +492,7 @@ describe("DELETE /chats (all user chats)", () => {
       await supertest(app)
         .post(`/api/chats/`)
         .set("Authorization", authHeader)
-        .send({ id: chat.id, page_url: chat.pageUrl, title: chat.title })
+        .send({ page_url: chat.pageUrl, title: chat.title })
         .expect(200);
     };
 
@@ -568,7 +500,6 @@ describe("DELETE /chats (all user chats)", () => {
     for (let i = 0; i < 3; i++) {
       promises.push(
         createChatInDB({
-          id: uuiv4(),
           title: "Example Chat",
           pageUrl: "https://www.example.com",
         })
@@ -593,7 +524,7 @@ describe("DELETE /chats (all user chats)", () => {
 });
 
 describe("POST /chats/:chat_id/messages", () => {
-  const chatId = uuiv4();
+  let chatId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com";
 
@@ -602,7 +533,13 @@ describe("POST /chats/:chat_id/messages", () => {
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
       .send({ id: chatId, page_url: pageUrl, title: chatTitle })
-      .expect(200);
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("id");
+        chatId = response.body.data.id;
+      });
   });
 
   it("Should add an user message to a chat", async () => {
@@ -769,7 +706,7 @@ describe("POST /chats/:chat_id/messages", () => {
 });
 
 describe("GET /chats/:chat_id/messages", () => {
-  const chatId = uuiv4();
+  let chatId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com";
 
@@ -778,9 +715,14 @@ describe("GET /chats/:chat_id/messages", () => {
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
-      .expect(200);
-
+      .send({ page_url: pageUrl, title: chatTitle })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body).toHaveProperty("data");
+        expect(response.body.data).toHaveProperty("id");
+        chatId = response.body.data.id;
+      });
     // Add messages to chat
     const messages = [
       {

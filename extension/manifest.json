@@ -9,7 +9,10 @@
     "128": "icons/logo.png"
   },
   "permissions": ["storage", "activeTab", "sidePanel", "scripting", "identity"],
-  "host_permissions": ["https://api.openai.com/*", "http://localhost:3000/api/*"],
+  "host_permissions": [
+    "https://api.openai.com/*",
+    "https://dev-capstone-2025.coccoc.com/api/*"
+  ],
   "background": {
     "service_worker": "scripts/background.js",
     "type": "module"
@@ -33,7 +36,14 @@
   ],
   "web_accessible_resources": [
     {
-      "resources": ["icons/*", "sidebar.html", "styles/*", "components/*", "scripts/content.js", "components/ContentExtractor.js"],
+      "resources": [
+        "icons/*",
+        "sidebar.html",
+        "styles/*",
+        "components/*",
+        "scripts/content.js",
+        "components/ContentExtractor.js"
+      ],
       "matches": ["<all_urls>"]
     }
   ],

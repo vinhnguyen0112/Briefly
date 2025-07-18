@@ -3,11 +3,11 @@ class Chat {
   /**
    * Insert a chat into database. Returns nothing
    * @param {Object} chatData Chat data object to insert
-   * @param {String} [chatData.id]
-   * @param {String} [chatData.user_id]
-   * @param {String} [chatData.page_url]
-   * @param {String} [chatData.page_id]
-   * @param {String} [chatData.title]
+   * @param {String} chatData.id
+   * @param {String} chatData.user_id
+   * @param {String} chatData.page_url
+   * @param {String} chatData.page_id
+   * @param {String} chatData.title
    */
   async create(chatData) {
     if (!chatData || Object.keys(chatData).length <= 0) return;

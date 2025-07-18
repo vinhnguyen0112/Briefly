@@ -11,6 +11,7 @@ const chatRoutes = require("./routes/chatRoutes");
 const testRoutes = require("./routes/testRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const queryRoutes = require("./routes/queryRoutes");
+const pageRoutes = require("./routes/pageRoutes");
 const healthCheckRoutes = require("./routes/healthCheckRoutes");
 const {
   extractClientIp,
@@ -26,8 +27,10 @@ app.use(morgan("dev"));
 app.set("trust proxy", true);
 
 // swagger
-const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+if (process.env.NODE_ENV === "development") {
+  const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+}
 
 // routes
 app.use("/api", extractClientIp, extractVisitorId);
@@ -37,6 +40,7 @@ app.use("/api/anon", anonRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/query", queryRoutes);
+app.use("/api/pages", pageRoutes);
 app.use("/status", healthCheckRoutes);
 
 // health check

@@ -11,7 +11,8 @@ import {
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 
-const API_BASE = "http://localhost:3000/api/chats";
+const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+
 const CHAT_QUERY_LIMIT = 20;
 //  first install
 chrome.runtime.onInstalled.addListener(() => {
@@ -423,30 +424,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
 
-  if (message.action === "saveApiKey") {
-    // API key to chrome storage
-    chrome.storage.sync.set({ openaiApiKey: message.apiKey }, () => {
-      console.log("API key saved");
-
-      if (sender.tab) {
-        chrome.action.setPopup({
-          popup: "",
-          tabId: sender.tab.id,
-        });
-      }
-
-      sendResponse({ success: true });
-    });
-    return true; //async response
-  }
-
-  if (message.action === "getApiKey") {
-    chrome.storage.sync.get(["openaiApiKey"], (result) => {
-      sendResponse({ apiKey: result.openaiApiKey || "" });
-    });
-    return true; // async response
-  }
-
   if (message.action === "extract_page_content") {
     console.log(
       "CocBot: Received extract_page_content request",
@@ -693,6 +670,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     });
 
     return true;
+  }
+  if (message.action === "store_page_summary") {
+    sendRequest(`${SERVER_URL}/api/pages`, {
+      method: "POST",
+      body: {
+        page_url: message.page_url,
+        title: message.title,
+        summary: message.summary,
+        suggested_questions: message.suggested_questions || [],
+      },
+    })
+      .then((res) => {
+        console.log("store_page_summary response: ", res);
+      })
+      .catch((err) => {
+        console.error("Failed to store page summary:", err);
+      });
+
+    return false;
   }
   if (message.action === "process_images") {
     resetProcessedImages();
