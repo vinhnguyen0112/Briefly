@@ -6,7 +6,7 @@ const router = express.Router();
 router.get("/", (req, res) => {
   res.json({
     status: 'ok',
-    version: '0.0.4-dev',
+    version: '0.0.5-dev',
   });
 });
 
