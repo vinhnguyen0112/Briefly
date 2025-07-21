@@ -79,6 +79,8 @@ export function setupEventListeners() {
           "Settings updated! I'll use these for future responses.",
           "assistant"
         );
+
+        elements.chatScreen.style.display = "flex";
       });
     }
   });
@@ -675,7 +677,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
     return;
   }
   clearMessagesFromChatContainer();
-  closeChatHistoryScreen();
+  closeAllScreensAndPanels();
   switchToChat();
 
   let messages = [];
