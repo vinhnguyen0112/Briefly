@@ -175,69 +175,69 @@ export function updateContentStatus() {
 }
 
 // generate and display questions about the content
-export async function generateAndDisplayQuestions() {
-  // check if we already have questions
-  if (
-    state.generatedQuestions ||
-    state.isGeneratingQuestions ||
-    !state.pageContent
-  ) {
-    return;
-  }
+// export async function generateAndDisplayQuestions() {
+//   // check if we already have questions
+//   if (
+//     state.generatedQuestions ||
+//     state.isGeneratingQuestions ||
+//     !state.pageContent
+//   ) {
+//     return;
+//   }
 
-  // get reference to questions container
-  const questionsContainer = document.querySelector(".generated-questions");
-  const buttonContainer = document.querySelector(".question-buttons-container");
+//   // get reference to questions container
+//   const questionsContainer = document.querySelector(".generated-questions");
+//   const buttonContainer = document.querySelector(".question-buttons-container");
 
-  // check if we have the elements
-  if (!questionsContainer || !buttonContainer) {
-    console.error("CocBot: Missing question container elements");
-    return;
-  }
+//   // check if we have the elements
+//   if (!questionsContainer || !buttonContainer) {
+//     console.error("CocBot: Missing question container elements");
+//     return;
+//   }
 
-  // show the container with loading state
-  questionsContainer.style.display = "block";
+//   // show the container with loading state
+//   questionsContainer.style.display = "block";
 
-  // set flag to prevent multiple calls
-  state.isGeneratingQuestions = true;
+//   // set flag to prevent multiple calls
+//   state.isGeneratingQuestions = true;
 
-  try {
-    // generate questions
-    const result = await generateQuestionsFromContent(state.pageContent);
+//   try {
+//     // generate questions
+//     const result = await generateQuestionsFromContent(state.pageContent);
 
-    console.log("Generated questions result: ", result);
+//     console.log("Generated questions result: ", result);
 
-    // clear the loading indicator
-    buttonContainer.innerHTML = "";
+//     // clear the loading indicator
+//     buttonContainer.innerHTML = "";
 
-    if (result.success && result.questions && result.questions.length > 0) {
-      console.log("CocBot: Successfully generated questions", result.questions);
+//     if (result.success && result.questions && result.questions.length > 0) {
+//       console.log("CocBot: Successfully generated questions", result.questions);
 
-      // save the questions
-      state.generatedQuestions = result.questions;
+//       // save the questions
+//       state.generatedQuestions = result.questions;
 
-      // add each question as a button
-      result.questions.forEach((question) => {
-        const questionButton = document.createElement("button");
-        questionButton.className = "question-button";
-        questionButton.textContent = question;
-        questionButton.onclick = () => {
-          processUserQuery(question);
-        };
+//       // add each question as a button
+//       result.questions.forEach((question) => {
+//         const questionButton = document.createElement("button");
+//         questionButton.className = "question-button";
+//         questionButton.textContent = question;
+//         questionButton.onclick = () => {
+//           processUserQuery(question);
+//         };
 
-        buttonContainer.appendChild(questionButton);
-      });
-    } else {
-      console.error("CocBot: Failed to generate questions", result.error);
-      questionsContainer.style.display = "none";
-    }
-  } catch (error) {
-    console.error("CocBot: Error in generating questions", error);
-    questionsContainer.style.display = "none";
-  } finally {
-    state.isGeneratingQuestions = false;
-  }
-}
+//         buttonContainer.appendChild(questionButton);
+//       });
+//     } else {
+//       console.error("CocBot: Failed to generate questions", result.error);
+//       questionsContainer.style.display = "none";
+//     }
+//   } catch (error) {
+//     console.error("CocBot: Error in generating questions", error);
+//     questionsContainer.style.display = "none";
+//   } finally {
+//     state.isGeneratingQuestions = false;
+//   }
+// }
 
 // setup improved content extraction reliability
 export function setupContentExtractionReliability() {

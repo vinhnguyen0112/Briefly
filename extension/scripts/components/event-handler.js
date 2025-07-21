@@ -12,7 +12,7 @@ import {
   handleResize,
   stopResize,
   addMessageToChat,
-  closeAllPanels,
+  closeAllScreensAndPanels,
   switchToChat,
   handleContentMessage,
   clearMessagesFromChatContainer,
@@ -57,14 +57,14 @@ export function setupEventListeners() {
   setupQuickActionsEvent();
 
   elements.configButton.addEventListener("click", () => {
+    // Close
     if (state.isConfigOpen) {
-      elements.configContainer.style.display = "none";
-      elements.configButton.classList.remove("active");
-      state.isConfigOpen = false;
-
-      elements.chatScreen.style.display = "flex";
-    } else {
-      closeAllPanels();
+      closeAllScreensAndPanels();
+    }
+    // Open
+    else {
+      closeAllScreensAndPanels();
+      elements.chatScreen.style.display = "none";
 
       elements.configContainer.style.display = "block";
       elements.configButton.classList.add("active");
@@ -142,7 +142,7 @@ export function setupEventListeners() {
 
       elements.chatScreen.style.display = "flex";
     } else {
-      closeAllPanels();
+      closeAllScreensAndPanels();
 
       openNotesPanel();
       elements.notesButton.classList.add("active");
@@ -339,8 +339,8 @@ export function setupListenersForDynamicChatHistoryElements() {
     console.log("Chat history event already initialized, returning");
     return;
   }
-  console.log("Setting up chat history events");
 
+  // Query elements
   const chatHistoryButton = document.getElementById("chat-history-button");
   const chatHistoryContent = document.getElementById("chat-history-content");
   const clearChatHistoryButton = document.getElementById(
@@ -353,6 +353,7 @@ export function setupListenersForDynamicChatHistoryElements() {
     "close-chat-history-button"
   );
 
+  // Assign event handlers
   chatHistoryButton.addEventListener("click", toggleChatHistoryScreen);
 
   closeChatHistoryButton.addEventListener("click", () => {
@@ -374,13 +375,23 @@ export function setupListenersForDynamicChatHistoryElements() {
   state.isChatHistoryEventsInitialized = true;
 }
 
-// Toggle the display state of the chat history screen
+/**
+ * Toggle display state of chat history screen
+ */
 function toggleChatHistoryScreen() {
   const chatHistory = elements.chatHistoryScreen;
+  const chatHistoryButton = document.getElementById("chat-history-button");
+
   // Open
   if (chatHistory.style.display === "none" || !chatHistory.style.display) {
+    closeAllScreensAndPanels();
+    elements.chatScreen.style.display = "none";
     chatHistory.style.display = "flex";
-    addToScreenStack("history");
+
+    if (chatHistoryButton) {
+      chatHistoryButton.classList.add("active");
+    }
+
     // If first load
     if (
       state.pagination.currentPage === 0 &&
@@ -397,11 +408,9 @@ function toggleChatHistoryScreen() {
   }
   // Close
   else {
-    chatHistory.style.display = "none";
-    state.screenStack.pop();
+    closeAllScreensAndPanels();
+    elements.chatScreen.style.display = "flex";
   }
-
-  console.log("Current stack: ", state.screenStack);
 }
 
 /**
@@ -745,7 +754,12 @@ function showRenameChatInput(item, chat) {
   input.focus();
   input.select();
 
+  let isRenaming = false; // Spam lock
+
   const save = async () => {
+    if (isRenaming) return;
+    isRenaming = true;
+
     const newTitle = input.value.trim();
     if (newTitle && newTitle !== currentTitle) {
       try {
@@ -760,12 +774,14 @@ function showRenameChatInput(item, chat) {
           title: "Error",
           message: "Failed to update chat title. Please try again later",
         });
+        isRenaming = false;
         return;
       }
     }
     input.outerHTML = `<div class="chat-history-title">${
       newTitle || currentTitle
     }</div>`;
+    isRenaming = false;
   };
 
   input.addEventListener("keydown", (e) => {
@@ -980,10 +996,12 @@ export function showPopupAlert({
   document.body.appendChild(alertOverlay);
 }
 
-// Toggle on/off the account popup UI
+/**
+ * Toggle the account popup display state (show/hide)
+ */
 function toggleAccountPopupUI() {
   const { accountPopup, accountButton } = elements;
-
+  // Show
   if (accountPopup.style.display === "none" || !accountPopup.style.display) {
     // Get button position
     const rect = accountButton.getBoundingClientRect();
@@ -993,7 +1011,9 @@ function toggleAccountPopupUI() {
       window.innerWidth - rect.right - window.scrollX - 16
     }px`; // Offset by 16 pixels
     accountPopup.style.display = "block";
-  } else {
+  }
+  // Hide
+  else {
     accountPopup.style.display = "none";
   }
 }

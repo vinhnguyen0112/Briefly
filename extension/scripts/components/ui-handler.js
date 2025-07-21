@@ -24,8 +24,10 @@ import {
   processUserQuery,
 } from "./api-handler.js";
 
-// close all panels
-export function closeAllPanels() {
+/**
+ * Close all screens and panels beside chat screen as it's main screen
+ */
+export function closeAllScreensAndPanels() {
   // hide config
   elements.configContainer.style.display = "none";
   elements.configButton.classList.remove("active");
@@ -38,6 +40,13 @@ export function closeAllPanels() {
 
   // hide sign in alert
   elements.signInAlertOverlay.style.display = "none";
+
+  // hide account popup
+  elements.accountPopup.style.display = "none";
+
+  // hide chat history screen
+  elements.chatHistoryScreen.style.display = "none";
+  document.getElementById("chat-history-button").classList.remove("active");
 
   // show main screen
   elements.chatScreen.style.display = "flex";
@@ -133,21 +142,6 @@ export async function addMessageToChat(message, role) {
     messageElement.innerHTML = `
       <div class="message-content">${formatMessage(message)}</div>
     `;
-
-    const userSession = await getUserSession();
-    if (userSession) {
-      const feedbackBtn = document.createElement("button");
-      feedbackBtn.className = "feedback-icon";
-      feedbackBtn.title = "Send feedback";
-      const img = document.createElement("img");
-      img.src = chrome.runtime.getURL("icons/feedback.png");
-      img.alt = "Feedback";
-      feedbackBtn.appendChild(img);
-      feedbackBtn.onclick = () => {
-        showFeedbackModal();
-      };
-      messageElement.appendChild(feedbackBtn);
-    }
   } else {
     messageElement.innerHTML = `
       <div class="message-content">${formatMessage(message)}</div>
@@ -322,6 +316,7 @@ function injectSuggestedQuestions(container) {
 
     loadingDiv.style.display = "none";
 
+    // Render generated questions
     if (result && result.success && Array.isArray(result.questions)) {
       questionButtonsContainer.innerHTML = "";
       result.questions.forEach((question) => {
@@ -337,6 +332,9 @@ function injectSuggestedQuestions(container) {
         };
         questionButtonsContainer.appendChild(questionButton);
       });
+
+      // Only store generated questions when it's displayabled
+      state.generatedQuestions = result.questions;
     } else {
       questionButtonsContainer.innerHTML = `<div style="color:#E53E3E;">Failed to generate questions.</div>`;
       generateQuestionsButton.style.display = "block";
@@ -686,7 +684,7 @@ function handleAuthStateChange(isAuth) {
   configureChatHistoryElementsOnAuthState(isAuth);
 
   // Navigate back to welcome page
-  closeAllPanels();
+  closeAllScreensAndPanels();
 
   // Reset state
   resetCurrentChatState();
