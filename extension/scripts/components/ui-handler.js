@@ -118,7 +118,7 @@ export function stopResize() {
 // switch from welcome to chat view
 export function switchToChat() {
   // hide chat history
-  elements.chatHistoryScreen.style.display = "none";
+  // elements.chatHistoryScreen.style.display = "none";
 
   // show chat
   elements.chatScreen.style.display = "flex";
@@ -126,8 +126,12 @@ export function switchToChat() {
   // focus input
   elements.userInput.focus();
 
-  // inject chat actions container if not exists
+  if (!elements.chatContainer.querySelector(".welcome-container")) {
+    const welcomeContainer = createWelcomeContainer();
+    elements.chatContainer.prepend(welcomeContainer);
+  }
   if (!elements.chatContainer.querySelector(".chat-actions-container")) {
+    // inject chat actions container if not exists
     const chatActionsContainer = createChatActionsContainer();
     elements.chatContainer.appendChild(chatActionsContainer);
   }
@@ -161,18 +165,43 @@ export async function addMessageToChat(message, role) {
 }
 
 /**
- * Clear all messages from chat container
- * and inject quick actions & suggested questions into chat container
+ * Clear all messages from chat container.
+ *
+ * Inject welcome section and quick actions & suggested questions
+ * and context indicator into chat container
  */
 export async function clearMessagesFromChatContainer() {
   if (!elements.chatContainer) return;
   elements.chatContainer.innerHTML = "";
+
+  const welcomeContainer = createWelcomeContainer();
+  elements.chatContainer.prepend(welcomeContainer);
 
   // Create a container for both quick actions and suggested questions
   const chatActionsContainer = createChatActionsContainer();
   elements.chatContainer.appendChild(chatActionsContainer);
 
   updateContentStatus();
+}
+
+/**
+ * Create a welcome container inside #chat-container, the container includes a logo and title
+ * @returns {HTMLElement}
+ */
+function createWelcomeContainer() {
+  const welcomeContainer = document.createElement("div");
+  welcomeContainer.className = "welcome-container";
+
+  welcomeContainer.innerHTML = `
+    <img
+      src="./icons/logo.png"
+      alt="logo"
+      id="welcome-logo"
+    />
+    <h3 data-i18n="welcome">Ask me anything about this webpage</h3>
+  `;
+
+  return welcomeContainer;
 }
 
 /**

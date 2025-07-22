@@ -104,41 +104,61 @@ export function renderContentInSidebar(content) {
   }
 }
 
-// update page context in welcome screen
+/**
+ * Updates the chat container with a context indicator that shows
+ * the current page's title and favicon. If `.welcome-container`
+ * exists, the indicator is inserted after it; otherwise, it is
+ * prepended to `#chat-container`.
+ */
 export function updateContentStatus() {
   const chatContainer = document.getElementById("chat-container");
   if (!chatContainer) return;
 
-  // Remove existing indicator
+  // Remove any existing indicator
   const existingIndicator = chatContainer.querySelector(
     ".chat-context-indicator"
   );
   if (existingIndicator) existingIndicator.remove();
 
+  const indicator = buildContextIndicator();
+
+  const welcomeSection = chatContainer.querySelector(".welcome-container");
+  if (welcomeSection) {
+    welcomeSection.after(indicator);
+  } else {
+    chatContainer.prepend(indicator);
+  }
+}
+
+/**
+ * Creates the context indicator element based on the current page content.
+ * Includes a favicon, page title, and a refresh button to reload context.
+ * @returns {HTMLDivElement} The DOM element representing the context indicator.
+ */
+function buildContextIndicator() {
   const indicator = document.createElement("div");
   indicator.className = "chat-context-indicator";
 
   if (!state.pageContent) {
     indicator.textContent = "Loading page context...";
-    chatContainer.prepend(indicator);
-    return;
+    return indicator;
   }
 
   if (state.pageContent.extractionSuccess === false) {
     indicator.innerHTML = `⚠️ Limited page context available`;
-    chatContainer.prepend(indicator);
-    return;
+    return indicator;
   }
 
   const pageTitle = state.pageContent.title || "Untitled Page";
-  const domain = (() => {
-    try {
-      const url = new URL(state.pageContent.url || window.location.href);
-      return url.hostname;
-    } catch {
-      return "";
-    }
-  })();
+  const rawUrl = state.pageContent.url || window.location.href;
+
+  // Extract domain from URL
+  let domain = "";
+  try {
+    domain = new URL(rawUrl).hostname;
+  } catch {
+    domain = "";
+  }
 
   const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
 
@@ -156,14 +176,13 @@ export function updateContentStatus() {
   // Refresh button
   const refreshBtn = document.createElement("button");
   refreshBtn.className = "chat-context-refresh-btn";
-  refreshBtn.innerHTML = `\
+  refreshBtn.title = "Refresh page context";
+  refreshBtn.innerHTML = `
     <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
       <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
     </svg>
   `;
-  refreshBtn.title = "Refresh page context";
-
-  refreshBtn.addEventListener("click", async () => {
+  refreshBtn.addEventListener("click", () => {
     requestPageContent();
   });
 
@@ -171,7 +190,7 @@ export function updateContentStatus() {
   indicator.appendChild(title);
   indicator.appendChild(refreshBtn);
 
-  chatContainer.prepend(indicator);
+  return indicator;
 }
 
 // generate and display questions about the content

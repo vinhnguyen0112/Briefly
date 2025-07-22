@@ -65,6 +65,8 @@ const translations = {
     delete: "Delete",
 
     account: "Account",
+
+    welcome: "Ask me anything about this webpage",
   },
 
   vi: {
@@ -129,6 +131,8 @@ const translations = {
     delete: "Xóa",
 
     account: "Tài Khoản",
+
+    welcome: "Hỏi tôi bất kì thứ gì về trang web này",
   },
 };
 

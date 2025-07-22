@@ -6,6 +6,7 @@ export const elements = {
   notesScreen: document.getElementById("notes-screen"),
 
   // Header elements
+  titleContainer: document.getElementById("title-container"),
   cocbotTitle: document.getElementById("cocbot-title"),
 
   // Authentication elements

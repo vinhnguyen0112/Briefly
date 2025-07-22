@@ -180,6 +180,8 @@ body.sidebar-resizing * {
   color: var(--primary-foreground);
 }
 
+/* CONFIG ELEMENTS STYLING */
+
 /* config button */
 #config-button {
   background-color: var(--muted);
@@ -194,6 +196,12 @@ body.sidebar-resizing * {
 #config-button.active {
   background-color: var(--primary);
   color: var(--primary-foreground);
+}
+
+/* config container */
+#config-container {
+  display: flex;
+  flex-direction: column;
 }
 
 .sidebar-content {
@@ -583,7 +591,7 @@ body.sidebar-resizing * {
 #chat-screen {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 38px); /*TODO: Temporary fix for off-screened chatbar*/
+  height: calc(100% - 48px); /*TODO: Temporary fix for off-screened chatbar*/
   width: 100%;
 }
 
@@ -597,6 +605,25 @@ body.sidebar-resizing * {
   scrollbar-width: thin;
   scroll-behavior: smooth;
   padding-bottom: 10px;
+}
+
+/* welcome container in chat container */
+.welcome-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  margin-top: 16px;
+  margin-bottom: 16px;
+}
+
+.welcome-container img {
+  height: 24px;
+  width: auto;
+}
+
+.welcome-container h3 {
+  font-weight: 500;
 }
 
 /* content viewer stuff */
@@ -1110,6 +1137,18 @@ body.sidebar-resizing * {
   background-color: var(--border);
 }
 
+#title-container {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  cursor: pointer;
+}
+
+#title-logo {
+  width: auto;
+  height: 18px;
+}
+
 .cocbot-title {
   cursor: pointer;
   transition: color 0.2s ease;
@@ -1318,12 +1357,10 @@ input:checked + .slider:before {
 
 #chat-history-content {
   flex: 1;
-  padding: 8px 12px 8px 12px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-
-  max-height: 90%;
+  max-height: 75vh;
   overflow-y: auto;
 }
 

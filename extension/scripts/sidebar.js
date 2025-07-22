@@ -139,6 +139,7 @@ document.addEventListener("DOMContentLoaded", () => {
   // make sure content extraction is reliable
   setupContentExtractionReliability();
 
+  // Call clearMessagesFromChatContainer() to inject welcome section, context indicator and quick actions
   clearMessagesFromChatContainer();
 });
 

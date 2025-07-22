@@ -39,7 +39,7 @@ export function setupEventListeners() {
   });
 
   // Title click
-  elements.cocbotTitle.addEventListener("click", () => {
+  elements.titleContainer.addEventListener("click", () => {
     // Close all non-chat screens & panels
     elements.chatHistoryScreen.style.display = "none";
     elements.configContainer.style.display = "none";
@@ -66,7 +66,7 @@ export function setupEventListeners() {
       closeAllScreensAndPanels();
       elements.chatScreen.style.display = "none";
 
-      elements.configContainer.style.display = "block";
+      elements.configContainer.style.display = "flex";
       elements.configButton.classList.add("active");
       state.isConfigOpen = true;
 
@@ -228,6 +228,7 @@ export function setupEventListeners() {
 
   elements.newChatButton.addEventListener("click", () => {
     resetCurrentChatState();
+    closeAllScreensAndPanels();
     clearMessagesFromChatContainer();
     switchToChat();
   });
@@ -359,8 +360,7 @@ export function setupListenersForDynamicChatHistoryElements() {
   chatHistoryButton.addEventListener("click", toggleChatHistoryScreen);
 
   closeChatHistoryButton.addEventListener("click", () => {
-    closeChatHistoryScreen();
-    state.screenStack.pop();
+    closeAllScreensAndPanels();
   });
 
   clearChatHistoryButton.addEventListener("click", () => {
