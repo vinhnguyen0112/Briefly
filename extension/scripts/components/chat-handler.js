@@ -1,6 +1,6 @@
 import { getUserSession, sendRequest } from "./state.js";
 
-const API_BASE = "https://dev-capstone-2025.coccoc.com/api/chats";
+const API_BASE = "http://localhost:3000/api/chats";
 
 /**
  * Create a new chat.

@@ -7,6 +7,7 @@ import {
   setCurrentChatState,
   addToScreenStack,
   resetPaginationState,
+  getUserSession,
 } from "./state.js";
 import {
   handleResize,
@@ -16,8 +17,6 @@ import {
   switchToChat,
   handleContentMessage,
   clearMessagesFromChatContainer,
-  updateFeedbackIconsForAssistantMessages,
-  removeFeedbackIconsForAssistantMessages,
   clearChatHistoryList,
 } from "./ui-handler.js";
 import { processUserQuery } from "./api-handler.js";
@@ -241,12 +240,20 @@ export function setupEventListeners() {
   });
 }
 
-// set up quick action buttons
-export function setupQuickActionsEvent() {
-  const quickActionButtons = document.querySelectorAll(".action-button");
+/**
+ * Set up event listeners for quick action buttons.
+ * @param {HTMLElement|Document} container Element to scope querySelector to
+ */
+export function setupQuickActionsEvent(container = document) {
+  const quickActionButtons = container.querySelectorAll(".action-button");
+
   quickActionButtons.forEach((button) => {
+    // Prevent multiple bindings
+    if (button.dataset.bound === "true") return;
+
+    button.dataset.bound = "true";
+
     button.addEventListener("click", async () => {
-      console.log("Button clicked");
       const action = button.getAttribute("data-action");
       let query = "";
       const metadata = {};
@@ -271,6 +278,10 @@ export function setupQuickActionsEvent() {
       if (query) {
         switchToChat();
         const response = await processUserQuery(query, metadata);
+
+        const authSession = await getUserSession();
+        if (!authSession || !authSession.id) return;
+
         if (action === "summarize" && response?.success && response.message) {
           chrome.runtime.sendMessage({
             action: "store_page_summary",
@@ -294,8 +305,6 @@ function setupAuthenticationButtons() {
           // Close the account popup & sign in alert
           closeAccountPopupUI();
           closeSignInAlertPopup();
-          console.log("User authenticated via Google");
-          updateFeedbackIconsForAssistantMessages();
         }
       });
     });
@@ -309,8 +318,6 @@ function setupAuthenticationButtons() {
           // Close the account popup & sign in alert
           closeAccountPopupUI();
           closeSignInAlertPopup();
-          console.log("User authenticated via Facebook");
-          updateFeedbackIconsForAssistantMessages();
         }
       });
     });
@@ -322,9 +329,6 @@ function setupAuthenticationButtons() {
       if (response.success) {
         // Close the account popup
         closeAccountPopupUI();
-
-        console.log("User signed out");
-        removeFeedbackIconsForAssistantMessages();
       }
     });
   });
@@ -698,7 +702,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
 
   const history = [];
   for (const message of messages) {
-    await addMessageToChat(message.content, message.role);
+    addMessageToChat(message.content, message.role, message.id);
     history.push({ role: message.role, content: message.content });
   }
   setCurrentChatState({ ...chat, history });

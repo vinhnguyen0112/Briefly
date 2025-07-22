@@ -6,12 +6,9 @@ import {
   getUserSession,
   resetCurrentChatState,
   resetPaginationState,
+  sendRequest,
 } from "./state.js";
-import {
-  renderContentInSidebar,
-  requestPageContent,
-  updateContentStatus,
-} from "./content-handler.js";
+import { requestPageContent, updateContentStatus } from "./content-handler.js";
 import {
   renderToggleAccountPopupUI,
   setupListenersForDynamicChatHistoryElements,
@@ -137,15 +134,39 @@ export function switchToChat() {
   }
 }
 
-// add message to chat
-export async function addMessageToChat(message, role) {
+/**
+ * Add message element to chat screen.
+ * Assistant messages are attached a message ID.
+ * @param {String} message Message content
+ * @param {String} role
+ * @param {String} messageId
+ * @param {String} tempMessageId
+ * @returns {HTMLElement} Message element
+ */
+export async function addMessageToChat(
+  message,
+  role,
+  messageId = null,
+  tempMessageId
+) {
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
+
+  // Set message ID attributes
+  if (messageId) {
+    messageElement.setAttribute("data-message-id", messageId);
+  } else if (tempMessageId) {
+    messageElement.setAttribute("data-temp-message-id", tempMessageId);
+  }
 
   if (role === "assistant") {
     messageElement.innerHTML = `
       <div class="message-content">${formatMessage(message)}</div>
     `;
+    // If vaid messageID is provided, display feedback icon
+    if (messageId) {
+      addFeedbackIconToMessage(messageElement);
+    }
   } else {
     messageElement.innerHTML = `
       <div class="message-content">${formatMessage(message)}</div>
@@ -182,6 +203,50 @@ export async function clearMessagesFromChatContainer() {
   elements.chatContainer.appendChild(chatActionsContainer);
 
   updateContentStatus();
+}
+
+/**
+ * Update message element with real message ID and show feedback icon
+ * @param {String} tempMessageId Temporary message ID
+ * @param {String} realMessageId Real message ID from backend
+ */
+export function updateMessageWithId(tempMessageId, realMessageId) {
+  const messageElement = document.querySelector(
+    `[data-temp-message-id="${tempMessageId}"]`
+  );
+  if (messageElement) {
+    // Remove temp ID and set real message ID
+    messageElement.removeAttribute("data-temp-message-id");
+    messageElement.setAttribute("data-message-id", realMessageId);
+
+    // Now show the feedback icon since we have a real message ID
+    addFeedbackIconToMessage(messageElement);
+  }
+}
+
+/**
+ * Add a feedback icon to the message element
+ * @param {HTMLElement} messageElement
+ */
+function addFeedbackIconToMessage(messageElement) {
+  // Check if feedback icon already exists
+  if (messageElement.querySelector(".feedback-button")) return;
+
+  const feedbackButton = document.createElement("button");
+  feedbackButton.className = "feedback-button";
+  feedbackButton.title = "Send feedback";
+  feedbackButton.innerHTML = `
+    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17h6l3 3v-3h2V9h-2M4 4h11v8H9l-3 3v-3H4V4Z"/>
+    </svg>
+  `;
+  feedbackButton.onclick = (event) => {
+    const messageId = messageElement.dataset.messageId;
+    console.log("Message Id: ", messageId);
+    showFeedbackModal(messageId);
+  };
+
+  messageElement.appendChild(feedbackButton);
 }
 
 /**
@@ -250,47 +315,7 @@ function injectQuickActions(container) {
   `;
   container.appendChild(quickActions);
 
-  const quickActionButtons = quickActions.querySelectorAll(".action-button");
-
-  quickActionButtons.forEach((button) => {
-    button.addEventListener("click", async () => {
-      console.log("Button clicked");
-      const action = button.getAttribute("data-action");
-      let query = "";
-      const metadata = {};
-
-      switch (action) {
-        case "summarize":
-          query = "Summarize this page in a concise way.";
-          metadata.event = "summarize";
-          break;
-        case "keypoints":
-          query = "What are the key points of this page?";
-          metadata.event = "keypoints";
-          break;
-        case "explain":
-          query = "Explain the content of this page as if I'm a beginner.";
-          metadata.event = "explain";
-          break;
-        default:
-          metadata.event = "ask";
-      }
-
-      if (query) {
-        switchToChat();
-        const response = await processUserQuery(query, metadata);
-        if (action === "summarize" && response?.success && response.message) {
-          chrome.runtime.sendMessage({
-            action: "store_page_summary",
-            page_url: state.pageContent.url || window.location.href,
-            title: state.pageContent.title || document.title,
-            summary: response.message,
-            suggested_questions: [],
-          });
-        }
-      }
-    });
-  });
+  setupQuickActionsEvent(container);
 }
 
 /**
@@ -380,29 +405,8 @@ export function clearChatHistoryList() {
   }
 }
 
-export async function updateFeedbackIconsForAssistantMessages() {
-  const userSession = await getUserSession();
-  if (!userSession) return;
-
-  const messages = document.querySelectorAll(".chat-message.assistant-message");
-  messages.forEach((msg) => {
-    if (msg.querySelector(".feedback-icon")) return;
-
-    const feedbackBtn = document.createElement("button");
-    feedbackBtn.className = "feedback-icon";
-    feedbackBtn.title = "Send feedback";
-    const img = document.createElement("img");
-    img.src = chrome.runtime.getURL("icons/feedback.png");
-    img.alt = "Feedback";
-    feedbackBtn.appendChild(img);
-    feedbackBtn.onclick = () => {
-      showFeedbackModal();
-    };
-    msg.appendChild(feedbackBtn);
-  });
-}
-
-async function showFeedbackModal() {
+async function showFeedbackModal(messageId) {
+  console.log("Message ID for feedback: ", messageId);
   const userSession = await getUserSession();
   if (!userSession) {
     alert("you need to login to give feedback");
@@ -410,8 +414,6 @@ async function showFeedbackModal() {
   }
 
   if (document.getElementById("cocbot-feedback-modal")) return;
-
-  console.log("Opening feedback modal...");
 
   // Add blur to sidebar
   const sidebar = document.querySelector(".sidebar");
@@ -422,16 +424,16 @@ async function showFeedbackModal() {
   modal.innerHTML = `
     <div class="cocbot-modal-backdrop"></div>
     <div class="cocbot-modal-content feedback-modal">
-      <h2 class="feedback-title">Give Feedback</h2>
-      <div class="feedback-subtitle">Rating your experience with Briefly</div>
+      <h2 class="feedback-title" data-i18n="feedbackTitle">Give Feedback</h2>
+      <div class="feedback-subtitle">Rate your experience with Briefly</div>
       ${renderStars()}
       <div class="feedback-reason-label">
         Write your feedback <span class="optional-label">(optional)</span>
       </div>
       <textarea class="feedback-reason-input" placeholder="please write here"></textarea>
       <div class="feedback-modal-actions">
-        <button class="button feedback-submit">Submit</button>
-        <button class="button feedback-cancel">Cancel</button>
+        <button class="action-button feedback-submit">Submit</button>
+        <button class="action-button feedback-cancel">Cancel</button>
       </div>
     </div>
   `;
@@ -494,31 +496,26 @@ async function showFeedbackModal() {
     if (submitBtn.disabled) return;
     const stars = selectedRate;
     const comment = modal.querySelector(".feedback-reason-input").value.trim();
-    const userSession = await getUserSession();
-    const sessionId = "auth:" + userSession?.id;
 
     try {
-      const res = await fetch(
-        "https://dev-capstone-2025.coccoc.com/api/feedback",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionId}`,
-          },
-          body: JSON.stringify({ stars, comment }),
-        }
-      );
-      const data = await res.json();
-      if (data.success) {
+      const response = await sendRequest(`http://localhost:3000/api/feedback`, {
+        method: "POST",
+        body: {
+          stars,
+          comment,
+          message_id: parseInt(messageId),
+        },
+      });
+      if (response.success) {
         showToast("Feedback received!");
         modal.remove();
         if (sidebar) sidebar.classList.remove("cocbot-blur");
       } else {
-        alert(data.error || "fail!");
+        showToast("Something went wrong, please try again later.");
       }
     } catch (err) {
-      alert("server fail");
+      console.error(err);
+      showToast("Something went wrong, please try again later.");
     }
   };
 
@@ -548,57 +545,22 @@ async function showFeedbackModal() {
   };
 }
 
+/**
+ * Create stars rating row using Font Awesome SVG
+ * @returns {string}
+ */
 function renderStars() {
-  if (window.innerWidth < 386) {
-    // 3 trên, 2 dưới
-    return `
-      <div class="feedback-rating-row">
-        <div class="feedback-rating-stars-row">
-          ${[0, 1, 2]
-            .map(
-              (i) => `
-            <div class="feedback-rating-item" data-rate="${i + 1}">
-              <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
-                i + 1
-              }" class="feedback-rating-icon" />
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-        <div class="feedback-rating-stars-row">
-          ${[3, 4]
-            .map(
-              (i) => `
-            <div class="feedback-rating-item" data-rate="${i + 1}">
-              <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
-                i + 1
-              }" class="feedback-rating-icon" />
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-      </div>
-    `;
-  } else {
-    // 5 sao 1 hàng
-    return `
-      <div class="feedback-rating-row">
-        ${[0, 1, 2, 3, 4]
-          .map(
-            (i) => `
-          <div class="feedback-rating-item" data-rate="${i + 1}">
-            <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
-              i + 1
-            }" class="feedback-rating-icon" />
-          </div>
-        `
-          )
-          .join("")}
-      </div>
-    `;
-  }
+  const starSVG = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="32" height="32" class="feedback-rating-item" data-rate="{RATE}">
+      <path fill="#FFD43B" d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"/>
+    </svg>
+  `;
+
+  return `
+    <div class="feedback-rating-row">
+      ${[1, 2, 3, 4, 5].map((i) => starSVG.replace("{RATE}", i)).join("")}
+    </div>
+  `;
 }
 
 // format markdown-like text
@@ -886,14 +848,4 @@ export function configureChatHistoryElementsOnAuthState(isAuth) {
       chatHistoryButton.remove();
     }
   }
-}
-
-// remove feedback icons from assistant messages
-export function removeFeedbackIconsForAssistantMessages() {
-  const messages = document.querySelectorAll(".chat-message.assistant-message");
-  messages.forEach((msg) => {
-    // TODO: Same height with message component, consider fixing
-    const feedbackBtn = msg.querySelector(".feedback-icon");
-    if (feedbackBtn) feedbackBtn.remove();
-  });
 }
