@@ -3,7 +3,7 @@ info:
   title: Capstone API
   version: 1.0.0
 servers:
-  - url: http://localhost:3000/api
+  - url: https://dev-capstone-2025.coccoc.com/api
     description: Development server
 paths:
   /anon:
