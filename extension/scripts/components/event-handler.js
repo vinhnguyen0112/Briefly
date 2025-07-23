@@ -100,33 +100,26 @@ export function setupEventListeners() {
     document.addEventListener("mouseup", stopResize);
   });
 
-  elements.chatForm.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const message = elements.userInput.value.trim();
-    if (!message) return;
-
-    processUserQuery(message);
-
-    elements.userInput.value = "";
-    elements.userInput.style.height = "auto";
+  // Handle submit via Enter key
+  elements.userInput.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault(); // prevent newline
+      const message = elements.userInput.value;
+      handleSubmit(message);
+    }
   });
 
+  // Handle submit via button click
+  elements.chatForm.addEventListener("submit", (e) => {
+    e.preventDefault(); // prevent real form submission
+    const message = elements.userInput.value;
+    handleSubmit(message);
+  });
+
+  // Auto-grow textarea
   elements.userInput.addEventListener("input", function () {
     this.style.height = "auto";
     this.style.height = this.scrollHeight + "px";
-  });
-
-  elements.userInput.addEventListener("keydown", function (e) {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-
-      const message = elements.userInput.value.trim();
-      if (message) {
-        processUserQuery(message);
-        elements.userInput.value = "";
-        elements.userInput.style.height = "auto";
-      }
-    }
   });
 
   window.addEventListener("message", (event) => {
@@ -238,6 +231,20 @@ export function setupEventListeners() {
   document.addEventListener("click", () => {
     closeAllChatHistoryItemsMenu();
   });
+}
+
+let isSubmitting = false;
+
+function handleSubmit(message) {
+  if (isSubmitting || !message.trim()) return;
+  isSubmitting = true;
+
+  processUserQuery(message.trim()).finally(() => {
+    isSubmitting = false;
+  });
+
+  elements.userInput.value = "";
+  elements.userInput.style.height = "auto";
 }
 
 /**
