@@ -20,6 +20,7 @@ import {
   showToast,
   removeToast,
   updateToast,
+  resetSuggestedQuestionsContainer,
 } from "./ui-handler.js";
 import { processUserQuery } from "./api-handler.js";
 import {
@@ -165,30 +166,33 @@ export function setupEventListeners() {
       viLabel.classList.toggle("active", language === "vi");
     }
 
-    const questionsContainer = document.querySelector(".generated-questions");
-    if (questionsContainer && questionsContainer.style.display !== "none") {
-      const buttonContainer = document.querySelector(
-        ".question-buttons-container"
-      );
-      if (buttonContainer) {
-        buttonContainer.innerHTML = `
-          <div class="question-loading">
-            <div class="spinner-small"></div>
-            <span data-i18n="generatingQuestions">
-              ${
-                language === "vi"
-                  ? "Đang tạo câu hỏi..."
-                  : "Generating questions..."
-              }
-            </span>
-          </div>
-        `;
-      }
-    }
+    // const questionsContainer = document.querySelector(".generated-questions");
+    // if (questionsContainer && questionsContainer.style.display !== "none") {
+    //   const buttonContainer = document.querySelector(
+    //     ".question-buttons-container"
+    //   );
+    //   if (buttonContainer) {
+    //     buttonContainer.innerHTML = `
+    //       <div class="question-loading">
+    //         <div class="spinner-small"></div>
+    //         <span data-i18n="generatingQuestions">
+    //           ${
+    //             language === "vi"
+    //               ? "Đang tạo câu hỏi..."
+    //               : "Generating questions..."
+    //           }
+    //         </span>
+    //       </div>
+    //     `;
+    //   }
+    // }
 
     // Use the new internationalization module to switch language
     switchLanguage(language).then((message) => {
       state.language = language;
+      // Reset suggested questions when language change
+      resetSuggestedQuestionsContainer();
+
       // Notify the user about language change
       addMessageToChat({ message, role: "assistant" });
     });
@@ -840,7 +844,7 @@ function showDeleteChatDialog(chat) {
             }
 
             updateToast(toastId, {
-              message: "Chat deleted",
+              message: "Chat deleted sucessfully",
               type: "success",
               duration: 2000,
             });

@@ -348,7 +348,7 @@ function injectSuggestedQuestions(container) {
     </button>
     <div class="question-loading" style="display:none;margin-top:12px;">
       <div class="spinner-small"></div>
-      <span>Generating questions...</span>
+      <span data-i18n=generatingQuestions>Generating questions...</span>
     </div>
     <div class="question-buttons-container" style="margin-top:12px;"></div>
   `;
@@ -373,10 +373,13 @@ function injectSuggestedQuestions(container) {
     let result;
 
     // Use generated questions if have
-    if (state.generatedQuestions) {
+    if (
+      state.generatedQuestions[state.language] &&
+      state.generatedQuestions[state.language].length > 0
+    ) {
       result = {
         success: true,
-        questions: state.generatedQuestions,
+        questions: state.generatedQuestions[state.language],
       };
     } else {
       result = await generateQuestionsFromContent(state.pageContent);
@@ -402,12 +405,36 @@ function injectSuggestedQuestions(container) {
       });
 
       // Only store generated questions when it's displayabled
-      state.generatedQuestions = result.questions;
+      state.generatedQuestions[state.language] = result.questions;
     } else {
       questionButtonsContainer.innerHTML = `<div style="color:#E53E3E;">Failed to generate questions.</div>`;
       generateQuestionsButton.style.display = "block";
     }
   });
+}
+
+/**
+ * Clear all suggested questions and display generate question button
+ */
+export function resetSuggestedQuestionsContainer() {
+  const suggestedQuestionsContainer = document.querySelector(
+    ".suggested-questions-container"
+  );
+  if (suggestedQuestionsContainer) {
+    const generateQuestionsButton = suggestedQuestionsContainer.querySelector(
+      ".generate-questions-button"
+    );
+    const questionButtonsContainer = suggestedQuestionsContainer.querySelector(
+      ".question-buttons-container"
+    );
+
+    // Clear all questions
+    if (questionButtonsContainer) {
+      questionButtonsContainer.innerHTML = "";
+    }
+
+    generateQuestionsButton.style.display = "flex";
+  }
 }
 
 /**
@@ -744,13 +771,6 @@ export function handleContentMessage(message) {
 
       // Request fresh content
       requestPageContent();
-
-      // If in welcome mode, reset any generated questions
-      state.generatedQuestions = null;
-      const questionsContainer = document.querySelector(".generated-questions");
-      if (questionsContainer) {
-        questionsContainer.style.display = "none";
-      }
 
       break;
 

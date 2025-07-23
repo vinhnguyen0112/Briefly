@@ -12,7 +12,10 @@ export const state = {
   contentFetchAttempts: 0,
   maxContentFetchAttempts: 5,
   isGeneratingQuestions: false,
-  generatedQuestions: null,
+  generatedQuestions: {
+    vn: [],
+    en: [],
+  },
   isNotesOpen: false,
   currentPageUrl: "",
   isEditingNote: false,

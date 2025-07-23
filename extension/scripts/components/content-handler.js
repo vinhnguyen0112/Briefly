@@ -1,76 +1,87 @@
 // handles page content extraction and rendering
 import { elements } from "./dom-elements.js";
 import { state } from "./state.js";
-import { switchToChat } from "./ui-handler.js";
+import {
+  resetSuggestedQuestionsContainer,
+  switchToChat,
+} from "./ui-handler.js";
 import {
   generateQuestionsFromContent,
   processUserQuery,
 } from "./api-handler.js";
 
-// request page content from background script
+/**
+ * Extracts page content by messaging the background script.
+ * Retries on failure up to `state.maxContentFetchAttempts`.
+ *
+ * @returns {Promise<Object>} Resolves with content (full or partial), or rejects on failure.
+ */
 export function requestPageContent() {
-  console.log("CocBot: Requesting page content");
+  return new Promise((resolve, reject) => {
+    console.log("CocBot: Requesting page content");
 
-  // reset questions
-  // state.generatedQuestions = null;
-  // const questionsContainer = document.querySelector(".generated-questions");
-  // if (questionsContainer) {
-  //   questionsContainer.style.display = "none";
-  // }
+    // Increment the retry attempt counter
+    state.contentFetchAttempts++;
 
-  // track attempts
-  state.contentFetchAttempts++;
+    // Clear any previous content to force fresh extraction
+    state.pageContent = null;
 
-  // Clear the previous content to force a fresh extraction
-  state.pageContent = null;
+    // Internal function that performs the actual extraction logic (with retry support)
+    function tryFetch() {
+      chrome.runtime.sendMessage(
+        { action: "extract_page_content", forceRefresh: true },
+        (response) => {
+          // No response from background script
+          if (!response) {
+            console.error("CocBot: No response from background script");
+            return reject("No response from background script");
+          }
 
-  chrome.runtime.sendMessage(
-    { action: "extract_page_content", forceRefresh: true },
-    (response) => {
-      if (!response) {
-        console.error("CocBot: No response from background script");
-        return;
-      }
+          // Content extraction successful
+          if (response.success) {
+            console.log("CocBot: Got page content!");
+            state.pageContent = response.content; // Assign new page content
 
-      if (response && response.success) {
-        console.log("CocBot: Got page content!");
-        state.pageContent = response.content;
+            // Update UI and reset retry counter
+            updateContentStatus();
+            state.contentFetchAttempts = 0;
 
-        // update ui
-        updateContentStatus();
+            return resolve(response.content);
+          }
 
-        // reset counter on success
-        state.contentFetchAttempts = 0;
-      } else {
-        console.log(
-          "CocBot: Content extraction failed:",
-          response?.error || "Unknown error"
-        );
+          // If there's partial content (e.g., a title), use it anyway
+          if (response.content && response.content.title) {
+            console.log("CocBot: Using partial content result");
+            state.pageContent = {
+              ...response.content,
+              extractionSuccess: false,
+            };
 
-        // If we have a partial content result, still use it
-        if (response.content && response.content.title) {
-          console.log("CocBot: Using partial content result");
-          state.pageContent = response.content;
-          state.pageContent.extractionSuccess = false;
-          updateContentStatus();
+            updateContentStatus();
+            return resolve(state.pageContent);
+          }
+
+          // Retry logic: check if more attempts are allowed
+          if (state.contentFetchAttempts < state.maxContentFetchAttempts) {
+            console.warn(
+              `CocBot: Will retry in 2 seconds (attempt ${state.contentFetchAttempts} of ${state.maxContentFetchAttempts})`
+            );
+
+            setTimeout(tryFetch, 2000);
+          } else {
+            // Exhausted all retry attempts
+            console.error(
+              "CocBot: Max content fetch attempts reached, giving up"
+            );
+            return reject("Max content fetch attempts reached");
+          }
         }
-
-        // retry up to max attempts
-        if (state.contentFetchAttempts < state.maxContentFetchAttempts) {
-          console.log(
-            `CocBot: Will retry in 2 seconds (attempt ${state.contentFetchAttempts} of ${state.maxContentFetchAttempts})`
-          );
-          setTimeout(() => {
-            requestPageContent();
-          }, 2000);
-        } else {
-          console.error(
-            "CocBot: Max content fetch attempts reached, giving up"
-          );
-        }
-      }
+      );
     }
-  );
+
+    // Start the first attempt
+    tryFetch();
+  });
 }
 
 // display content in sidebar
@@ -183,7 +194,11 @@ function buildContextIndicator() {
     </svg>
   `;
   refreshBtn.addEventListener("click", () => {
-    requestPageContent();
+    requestPageContent().then(() => {
+      // reset questions
+      resetSuggestedQuestionsContainer();
+      state.generatedQuestions = {};
+    });
   });
 
   indicator.appendChild(favicon);

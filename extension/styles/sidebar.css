@@ -2023,6 +2023,8 @@ input:checked + .slider:before {
   opacity: 1.1;
 }
 
+/* TOAST STYLING */
+
 .toast {
   position: fixed;
   top: 24px;
@@ -2037,16 +2039,12 @@ input:checked + .slider:before {
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
   z-index: 99999;
 
-  /* Size based on content with constraints */
   width: fit-content;
   max-width: 90vw;
-  min-width: 200px; /* Set a reasonable minimum instead of 60vw */
+  min-width: 200px;
 
-  /* Text wrapping */
   white-space: normal;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  hyphens: auto;
+  word-break: break-word;
 }
 
 .toast-icon {

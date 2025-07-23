@@ -197,25 +197,25 @@ export async function switchLanguage(language) {
 
   await updatePageLanguage();
 
-  state.generatedQuestions = null;
-  const questionsContainer = document.querySelector(".generated-questions");
-  if (questionsContainer) {
-    const buttonContainer = document.querySelector(
-      ".question-buttons-container"
-    );
-    if (buttonContainer) {
-      buttonContainer.innerHTML = `
-        <div class="question-loading">
-          <div class="spinner-small"></div>
-          <span data-i18n="generatingQuestions">${translate(
-            "generatingQuestions"
-          )}</span>
-        </div>
-      `;
-    }
+  // state.generatedQuestions[language] = [];
+  // const questionsContainer = document.querySelector(".generated-questions");
+  // if (questionsContainer) {
+  //   const buttonContainer = document.querySelector(
+  //     ".question-buttons-container"
+  //   );
+  //   if (buttonContainer) {
+  //     buttonContainer.innerHTML = `
+  //       <div class="question-loading">
+  //         <div class="spinner-small"></div>
+  //         <span data-i18n="generatingQuestions">${translate(
+  //           "generatingQuestions"
+  //         )}</span>
+  //       </div>
+  //     `;
+  //   }
 
-    questionsContainer.style.display = "block";
-  }
+  //   questionsContainer.style.display = "block";
+  // }
 
   return translate("languageChanged");
 }
