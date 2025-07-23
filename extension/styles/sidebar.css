@@ -61,6 +61,10 @@ body {
   transition: width 0.2s ease;
 }
 
+.full-screen {
+  min-height: 100vh;
+}
+
 /* grab handle for resize */
 .resize-handle {
   position: absolute;
@@ -120,7 +124,7 @@ body.sidebar-resizing * {
   z-index: 10001;
 }
 
-/* buttons in header */
+/* ICON BUTTONS STYLING */
 .icon-button {
   background-color: var(--muted);
   color: var(--muted-foreground);
@@ -144,7 +148,7 @@ body.sidebar-resizing * {
   color: var(--primary-foreground);
 }
 
-/* account button */
+/* ACCOUNT BUTTON */
 #account-button {
   background-color: var(--muted);
   color: var(--muted-foreground);
@@ -160,22 +164,6 @@ body.sidebar-resizing * {
 }
 
 #account-button.active {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
-}
-
-/* content view button */
-#view-content-button {
-  background-color: var(--muted);
-  color: var(--muted-foreground);
-  transition: background-color 0.2s, color 0.2s;
-}
-
-#view-content-button:hover {
-  opacity: 0.8;
-}
-
-#view-content-button.active {
   background-color: var(--primary);
   color: var(--primary-foreground);
 }
@@ -209,6 +197,7 @@ body.sidebar-resizing * {
   background-color: var(--background-color, #ffffff);
   border-radius: 0.5rem;
 }
+
 .config-title {
   font-size: 1.25rem;
   font-weight: 600;
@@ -216,31 +205,37 @@ body.sidebar-resizing * {
   color: var(--text-color, #111827);
   text-align: center;
 }
+
 .config-form {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
 }
+
 .form-group {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
 }
+
 .form-label {
   font-size: 0.875rem;
   font-weight: 500;
   color: var(--text-color, #111827);
 }
+
 .help-text {
   font-size: 0.75rem;
   color: var(--muted-color, #6b7280);
   margin-top: 0.25rem;
 }
+
 .slider-container {
   padding: 0.5rem 0;
   margin: 0.5rem 0;
   position: relative;
 }
+
 .slider {
   appearance: none;
   width: 100%;
@@ -252,6 +247,7 @@ body.sidebar-resizing * {
   position: relative;
   z-index: 2;
 }
+
 .slider::-webkit-slider-thumb {
   appearance: none;
   width: 1rem;
@@ -263,11 +259,13 @@ body.sidebar-resizing * {
   position: relative;
   z-index: 3;
 }
+
 .slider::-webkit-slider-thumb:hover {
   background: var(--primary-hover, #3a76d8);
   transform: scale(1.1);
 }
-.slider-markers {
+
+/* .slider-markers {
   display: flex;
   justify-content: space-between;
   width: calc(100% - 16px);
@@ -276,16 +274,32 @@ body.sidebar-resizing * {
   margin: 12px 8px 0 8px;
   position: relative;
   padding-top: 4px;
+} */
+
+.slider-markers {
+  position: absolute;
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  left: 0;
+  bottom: 0;
+  font-size: 0.75rem;
+  color: #888;
+  pointer-events: none;
 }
+
 .slider-markers span:nth-child(1) {
   transform: translateX(0);
 }
+
 .slider-markers span:nth-child(4) {
   transform: translateX(0);
 }
+
 .response-style-group {
   margin-top: 1rem;
 }
+
 .radio-options {
   display: flex;
   flex-direction: column;
@@ -1308,7 +1322,7 @@ body.sidebar-resizing * {
   color: #76c152;
 }
 
-.slider:before {
+/* .slider:before {
   position: absolute;
   content: "";
   height: 14px;
@@ -1317,7 +1331,7 @@ body.sidebar-resizing * {
   bottom: 3px;
   background-color: white;
   transition: 0.4s;
-}
+} */
 
 input:checked + .slider {
   background-color: var(--primary);
@@ -2007,4 +2021,65 @@ input:checked + .slider:before {
 
 .chat-context-refresh-btn:hover {
   opacity: 1.1;
+}
+
+.toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background-color: var(--primary-foreground);
+  padding: 12px 20px;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  z-index: 99999;
+
+  /* Size based on content with constraints */
+  width: fit-content;
+  max-width: 90vw;
+  min-width: 200px; /* Set a reasonable minimum instead of 60vw */
+
+  /* Text wrapping */
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+.toast-icon {
+  width: 16px;
+  height: 16px;
+  border: none;
+}
+
+.toast.toast-success .toast-icon {
+  color: #28a745;
+}
+
+.toast.toast-error .toast-icon {
+  color: #dc3545;
+}
+
+.toast.toast-info .toast-icon {
+  color: #007bff;
+}
+
+/* Spinner animation for loading */
+.toast-spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--foreground);
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: toast-spin 0.8s linear infinite;
+  display: inline-block;
+}
+
+@keyframes toast-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }

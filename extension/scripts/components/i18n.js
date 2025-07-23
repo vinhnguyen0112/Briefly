@@ -121,12 +121,12 @@ const translations = {
 
     welcome: "Hỏi tôi bất kì thứ gì về trang web này",
 
-    responseLength: "Độ dài phản hồi tối đa:",
+    responseLength: "Độ Dài Phản Hồi Tối Đa:",
     words: "từ",
-    responseStyle: "Phong cách phản hồi",
-    conversational: "Thân mật",
-    educational: "Giáo dục",
-    technical: "Kỹ thuật",
+    responseStyle: "Phong Cách Phản Hồi",
+    conversational: "Thân Mật",
+    educational: "Giáo Dục",
+    technical: "Kỹ Thuật",
     responseLanguage: "Ngôn ngữ phản hồi",
     conversationalDesc:
       "Giải thích thân thiện, dễ hiểu bằng ngôn ngữ đời thường",

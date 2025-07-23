@@ -420,22 +420,143 @@ export function clearChatHistoryList() {
 }
 
 async function showFeedbackModal(messageId) {
-  console.log("Message ID for feedback: ", messageId);
   const userSession = await getUserSession();
   if (!userSession) {
-    alert("you need to login to give feedback");
+    // TODO: Change to message passing to invoke dialog
+    alert("You need to login to give feedback.");
     return;
   }
 
+  // Prevent opening multiple modals
   if (document.getElementById("cocbot-feedback-modal")) return;
 
-  // Add blur to sidebar
   const sidebar = document.querySelector(".sidebar");
   if (sidebar) sidebar.classList.add("cocbot-blur");
 
+  // Create modal element
   const modal = document.createElement("div");
   modal.id = "cocbot-feedback-modal";
-  modal.innerHTML = `
+  modal.innerHTML = generateFeedbackModalHTML();
+  document.body.appendChild(modal);
+
+  // Close modal and remove blur
+  function closeModal() {
+    modal.remove();
+    if (sidebar) sidebar.classList.remove("cocbot-blur");
+  }
+
+  // Event: Click outside to close
+  modal
+    .querySelector(".cocbot-modal-backdrop")
+    .addEventListener("click", closeModal);
+
+  // Prevent modal click from closing
+  modal
+    .querySelector(".cocbot-modal-content")
+    .addEventListener("click", (e) => {
+      e.stopPropagation();
+    });
+
+  // Star rating logic
+  let selectedRate = null;
+  const ratingItems = modal.querySelectorAll(".feedback-rating-item");
+  const submitBtn = modal.querySelector(".feedback-submit");
+  const cancelBtn = modal.querySelector(".feedback-cancel");
+
+  submitBtn.disabled = true;
+
+  ratingItems.forEach((item, index) => {
+    item.addEventListener("mouseenter", () => updateStars(index));
+    item.addEventListener("mouseleave", restoreStars);
+    item.addEventListener("click", () => selectStars(index));
+  });
+
+  cancelBtn.onclick = closeModal;
+
+  submitBtn.onclick = async () => {
+    if (submitBtn.disabled) return;
+
+    const stars = selectedRate;
+    const comment = modal.querySelector(".feedback-reason-input").value.trim();
+
+    const toastId = showToast({
+      message: "Submitting feedback",
+      type: "loading",
+      duration: null,
+    });
+
+    try {
+      const response = await sendRequest(
+        `https://dev-capstone-2025.coccoc.com/api/feedback`,
+        {
+          method: "POST",
+          body: { stars, comment, message_id: parseInt(messageId) },
+        }
+      );
+
+      if (response.success) {
+        updateToast(toastId, {
+          message: "Feedback submitted",
+          type: "success",
+          duration: 2000,
+        });
+      } else {
+        updateToast(toastId, {
+          message: "Something went wrong, please try again later",
+          type: "error",
+          duration: 2000,
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      updateToast(toastId, {
+        message: "Something went wrong, please try again later",
+        type: "error",
+        duration: 2000,
+      });
+    } finally {
+      closeModal();
+    }
+  };
+
+  // Helper: Fill stars on hover
+  function updateStars(hoverIndex) {
+    ratingItems.forEach((el, i) => {
+      el.classList.toggle("hovered", i <= hoverIndex);
+      el.classList.toggle(
+        "selected",
+        selectedRate && i < selectedRate && i <= hoverIndex
+      );
+    });
+  }
+
+  // Helper: Restore stars on leave
+  function restoreStars() {
+    ratingItems.forEach((el, i) => {
+      el.classList.remove("hovered");
+      el.classList.toggle("selected", selectedRate && i < selectedRate);
+    });
+  }
+
+  // Helper: Select/deselect stars
+  function selectStars(index) {
+    if (selectedRate === index + 1) {
+      selectedRate = null;
+      ratingItems.forEach((el) => el.classList.remove("selected"));
+      submitBtn.disabled = true;
+    } else {
+      selectedRate = index + 1;
+      ratingItems.forEach((el, i) => {
+        el.classList.toggle("selected", i < selectedRate);
+      });
+      submitBtn.disabled = false;
+    }
+  }
+}
+
+// Extracted HTML rendering logic
+function generateFeedbackModalHTML() {
+  return `
     <div class="cocbot-modal-backdrop"></div>
     <div class="cocbot-modal-content feedback-modal">
       <h2 class="feedback-title" data-i18n="feedbackTitle">Give Feedback</h2>
@@ -451,115 +572,6 @@ async function showFeedbackModal(messageId) {
       </div>
     </div>
   `;
-  document.body.appendChild(modal);
-
-  // Đóng modal khi click backdrop
-  modal
-    .querySelector(".cocbot-modal-backdrop")
-    .addEventListener("click", () => {
-      modal.remove();
-      if (sidebar) sidebar.classList.remove("cocbot-blur");
-    });
-
-  // Ngăn nổi bọt khi click vào modal content
-  modal
-    .querySelector(".cocbot-modal-content")
-    .addEventListener("click", (e) => {
-      e.stopPropagation();
-    });
-
-  // Star rating logic
-  const ratingItems = modal.querySelectorAll(".feedback-rating-item");
-  let selectedRate = null;
-  const submitBtn = modal.querySelector(".feedback-submit");
-  submitBtn.disabled = true; // Disable submit ban đầu
-
-  ratingItems.forEach((item, idx) => {
-    item.addEventListener("mouseenter", () => {
-      ratingItems.forEach((el, i) => {
-        el.classList.toggle("hovered", i <= idx);
-        el.classList.toggle(
-          "selected",
-          selectedRate && i < selectedRate && i <= idx
-        );
-      });
-    });
-    item.addEventListener("mouseleave", () => {
-      ratingItems.forEach((el) => el.classList.remove("hovered"));
-      ratingItems.forEach((el, i) => {
-        el.classList.toggle("selected", selectedRate && i < selectedRate);
-      });
-    });
-    item.addEventListener("click", () => {
-      if (selectedRate === idx + 1) {
-        selectedRate = null;
-        ratingItems.forEach((el) => el.classList.remove("selected"));
-        submitBtn.disabled = true; // Disable khi bỏ chọn
-      } else {
-        selectedRate = idx + 1;
-        ratingItems.forEach((el, i) => {
-          el.classList.toggle("selected", i < selectedRate);
-        });
-        submitBtn.disabled = false; // Enable khi đã chọn
-      }
-    });
-  });
-
-  // Submit/cancel logic
-  submitBtn.onclick = async () => {
-    if (submitBtn.disabled) return;
-    const stars = selectedRate;
-    const comment = modal.querySelector(".feedback-reason-input").value.trim();
-
-    try {
-      const response = await sendRequest(
-        `https://dev-capstone-2025.coccoc.com/api/feedback`,
-        {
-          method: "POST",
-          body: {
-            stars,
-            comment,
-            message_id: parseInt(messageId),
-          },
-        }
-      );
-      if (response.success) {
-        showToast("Feedback received!");
-        modal.remove();
-        if (sidebar) sidebar.classList.remove("cocbot-blur");
-      } else {
-        showToast("Something went wrong, please try again later.");
-      }
-    } catch (err) {
-      console.error(err);
-      showToast("Something went wrong, please try again later.");
-    }
-  };
-
-  function showToast(message) {
-    const toast = document.createElement("div");
-    toast.textContent = message;
-    toast.style.position = "fixed";
-    toast.style.top = "24px";
-    toast.style.left = "50%";
-    toast.style.transform = "translateX(-50%)";
-    toast.style.background = "#222";
-    toast.style.color = "#fff";
-    toast.style.padding = "12px 24px";
-    toast.style.borderRadius = "8px";
-    toast.style.zIndex = 99999;
-    toast.style.fontSize = "1rem";
-    toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
-    toast.style.opacity = "0.92";
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2200);
-  }
-
-  const cancelBtn = modal.querySelector(".feedback-cancel");
-  cancelBtn.onclick = () => {
-    modal.remove();
-    if (sidebar) sidebar.classList.remove("cocbot-blur");
-  };
 }
 
 /**
@@ -578,6 +590,96 @@ function renderStars() {
       ${[1, 2, 3, 4, 5].map((i) => starSVG.replace("{RATE}", i)).join("")}
     </div>
   `;
+}
+
+/**
+ * Show a dynamic toast notification
+ * @param {Object} options
+ * @param {string} options.message The main toast text
+ * @param {'info'|'success'|'error'|'loading'} [options.type='info'] Toast category
+ * @param {number|null} [options.duration] Duration in ms. If null, stays until removed manually
+ * @returns {string} toastId Can be used to update/dismiss later
+ */
+export function showToast({ message, type = "info", duration = 2000 }) {
+  const toastId = `toast-${state.toastIdCounter++}`;
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.id = toastId;
+
+  const icon = getToastIcon(type);
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-message">${message}</span>
+  `;
+
+  document.body.appendChild(toast);
+
+  if (duration !== null) {
+    setTimeout(() => removeToast(toastId), duration);
+  }
+
+  return toastId;
+}
+
+/**
+ * Update an existing toast by ID
+ * @param {string} toastId
+ * @param {Object} options
+ * @param {string} [options.message]
+ * @param {'info'|'success'|'error'|'loading'} [options.type]
+ * @param {number|null} [options.duration] Reset or extend timeout
+ */
+export function updateToast(toastId, { message, type, duration }) {
+  const toast = document.getElementById(toastId);
+  if (!toast) return;
+
+  if (message) toast.querySelector(".toast-message").textContent = message;
+  if (type) {
+    toast.className = `toast toast-${type}`;
+    toast.querySelector(".toast-icon").innerHTML = getToastIcon(type);
+  }
+
+  if (duration !== undefined) {
+    setTimeout(() => removeToast(toastId), duration);
+  }
+}
+
+/**
+ * Remove a toast by ID
+ * @param {string} toastId
+ */
+export function removeToast(toastId) {
+  const toast = document.getElementById(toastId);
+  if (toast) toast.remove();
+}
+
+/**
+ * Get icon HTML by type
+ */
+function getToastIcon(type) {
+  switch (type) {
+    case "success":
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="toast-icon">
+          <path fill="currentColor" d="M434.8 70.1c14.3 10.4 17.5 30.4 7.1 44.7l-256 352c-5.5 7.6-14 12.3-23.4 13.1s-18.5-2.7-25.1-9.3l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l101.5 101.5 234-321.7c10.4-14.3 30.4-17.5 44.7-7.1z"/>
+        </svg>
+        `;
+    case "error":
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" class="toast-icon">
+          <path fill="currentColor" d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/>
+        </svg>
+      `;
+    case "loading":
+      return `<span class="toast-spinner"></span>`;
+    case "info":
+    default:
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 512" class="toast-icon">
+          <path fill="currentColor" d="M48 48a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zM0 192c0-17.7 14.3-32 32-32l64 0c17.7 0 32 14.3 32 32l0 256 32 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 512c-17.7 0-32-14.3-32-32s14.3-32 32-32l32 0 0-224-32 0c-17.7 0-32-14.3-32-32z"/>
+        </svg>
+      `;
+  }
 }
 
 // format markdown-like text

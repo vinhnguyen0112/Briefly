@@ -5,7 +5,6 @@ import {
   saveConfig,
   resetCurrentChatState,
   setCurrentChatState,
-  addToScreenStack,
   resetPaginationState,
   getUserSession,
 } from "./state.js";
@@ -18,6 +17,9 @@ import {
   handleContentMessage,
   clearMessagesFromChatContainer,
   clearChatHistoryList,
+  showToast,
+  removeToast,
+  updateToast,
 } from "./ui-handler.js";
 import { processUserQuery } from "./api-handler.js";
 import {
@@ -50,31 +52,16 @@ export function setupEventListeners() {
   setupQuickActionsEvent();
 
   elements.configButton.addEventListener("click", () => {
-    // Close
     if (state.isConfigOpen) {
       closeAllScreensAndPanels();
-    }
-    // Open
-    else {
+    } else {
       closeAllScreensAndPanels();
       elements.chatScreen.style.display = "none";
-
       elements.configContainer.style.display = "flex";
       elements.configButton.classList.add("active");
       state.isConfigOpen = true;
 
-      renderConfigUI("config-content", (newConfig) => {
-        state.currentConfig = newConfig;
-        elements.configContainer.style.display = "none";
-        elements.configButton.classList.remove("active");
-        state.isConfigOpen = false;
-        addMessageToChat({
-          message: "Settings updated! I'll use these for future responses.",
-          role: "assistant",
-        });
-
-        elements.chatScreen.style.display = "flex";
-      });
+      initializeConfigUI();
     }
   });
 
@@ -774,23 +761,39 @@ function showRenameChatInput(item, chat) {
     isRenaming = true;
 
     const newTitle = input.value.trim();
+    // If user actually gave a new name
     if (newTitle && newTitle !== currentTitle) {
+      // Show toast
+      const toastId = showToast({
+        message: "Renaming chat",
+        type: "loading",
+        duration: null,
+      });
       try {
         await chatHandler.updateChat(chat.id, { title: newTitle });
         await idbHandler.updateChat(chat.id, { title: newTitle });
         state.chatHistory = state.chatHistory.map((c) =>
           c.id === chat.id ? { ...c, title: newTitle } : c
         );
+
+        // Update toast to display success
+        updateToast(toastId, {
+          message: "Rename successfully",
+          type: "success",
+          duration: 2000,
+        });
       } catch (err) {
         console.error(err);
-        showPopupDialog({
-          title: "Error",
-          message: "Failed to update chat title. Please try again later",
+        updateToast(toastId, {
+          message: "Something went wrong, please try again",
+          type: "error",
+          duration: 2000,
         });
         isRenaming = false;
         return;
       }
     }
+
     input.outerHTML = `<div class="chat-history-title">${
       newTitle || currentTitle
     }</div>`;
@@ -819,13 +822,35 @@ function showDeleteChatDialog(chat) {
         label: "Yes",
         style: "danger",
         eventHandler: async () => {
-          await chatHandler.deleteChatById(chat.id);
-          await idbHandler.deleteChatById(chat.id);
-          state.chatHistory = state.chatHistory.filter((c) => c.id !== chat.id);
-          removeChatHistoryItem(chat.id);
-          if (chat.id === state.currentChat.id) {
-            clearMessagesFromChatContainer();
-            resetCurrentChatState();
+          const toastId = showToast({
+            message: "Deleting chat",
+            type: "loading",
+            duration: null,
+          });
+          try {
+            await chatHandler.deleteChatById(chat.id);
+            await idbHandler.deleteChatById(chat.id);
+            state.chatHistory = state.chatHistory.filter(
+              (c) => c.id !== chat.id
+            );
+            removeChatHistoryItem(chat.id);
+            if (chat.id === state.currentChat.id) {
+              clearMessagesFromChatContainer();
+              resetCurrentChatState();
+            }
+
+            updateToast(toastId, {
+              message: "Chat deleted",
+              type: "success",
+              duration: 2000,
+            });
+          } catch (err) {
+            console.error(err);
+            updateToast(toastId, {
+              message: "Something went wrong, please try again",
+              type: "error",
+              duration: 2000,
+            });
           }
         },
       },
@@ -1077,130 +1102,213 @@ function closeSignInAlertPopup() {
   elements.signInAlertOverlay.style.display = "none";
 }
 
-// External function for rendering UI config
-function renderConfigUI(containerId, onSave) {
-  const container = document.getElementById(containerId);
+function createSliderMarkers(min, max, step) {
+  const markerContainer = document.getElementById("slider-markers");
+  markerContainer.innerHTML = ""; // Clear existing
 
-  if (!container) {
-    console.error("CocBot: Config container not found");
-    return;
-  }
+  const totalSteps = (max - min) / step;
+  const values = [min, min + (max - min) / 3, min + ((max - min) * 2) / 3, max];
 
+  values.forEach((val) => {
+    const marker = document.createElement("span");
+    marker.textContent = val;
+    marker.style.position = "absolute";
+    marker.style.left = `${((val - min) / (max - min)) * 100}%`;
+    marker.style.transform = "translateX(-50%)";
+    markerContainer.appendChild(marker);
+  });
+}
+
+function initializeConfigUI() {
   getConfig().then((config) => {
     const maxWordCount = config?.maxWordCount || 150;
     const responseStyle = config?.responseStyle || "conversational";
 
-    container.innerHTML = `
-  <div class="config-section">
-    <div class="config-form">
-      <div class="form-group">
-        <label for="max-word-count" class="form-label">
-          <span data-i18n="responseLength">Maximum Response Length:</span>
-          <span id="word-count-value">${maxWordCount}</span>
-          <span data-i18n="words">words</span>
-        </label>
-        <div class="slider-container">
-          <input type="range" id="max-word-count" min="50" max="500" step="10" value="${maxWordCount}" class="slider">
-          <div class="slider-markers">
-            <span>50</span>
-            <span>150</span>
-            <span>300</span>
-            <span>500</span>
-          </div>
-        </div>
-        <div class="help-text" data-i18n="responseVerbosity">Control how verbose the answers will be</div>
-      </div>
-      
-      <div class="form-group response-style-group">
-        <label class="form-label" data-i18n="responseStyle">Response Style:</label>
-        <div class="radio-options">
-          <label class="radio-card ${
-            responseStyle === "conversational" ? "selected" : ""
-          }" data-style="conversational">
-            <input type="radio" name="response-style" value="conversational" ${
-              responseStyle === "conversational" ? "checked" : ""
-            }>
-            <div class="radio-card-content">
-              <span class="radio-card-title" data-i18n="conversational">Conversational</span>
-              <span class="radio-card-desc" data-i18n="conversationalDesc">Friendly, easy-to-understand explanations using everyday language</span>
-            </div>
-          </label>
-          <label class="radio-card ${
-            responseStyle === "educational" ? "selected" : ""
-          }" data-style="educational">
-            <input type="radio" name="response-style" value="educational" ${
-              responseStyle === "educational" ? "checked" : ""
-            }>
-            <div class="radio-card-content">
-              <span class="radio-card-title" data-i18n="educational">Educational</span>
-              <span class="radio-card-desc" data-i18n="educationalDesc">Structured explanations with clear points and examples</span>
-            </div>
-          </label>
-          <label class="radio-card ${
-            responseStyle === "technical" ? "selected" : ""
-          }" data-style="technical">
-            <input type="radio" name="response-style" value="technical" ${
-              responseStyle === "technical" ? "checked" : ""
-            }>
-            <div class="radio-card-content">
-              <span class="radio-card-title" data-i18n="technical">Technical</span>
-              <span class="radio-card-desc" data-i18n="technicalDesc">Precise terminology and thorough analysis for advanced understanding</span>
-            </div>
-          </label>
-        </div>
-      </div>
-      
-      <div class="form-actions">
-        <button id="save-config" type="button" class="btn-primary" data-i18n="saveSettings">Save Settings</button>
-      </div>
-    </div>
-  </div>
-`;
+    createSliderMarkers(50, 500, 10);
 
-    // Update word count display as slider changes
     const slider = document.getElementById("max-word-count");
     const wordCountValue = document.getElementById("word-count-value");
+    slider.value = maxWordCount;
+    wordCountValue.textContent = maxWordCount;
 
     slider.addEventListener("input", () => {
       wordCountValue.textContent = slider.value;
     });
 
-    // Highlight selected radio card
-    const radioCards = document.querySelectorAll(".radio-card");
-    radioCards.forEach((card) => {
-      card.addEventListener("click", () => {
-        // Select the radio input
-        const radioInput = card.querySelector('input[type="radio"]');
-        radioInput.checked = true;
+    // Set selected response style
+    const radioInputs = document.querySelectorAll(
+      'input[name="response-style"]'
+    );
+    radioInputs.forEach((input) => {
+      input.checked = input.value === responseStyle;
+      input.closest(".radio-card").classList.toggle("selected", input.checked);
+    });
 
-        // Update visual selection
-        radioCards.forEach((c) => c.classList.remove("selected"));
+    // Update selection visuals on click
+    document.querySelectorAll(".radio-card").forEach((card) => {
+      card.addEventListener("click", () => {
+        const radio = card.querySelector('input[type="radio"]');
+        radio.checked = true;
+        document
+          .querySelectorAll(".radio-card")
+          .forEach((c) => c.classList.remove("selected"));
         card.classList.add("selected");
       });
     });
 
     document.getElementById("save-config").addEventListener("click", () => {
-      const maxWordCount = parseInt(
-        document.getElementById("max-word-count").value
-      );
-      const responseStyle = document.querySelector(
+      const newWordCount = parseInt(slider.value);
+      const selectedStyle = document.querySelector(
         'input[name="response-style"]:checked'
-      ).value;
-
-      // Use a default personality that aligns with the backend
-      const personality =
-        "Be helpful and informative, focusing on the content.";
+      )?.value;
 
       const newConfig = {
         ...config,
-        personality,
-        maxWordCount,
-        responseStyle,
+        personality: "Be helpful and informative, focusing on the content.",
+        maxWordCount: newWordCount,
+        responseStyle: selectedStyle,
       };
 
       saveConfig(newConfig).then(() => {
-        if (onSave) onSave(newConfig);
+        state.currentConfig = newConfig;
+        elements.configContainer.style.display = "none";
+        elements.configButton.classList.remove("active");
+        state.isConfigOpen = false;
+        elements.chatScreen.style.display = "flex";
+
+        addMessageToChat({
+          message: "Settings updated! I'll use these for future responses.",
+          role: "assistant",
+        });
       });
     });
   });
 }
+
+// External function for rendering UI config
+// function renderConfigUI(containerId, onSave) {
+//   const container = document.getElementById(containerId);
+
+//   if (!container) {
+//     console.error("CocBot: Config container not found");
+//     return;
+//   }
+
+//   getConfig().then((config) => {
+//     const maxWordCount = config?.maxWordCount || 150;
+//     const responseStyle = config?.responseStyle || "conversational";
+
+//     container.innerHTML = `
+//   <div class="config-section">
+//     <div class="config-form">
+//       <div class="form-group">
+//         <label for="max-word-count" class="form-label">
+//           <span data-i18n="responseLength">Maximum Response Length:</span>
+//           <span id="word-count-value">${maxWordCount}</span>
+//           <span data-i18n="words">words</span>
+//         </label>
+//         <div class="slider-container">
+//           <input type="range" id="max-word-count" min="50" max="500" step="10" value="${maxWordCount}" class="slider">
+//           <div class="slider-markers">
+//             <span>50</span>
+//             <span>150</span>
+//             <span>300</span>
+//             <span>500</span>
+//           </div>
+//         </div>
+//         <div class="help-text" data-i18n="responseVerbosity">Control how verbose the answers will be</div>
+//       </div>
+
+//       <div class="form-group response-style-group">
+//         <label class="form-label" data-i18n="responseStyle">Response Style:</label>
+//         <div class="radio-options">
+//           <label class="radio-card ${
+//             responseStyle === "conversational" ? "selected" : ""
+//           }" data-style="conversational">
+//             <input type="radio" name="response-style" value="conversational" ${
+//               responseStyle === "conversational" ? "checked" : ""
+//             }>
+//             <div class="radio-card-content">
+//               <span class="radio-card-title" data-i18n="conversational">Conversational</span>
+//               <span class="radio-card-desc" data-i18n="conversationalDesc">Friendly, easy-to-understand explanations using everyday language</span>
+//             </div>
+//           </label>
+//           <label class="radio-card ${
+//             responseStyle === "educational" ? "selected" : ""
+//           }" data-style="educational">
+//             <input type="radio" name="response-style" value="educational" ${
+//               responseStyle === "educational" ? "checked" : ""
+//             }>
+//             <div class="radio-card-content">
+//               <span class="radio-card-title" data-i18n="educational">Educational</span>
+//               <span class="radio-card-desc" data-i18n="educationalDesc">Structured explanations with clear points and examples</span>
+//             </div>
+//           </label>
+//           <label class="radio-card ${
+//             responseStyle === "technical" ? "selected" : ""
+//           }" data-style="technical">
+//             <input type="radio" name="response-style" value="technical" ${
+//               responseStyle === "technical" ? "checked" : ""
+//             }>
+//             <div class="radio-card-content">
+//               <span class="radio-card-title" data-i18n="technical">Technical</span>
+//               <span class="radio-card-desc" data-i18n="technicalDesc">Precise terminology and thorough analysis for advanced understanding</span>
+//             </div>
+//           </label>
+//         </div>
+//       </div>
+
+//       <div class="form-actions">
+//         <button id="save-config" type="button" class="btn-primary" data-i18n="saveSettings">Save Settings</button>
+//       </div>
+//     </div>
+//   </div>
+// `;
+
+//     // Update word count display as slider changes
+//     const slider = document.getElementById("max-word-count");
+//     const wordCountValue = document.getElementById("word-count-value");
+
+//     slider.addEventListener("input", () => {
+//       wordCountValue.textContent = slider.value;
+//     });
+
+//     // Highlight selected radio card
+//     const radioCards = document.querySelectorAll(".radio-card");
+//     radioCards.forEach((card) => {
+//       card.addEventListener("click", () => {
+//         // Select the radio input
+//         const radioInput = card.querySelector('input[type="radio"]');
+//         radioInput.checked = true;
+
+//         // Update visual selection
+//         radioCards.forEach((c) => c.classList.remove("selected"));
+//         card.classList.add("selected");
+//       });
+//     });
+
+//     document.getElementById("save-config").addEventListener("click", () => {
+//       const maxWordCount = parseInt(
+//         document.getElementById("max-word-count").value
+//       );
+//       const responseStyle = document.querySelector(
+//         'input[name="response-style"]:checked'
+//       ).value;
+
+//       // Use a default personality that aligns with the backend
+//       const personality =
+//         "Be helpful and informative, focusing on the content.";
+
+//       const newConfig = {
+//         ...config,
+//         personality,
+//         maxWordCount,
+//         responseStyle,
+//       };
+
+//       saveConfig(newConfig).then(() => {
+//         if (onSave) onSave(newConfig);
+//       });
+//     });
+//   });
+// }
