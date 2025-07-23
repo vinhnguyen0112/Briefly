@@ -507,7 +507,8 @@ async function showFeedbackModal(messageId) {
     const comment = modal.querySelector(".feedback-reason-input").value.trim();
 
     const toastId = showToast({
-      message: "Submitting feedback",
+      message:
+        state.language === "en" ? "Submitting feedback" : "Đang gửi góp ý",
       type: "loading",
       duration: null,
     });
@@ -523,13 +524,17 @@ async function showFeedbackModal(messageId) {
 
       if (response.success) {
         updateToast(toastId, {
-          message: "Feedback submitted",
+          message:
+            state.language === "en" ? "Feedback submitted" : "Gửi thành công",
           type: "success",
           duration: 2000,
         });
       } else {
         updateToast(toastId, {
-          message: "Something went wrong, please try again later",
+          message:
+            state.language === "en"
+              ? "Something went wrong, please try again later"
+              : "Đã xảy ra lỗi, vui lòng thử lại sau",
           type: "error",
           duration: 2000,
         });
@@ -537,7 +542,10 @@ async function showFeedbackModal(messageId) {
     } catch (err) {
       console.error(err);
       updateToast(toastId, {
-        message: "Something went wrong, please try again later",
+        message:
+          state.language === "en"
+            ? "Something went wrong, please try again later"
+            : "Đã xảy ra lỗi, vui lòng thử lại sau",
         type: "error",
         duration: 2000,
       });
@@ -926,6 +934,7 @@ export function configureChatHistoryElementsOnAuthState(isAuth) {
               <button
                 id="close-chat-history-button"
                 class="icon-button"
+                data-i18n-title="close"
                 title="Close"
               >
                 <svg

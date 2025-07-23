@@ -292,11 +292,33 @@ function setupAuthenticationButtons() {
   // Google authentication button
   elements.googleLoginButtons.forEach((b) => {
     b.addEventListener("click", () => {
+      const toastId = showToast({
+        message:
+          state.language === "en"
+            ? "Signing in with Google..."
+            : "Đang đăng nhập với Google...",
+        type: "loading",
+        duration: null,
+      });
       chrome.runtime.sendMessage({ action: "google_login" }, (response) => {
         if (response.success) {
-          // Close the account popup & sign in alert
           closeAccountPopupUI();
           closeSignInAlertPopup();
+          updateToast(toastId, {
+            message:
+              state.language === "en"
+                ? "Signed in successfully"
+                : "Đăng nhập thành công",
+            type: "success",
+          });
+        } else {
+          updateToast(toastId, {
+            message:
+              state.language === "en"
+                ? "Google sign-in failed"
+                : "Đăng nhập Google thất bại",
+            type: "error",
+          });
         }
       });
     });
@@ -305,11 +327,33 @@ function setupAuthenticationButtons() {
   // Facebook authentication button
   elements.facebookLoginButtons.forEach((b) => {
     b.addEventListener("click", () => {
+      const toastId = showToast({
+        message:
+          state.language === "en"
+            ? "Signing in with Facebook..."
+            : "Đang đăng nhập với Facebook...",
+        type: "loading",
+        duration: null,
+      });
       chrome.runtime.sendMessage({ action: "facebook_login" }, (response) => {
         if (response.success) {
-          // Close the account popup & sign in alert
           closeAccountPopupUI();
           closeSignInAlertPopup();
+          updateToast(toastId, {
+            message:
+              state.language === "en"
+                ? "Signed in successfully"
+                : "Đăng nhập thành công",
+            type: "success",
+          });
+        } else {
+          updateToast(toastId, {
+            message:
+              state.language === "en"
+                ? "Facebook sign-in failed"
+                : "Đăng nhập Facebook thất bại",
+            type: "error",
+          });
         }
       });
     });
@@ -317,10 +361,27 @@ function setupAuthenticationButtons() {
 
   // Sign out button
   elements.signOutButton.addEventListener("click", () => {
+    const toastId = showToast({
+      message: state.language === "en" ? "Signing out..." : "Đang đăng xuất...",
+      type: "loading",
+      duration: null,
+    });
     chrome.runtime.sendMessage({ action: "sign_out" }, (response) => {
       if (response.success) {
-        // Close the account popup
         closeAccountPopupUI();
+        updateToast(toastId, {
+          message:
+            state.language === "en"
+              ? "Signed out successfully"
+              : "Đăng xuất thành công",
+          type: "success",
+        });
+      } else {
+        updateToast(toastId, {
+          message:
+            state.language === "en" ? "Sign out failed" : "Đăng xuất thất bại",
+          type: "error",
+        });
       }
     });
   });
@@ -769,7 +830,7 @@ function showRenameChatInput(item, chat) {
     if (newTitle && newTitle !== currentTitle) {
       // Show toast
       const toastId = showToast({
-        message: "Renaming chat",
+        message: state.language === "en" ? "Renaming chat" : "Đang sửa tên",
         type: "loading",
         duration: null,
       });
@@ -782,14 +843,20 @@ function showRenameChatInput(item, chat) {
 
         // Update toast to display success
         updateToast(toastId, {
-          message: "Rename successfully",
+          message:
+            state.language === "en"
+              ? "Rename successfully"
+              : "Sửa tên thành công",
           type: "success",
           duration: 2000,
         });
       } catch (err) {
         console.error(err);
         updateToast(toastId, {
-          message: "Something went wrong, please try again",
+          message:
+            state.language === "en"
+              ? "Something went wrong, please try again later"
+              : "Đã xảy ra lỗi, vui lòng thử lại sau",
           type: "error",
           duration: 2000,
         });
@@ -827,7 +894,7 @@ function showDeleteChatDialog(chat) {
         style: "danger",
         eventHandler: async () => {
           const toastId = showToast({
-            message: "Deleting chat",
+            message: state.language === "en" ? "Deleting chat" : "Đang xóa",
             type: "loading",
             duration: null,
           });
@@ -844,14 +911,20 @@ function showDeleteChatDialog(chat) {
             }
 
             updateToast(toastId, {
-              message: "Chat deleted sucessfully",
+              message:
+                state.language === "en"
+                  ? "Chat deleted sucessfully"
+                  : "Xóa thành công",
               type: "success",
               duration: 2000,
             });
           } catch (err) {
             console.error(err);
             updateToast(toastId, {
-              message: "Something went wrong, please try again",
+              message:
+                state.language === "en"
+                  ? "Something went wrong, please try again later"
+                  : "Đã xảy ra lỗi, vui lòng thử lại sau",
               type: "error",
               duration: 2000,
             });
@@ -959,6 +1032,7 @@ export function showPopupDialog(options) {
 
   popup.appendChild(content);
   dialogOverlay.appendChild(popup);
+
   document.body.appendChild(dialogOverlay);
 }
 

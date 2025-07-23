@@ -8,6 +8,11 @@ const translations = {
     save: "Save",
     cancel: "Cancel",
 
+    // Authentications
+    signOut: "Sign Out",
+    signInGoogle: "Sign In With Google",
+    signInFacebook: "Sign In With Facebook",
+
     pageContentViewer: "Page Content Viewer",
     apiKeySettings: "API Key Settings",
     responseSettings: "Response Settings",
@@ -27,14 +32,19 @@ const translations = {
     configure: "Configure",
     notes: "Notes",
 
+    refreshPageContext: "Refresh Page Context",
+
     askAnything: "Ask me anything...",
     writeNote: "Write your note here...",
     enterApiKey: "Enter OpenAI API Key",
 
     processingContent: "Processing page content...",
     generatingQuestions: "Generating questions...",
+
+    // Notes
     noNotes: "No notes for this page yet.",
     createFirstNote: "Create your first note",
+    addNote: "Add Note",
 
     enterApiKeyMessage: "Enter your OpenAI API key to use the assistant:",
 
@@ -76,6 +86,11 @@ const translations = {
     save: "Lưu",
     cancel: "Hủy",
 
+    // Authentications
+    signOut: "Đăng Xuất",
+    signInGoogle: "Đăng Nhập Với Google",
+    signInFacebook: "Đăng Nhập Với Facebook",
+
     pageContentViewer: "Trình Xem Nội Dung Trang",
     apiKeySettings: "Cài Đặt Khóa API",
     responseSettings: "Cài Đặt Phản Hồi",
@@ -95,14 +110,19 @@ const translations = {
     configure: "Cấu Hình",
     notes: "Ghi Chú",
 
+    refreshPageContext: "Tải Lại Nội Dung Trang",
+
     askAnything: "Hỏi tôi bất cứ điều gì...",
     writeNote: "Viết ghi chú của bạn tại đây...",
     enterApiKey: "Nhập Khóa API OpenAI",
 
     processingContent: "Đang xử lý nội dung trang...",
     generatingQuestions: "Đang tạo câu hỏi...",
+
+    // Notes
     noNotes: "Chưa có ghi chú nào cho trang này.",
     createFirstNote: "Tạo ghi chú đầu tiên",
+    addNote: "Thêm Ghi Chú",
 
     enterApiKeyMessage: "Nhập khóa API OpenAI của bạn để sử dụng trợ lý:",
 

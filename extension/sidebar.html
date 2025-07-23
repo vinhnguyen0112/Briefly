@@ -219,7 +219,12 @@
           <div class="notes-header">
             <h3 data-i18n="pageNotes">Page Notes</h3>
             <div class="notes-actions">
-              <button id="add-note-button" class="icon-button" title="Add Note">
+              <button
+                id="add-note-button"
+                class="icon-button"
+                data-i18n-title="addNote"
+                title="Add Note"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
                   width="16"
@@ -366,6 +371,7 @@
               <button
                 id="close-chat-history-button"
                 class="icon-button"
+                data-i18n-title="close"
                 title="Close"
               >
                 <svg
@@ -523,7 +529,7 @@
     <div id="account-popup" class="popup" style="display: none">
       <div class="popup-content">
         <button id="sign-out-button" class="button button-secondary">
-          Sign Out
+          <span data-i18n="signOut" data-i18n-title="signOut">Sign Out</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -532,7 +538,6 @@
             viewBox="0 0 24 24"
             class="auth-icon"
           >
-            <title>logout</title>
             <path
               d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.58L17 17L22 12M4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z"
             />
@@ -565,7 +570,9 @@
               ></path>
             </g>
           </svg>
-          Sign in with Google
+          <span data-i18n="signInGoogle" data-i18n-title="signInGoogle"
+            >Sign in with Google</span
+          >
         </button>
 
         <button class="button auth-button facebook-login-button header-button">
@@ -581,7 +588,9 @@
               d="M512 256C512 114.6 397.4 0 256 0S0 114.6 0 256C0 376 82.7 476.8 194.2 504.5V334.2H141.4V256h52.8V222.3c0-87.1 39.4-127.5 125-127.5c16.2 0 44.2 3.2 55.7 6.4V172c-6-.6-16.5-1-29.6-1c-42 0-58.2 15.9-58.2 57.2V256h83.6l-14.4 78.2H287V510.1C413.8 494.8 512 386.9 512 256h0z"
             />
           </svg>
-          Sign in with Facebook
+          <span data-i18n="signInFacebook" data-i18n-title="signInFacebook"
+            >Sign in with Facebook</span
+          >
         </button>
       </div>
     </div>

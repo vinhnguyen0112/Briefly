@@ -9,6 +9,7 @@ import {
   generateQuestionsFromContent,
   processUserQuery,
 } from "./api-handler.js";
+import { translateElement } from "./i18n.js";
 
 /**
  * Extracts page content by messaging the background script.
@@ -187,7 +188,8 @@ function buildContextIndicator() {
   // Refresh button
   const refreshBtn = document.createElement("button");
   refreshBtn.className = "chat-context-refresh-btn";
-  refreshBtn.title = "Refresh page context";
+  refreshBtn.dataset.i18nTitle = "refreshPageContext";
+  refreshBtn.title = "Refresh Page Context";
   refreshBtn.innerHTML = `
     <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
       <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
@@ -200,6 +202,8 @@ function buildContextIndicator() {
       state.generatedQuestions = {};
     });
   });
+
+  translateElement(refreshBtn);
 
   indicator.appendChild(favicon);
   indicator.appendChild(title);
