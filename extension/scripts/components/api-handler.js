@@ -40,7 +40,11 @@ export async function processUserQuery(query, metadata = {}) {
   }
 
   // Show user prompt with thinking indicator
-  addMessageToChat(query, "user");
+  addMessageToChat({
+    message: query,
+    role: "user",
+    event: metadata.event,
+  });
   const typingIndicator = addTypingIndicator();
 
   state.isProcessingQuery = true;
@@ -66,12 +70,11 @@ export async function processUserQuery(query, metadata = {}) {
       const tempMessageId = `temp_${Date.now()}_${Math.random()
         .toString(36)
         .substr(2, 9)}`;
-      const messageElement = addMessageToChat(
-        assistantMessage,
-        "assistant",
-        null,
-        tempMessageId
-      );
+      const messageElement = addMessageToChat({
+        message: assistantMessage,
+        role: "assistant",
+        tempMessageId,
+      });
 
       // Update current chat history for context-aware responses
       state.currentChat.history.push({ role: "user", content: query });
@@ -94,7 +97,10 @@ export async function processUserQuery(query, metadata = {}) {
 
       return { success: true, message: assistantMessage };
     } else {
-      addMessageToChat("Oops, got an error: " + response.error, "assistant");
+      addMessageToChat({
+        message: `Oops, got an error: ${response.error}`,
+        role: "assistant",
+      });
       if (state.currentChat.history.length <= 0) {
         resetCurrentChatState();
       }
@@ -103,7 +109,10 @@ export async function processUserQuery(query, metadata = {}) {
   } catch (error) {
     console.error("CocBot: Query error:", error);
     removeTypingIndicator(typingIndicator);
-    addMessageToChat("Something went wrong. Try again?", "assistant");
+    addMessageToChat({
+      message: "Something went wrong. Try again?",
+      role: "assistant",
+    });
     if (state.currentChat.history.length <= 0) {
       resetCurrentChatState();
     }

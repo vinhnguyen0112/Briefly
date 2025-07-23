@@ -26,7 +26,7 @@ import {
   closeNoteEditor,
   handleSaveNote,
 } from "./notes-handler.js";
-import { switchLanguage } from "./i18n.js";
+import { switchLanguage, translateElement } from "./i18n.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { updateContentStatus } from "./content-handler.js";
@@ -39,13 +39,7 @@ export function setupEventListeners() {
 
   // Title click
   elements.titleContainer.addEventListener("click", () => {
-    // Close all non-chat screens & panels
-    elements.chatHistoryScreen.style.display = "none";
-    elements.configContainer.style.display = "none";
-    elements.notesScreen.style.display = "none";
-
-    elements.configButton.classList.remove("active");
-    elements.notesButton.classList.remove("active");
+    closeAllScreensAndPanels();
 
     // Scroll to bottom of chat
     elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
@@ -74,10 +68,10 @@ export function setupEventListeners() {
         elements.configContainer.style.display = "none";
         elements.configButton.classList.remove("active");
         state.isConfigOpen = false;
-        addMessageToChat(
-          "Settings updated! I'll use these for future responses.",
-          "assistant"
-        );
+        addMessageToChat({
+          message: "Settings updated! I'll use these for future responses.",
+          role: "assistant",
+        });
 
         elements.chatScreen.style.display = "flex";
       });
@@ -209,7 +203,7 @@ export function setupEventListeners() {
     switchLanguage(language).then((message) => {
       state.language = language;
       // Notify the user about language change
-      addMessageToChat(message, "assistant");
+      addMessageToChat({ message, role: "assistant" });
     });
   });
 
@@ -272,7 +266,7 @@ export function setupQuickActionsEvent(container = document) {
           break;
         case "keypoints":
           query = "What are the key points of this page?";
-          metadata.event = "keypoints";
+          metadata.event = "keyPoints";
           break;
         case "explain":
           query = "Explain the content of this page as if I'm a beginner.";
@@ -650,20 +644,22 @@ function createChatHistoryItem(chat) {
       }</span>
     </div>
     <div class="chat-history-actions-menu hidden">
-      <button class="chat-history-actions-menu-item button" id="rename-button" data-i18n="rename">
+      <button class="chat-history-actions-menu-item button" id="rename-button">
         <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
           <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.779 17.779 4.36 19.918 6.5 13.5m4.279 4.279 8.364-8.643a3.027 3.027 0 0 0-2.14-5.165 3.03 3.03 0 0 0-2.14.886L6.5 13.5m4.279 4.279L6.499 13.5m2.14 2.14 6.213-6.504M12.75 7.04 17 11.28"/>
         </svg>
-        Rename
+        <span data-i18n="rename">Rename<span/>
       </button>
-      <button class="chat-history-actions-menu-item button" id="delete-button" style="color:#E53E3E" data-i18n="delete">
+      <button class="chat-history-actions-menu-item button" id="delete-button" style="color:#E53E3E">
         <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
           <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 7h14m-9 3v8m4-8v8M10 3h4a1 1 0 0 1 1 1v3H9V4a1 1 0 0 1 1-1ZM6 7h12v13a1 1 0 0 1-1 1H7a1 1 0 0 1-1-1V7Z"/>
         </svg>
-        Delete
+        <span data-i18n="delete">Delete<span/>
       </button>
     </div>
   `;
+
+  translateElement(item);
 
   item.addEventListener("click", (e) =>
     handleChatHistoryItemClick(e, chat, item)
@@ -709,7 +705,11 @@ async function handleChatHistoryItemClick(e, chat, item) {
 
   const history = [];
   for (const message of messages) {
-    addMessageToChat(message.content, message.role, message.id);
+    addMessageToChat({
+      message: message.content,
+      role: message.role,
+      messageId: message.id,
+    });
     history.push({ role: message.role, content: message.content });
   }
   setCurrentChatState({ ...chat, history });
@@ -1091,223 +1091,71 @@ function renderConfigUI(containerId, onSave) {
     const responseStyle = config?.responseStyle || "conversational";
 
     container.innerHTML = `
-      <div class="config-section">
-        <div class="config-form">
-          <h3 class="config-title">Response Settings</h3>
-          
-          <div class="form-group">
-            <label for="max-word-count" class="form-label">Maximum Response Length: <span id="word-count-value">${maxWordCount}</span> words</label>
-            <div class="slider-container">
-              <input type="range" id="max-word-count" min="50" max="500" step="10" value="${maxWordCount}" class="slider">
-              <div class="slider-markers">
-                <span>50</span>
-                <span>150</span>
-                <span>300</span>
-                <span>500</span>
-              </div>
+  <div class="config-section">
+    <div class="config-form">
+      <div class="form-group">
+        <label for="max-word-count" class="form-label">
+          <span data-i18n="responseLength">Maximum Response Length:</span>
+          <span id="word-count-value">${maxWordCount}</span>
+          <span data-i18n="words">words</span>
+        </label>
+        <div class="slider-container">
+          <input type="range" id="max-word-count" min="50" max="500" step="10" value="${maxWordCount}" class="slider">
+          <div class="slider-markers">
+            <span>50</span>
+            <span>150</span>
+            <span>300</span>
+            <span>500</span>
+          </div>
+        </div>
+        <div class="help-text" data-i18n="responseVerbosity">Control how verbose the answers will be</div>
+      </div>
+      
+      <div class="form-group response-style-group">
+        <label class="form-label" data-i18n="responseStyle">Response Style:</label>
+        <div class="radio-options">
+          <label class="radio-card ${
+            responseStyle === "conversational" ? "selected" : ""
+          }" data-style="conversational">
+            <input type="radio" name="response-style" value="conversational" ${
+              responseStyle === "conversational" ? "checked" : ""
+            }>
+            <div class="radio-card-content">
+              <span class="radio-card-title" data-i18n="conversational">Conversational</span>
+              <span class="radio-card-desc" data-i18n="conversationalDesc">Friendly, easy-to-understand explanations using everyday language</span>
             </div>
-            <div class="help-text">Control how verbose the answers will be</div>
-          </div>
-          
-          <div class="form-group response-style-group">
-            <label class="form-label">Response Style:</label>
-            <div class="radio-options">
-              <label class="radio-card ${
-                responseStyle === "conversational" ? "selected" : ""
-              }" data-style="conversational">
-                <input type="radio" name="response-style" value="conversational" ${
-                  responseStyle === "conversational" ? "checked" : ""
-                }>
-                <div class="radio-card-content">
-                  <span class="radio-card-title">Conversational</span>
-                  <span class="radio-card-desc">Friendly, easy-to-understand explanations using everyday language</span>
-                </div>
-              </label>
-              <label class="radio-card ${
-                responseStyle === "educational" ? "selected" : ""
-              }" data-style="educational">
-                <input type="radio" name="response-style" value="educational" ${
-                  responseStyle === "educational" ? "checked" : ""
-                }>
-                <div class="radio-card-content">
-                  <span class="radio-card-title">Educational</span>
-                  <span class="radio-card-desc">Structured explanations with clear points and examples</span>
-                </div>
-              </label>
-              <label class="radio-card ${
-                responseStyle === "technical" ? "selected" : ""
-              }" data-style="technical">
-                <input type="radio" name="response-style" value="technical" ${
-                  responseStyle === "technical" ? "checked" : ""
-                }>
-                <div class="radio-card-content">
-                  <span class="radio-card-title">Technical</span>
-                  <span class="radio-card-desc">Precise terminology and thorough analysis for advanced understanding</span>
-                </div>
-              </label>
+          </label>
+          <label class="radio-card ${
+            responseStyle === "educational" ? "selected" : ""
+          }" data-style="educational">
+            <input type="radio" name="response-style" value="educational" ${
+              responseStyle === "educational" ? "checked" : ""
+            }>
+            <div class="radio-card-content">
+              <span class="radio-card-title" data-i18n="educational">Educational</span>
+              <span class="radio-card-desc" data-i18n="educationalDesc">Structured explanations with clear points and examples</span>
             </div>
-          </div>
-          
-          <div class="form-actions">
-            <button id="save-config" type="button" class="btn-primary">Save Settings</button>
-          </div>
+          </label>
+          <label class="radio-card ${
+            responseStyle === "technical" ? "selected" : ""
+          }" data-style="technical">
+            <input type="radio" name="response-style" value="technical" ${
+              responseStyle === "technical" ? "checked" : ""
+            }>
+            <div class="radio-card-content">
+              <span class="radio-card-title" data-i18n="technical">Technical</span>
+              <span class="radio-card-desc" data-i18n="technicalDesc">Precise terminology and thorough analysis for advanced understanding</span>
+            </div>
+          </label>
         </div>
       </div>
       
-      <style>
-        .config-section {
-          padding: 1rem;
-          background-color: var(--background-color, #ffffff);
-          border-radius: 0.5rem;
-          max-height: 85vh;
-          overflow-y: auto;
-        }
-        .config-title {
-          font-size: 1.25rem;
-          font-weight: 600;
-          margin-bottom: 1.5rem;
-          color: var(--text-color, #111827);
-          text-align: center;
-        }
-        .config-form {
-          display: flex;
-          flex-direction: column;
-          gap: 1.5rem;
-        }
-        .form-group {
-          display: flex;
-          flex-direction: column;
-          gap: 0.5rem;
-        }
-        .form-label {
-          font-size: 0.875rem;
-          font-weight: 500;
-          color: var(--text-color, #111827);
-        }
-        .help-text {
-          font-size: 0.75rem;
-          color: var(--muted-color, #6b7280);
-          margin-top: 0.25rem;
-        }
-        .slider-container {
-          padding: 0.5rem 0;
-          margin: 0.5rem 0;
-          position: relative;
-        }
-        .slider {
-          appearance: none;
-          width: 100%;
-          height: 0.25rem;
-          background: var(--border-color, #e5e7eb);
-          border-radius: 1rem;
-          margin: 0.5rem 0;
-          outline: none;
-          position: relative;
-          z-index: 2;
-        }
-        .slider::-webkit-slider-thumb {
-          appearance: none;
-          width: 1rem;
-          height: 1rem;
-          background: var(--primary-color, #4a86e8);
-          border-radius: 50%;
-          cursor: pointer;
-          transition: all 0.2s;
-          position: relative;
-          z-index: 3;
-        }
-        .slider::-webkit-slider-thumb:hover {
-          background: var(--primary-hover, #3a76d8);
-          transform: scale(1.1);
-        }
-        .slider-markers {
-          display: flex;
-          justify-content: space-between;
-          width: calc(100% - 16px);
-          font-size: 0.75rem;
-          color: var(--muted-color, #6b7280);
-          margin: 12px 8px 0 8px;
-          position: relative;
-          padding-top: 4px;
-        }
-        .slider-markers span:nth-child(1) {
-          transform: translateX(0);
-        }
-        .slider-markers span:nth-child(4) {
-          transform: translateX(0);
-        }
-        .response-style-group {
-          margin-top: 1rem;
-        }
-        .radio-options {
-          display: flex;
-          flex-direction: column;
-          gap: 0.75rem;
-          width: 100%;
-          margin-top: 0.5rem;
-        }
-        .radio-card {
-          position: relative;
-          display: flex;
-          align-items: flex-start;
-          gap: 0.5rem;
-          cursor: pointer;
-          padding: 0.75rem;
-          border-radius: 0.375rem;
-          border: 1px solid var(--border-color, #e5e7eb);
-          background-color: var(--background-color, #ffffff);
-          transition: all 0.2s ease;
-        }
-        .radio-card:hover {
-          border-color: var(--border-hover, #d1d5db);
-          background-color: var(--background-hover, #f9fafb);
-        }
-        .radio-card.selected {
-          border-color: var(--primary-color, #4a86e8);
-          background-color: var(--primary-light, #f0f7ff);
-        }
-        .radio-card input[type="radio"] {
-          margin-top: 0.25rem;
-        }
-        .radio-card-content {
-          display: flex;
-          flex-direction: column;
-          gap: 0.25rem;
-        }
-        .radio-card-title {
-          font-weight: 500;
-          color: var(--text-color, #111827);
-        }
-        .radio-card-desc {
-          font-size: 0.75rem;
-          color: var(--muted-color, #6b7280);
-        }
-        .form-actions {
-          display: flex;
-          justify-content: flex-end;
-          margin-top: 1.5rem;
-        }
-        .btn-primary {
-          padding: 0.5rem 1rem;
-          background-color: var(--primary-color, #4a86e8);
-          color: white;
-          border: none;
-          border-radius: 0.375rem;
-          font-size: 0.875rem;
-          font-weight: 500;
-          cursor: pointer;
-          transition: background-color 0.2s;
-          box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-        }
-        .btn-primary:hover {
-          background-color: var(--primary-hover, #3a76d8);
-        }
-        .btn-primary:focus {
-          outline: 2px solid var(--primary-light, #93c5fd);
-          outline-offset: 2px;
-        }
-      </style>
-    `;
+      <div class="form-actions">
+        <button id="save-config" type="button" class="btn-primary" data-i18n="saveSettings">Save Settings</button>
+      </div>
+    </div>
+  </div>
+`;
 
     // Update word count display as slider changes
     const slider = document.getElementById("max-word-count");

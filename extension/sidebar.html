@@ -13,7 +13,6 @@
       <div id="sidebar-resize-handle" class="resize-handle"></div>
       <div class="sidebar-header">
         <div id="title-container">
-          <img id="title-logo" src="./icons/logo.png" />
           <h2 id="cocbot-title" class="cocbot-title" data-i18n="title">
             Briefly
           </h2>
@@ -172,7 +171,7 @@
               <span class="toggle-label" id="en-label">EN</span>
               <label class="switch">
                 <input type="checkbox" id="language-toggle" />
-                <span class="slider round"></span>
+                <span class="lang-slider round"></span>
               </label>
               <span class="toggle-label" id="vi-label">VI</span>
             </div>
@@ -586,7 +585,7 @@
         height: 0;
       }
 
-      .slider {
+      .lang-slider {
         position: absolute;
         cursor: pointer;
         top: 0;
@@ -597,7 +596,7 @@
         transition: 0.4s;
       }
 
-      .slider:before {
+      .lang-slider:before {
         position: absolute;
         content: "";
         height: 14px;
@@ -608,23 +607,23 @@
         transition: 0.4s;
       }
 
-      input:checked + .slider {
+      input:checked + .lang-slider {
         background-color: var(--primary);
       }
 
-      input:focus + .slider {
+      input:focus + .lang-slider {
         box-shadow: 0 0 1px var(--primary);
       }
 
-      input:checked + .slider:before {
+      input:checked + .lang-slider:before {
         transform: translateX(16px);
       }
 
-      .slider.round {
+      .lang-slider.round {
         border-radius: 20px;
       }
 
-      .slider.round:before {
+      .lang-slider.round:before {
         border-radius: 50%;
       }
     </style>

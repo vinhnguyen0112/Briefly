@@ -7,7 +7,6 @@ export const elements = {
 
   // Header elements
   titleContainer: document.getElementById("title-container"),
-  cocbotTitle: document.getElementById("cocbot-title"),
 
   // Authentication elements
   googleLoginButtons: document.querySelectorAll(".google-login-button"),

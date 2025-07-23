@@ -20,6 +20,7 @@ import {
   generateQuestionsFromContent,
   processUserQuery,
 } from "./api-handler.js";
+import { translateElement } from "./i18n.js";
 
 /**
  * Close all screens and panels beside chat screen as it's main screen
@@ -137,43 +138,47 @@ export function switchToChat() {
 /**
  * Add message element to chat screen.
  * Assistant messages are attached a message ID.
- * @param {String} message Message content
- * @param {String} role
- * @param {String} messageId
- * @param {String} tempMessageId
+ * @param {Object} options Configuration object
+ * @param {String} options.message Message content
+ * @param {"user" | "assistant"} options.role
+ * @param {String} [options.messageId]
+ * @param {String} [options.tempMessageId]
+ * @param {String} [options.event]
  * @returns {HTMLElement} Message element
  */
-export async function addMessageToChat(
+export async function addMessageToChat({
   message,
   role,
   messageId = null,
-  tempMessageId
-) {
+  tempMessageId = null,
+  event = null,
+}) {
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
 
-  // Set message ID attributes
+  // Set ID
   if (messageId) {
     messageElement.setAttribute("data-message-id", messageId);
   } else if (tempMessageId) {
     messageElement.setAttribute("data-temp-message-id", tempMessageId);
   }
 
-  if (role === "assistant") {
-    messageElement.innerHTML = `
-      <div class="message-content">${formatMessage(message)}</div>
-    `;
-    // If vaid messageID is provided, display feedback icon
-    if (messageId) {
-      addFeedbackIconToMessage(messageElement);
-    }
-  } else {
-    messageElement.innerHTML = `
-      <div class="message-content">${formatMessage(message)}</div>
-    `;
+  // Conditionally add data-i18n if event is not "ask"
+  const i18nAttribute = event && event !== "ask" ? `data-i18n="${event}"` : "";
+
+  messageElement.innerHTML = `
+    <div class="message-content" ${i18nAttribute}>
+      ${formatMessage(message)}
+    </div>
+  `;
+
+  // Add feedback icon for assistant replies
+  if (role === "assistant" && messageId) {
+    addFeedbackIconToMessage(messageElement);
   }
 
-  // Insert message before actions container so actions stay at the bottom
+  translateElement(messageElement);
+
   const actionsContainer = elements.chatContainer.querySelector(
     ".chat-actions-container"
   );
@@ -182,7 +187,10 @@ export async function addMessageToChat(
   } else {
     elements.chatContainer.appendChild(messageElement);
   }
+
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+
+  return messageElement;
 }
 
 /**
@@ -266,6 +274,8 @@ function createWelcomeContainer() {
     <h3 data-i18n="welcome">Ask me anything about this webpage</h3>
   `;
 
+  translateElement(welcomeContainer);
+
   return welcomeContainer;
 }
 
@@ -315,6 +325,8 @@ function injectQuickActions(container) {
   `;
   container.appendChild(quickActions);
 
+  translateElement(quickActions);
+
   setupQuickActionsEvent(container);
 }
 
@@ -341,6 +353,8 @@ function injectSuggestedQuestions(container) {
     <div class="question-buttons-container" style="margin-top:12px;"></div>
   `;
   container.appendChild(suggestedQuestionsContainer);
+
+  translateElement(suggestedQuestionsContainer);
 
   const generateQuestionsButton = suggestedQuestionsContainer.querySelector(
     ".generate-questions-button"

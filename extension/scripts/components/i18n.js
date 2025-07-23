@@ -37,21 +37,6 @@ const translations = {
     createFirstNote: "Create your first note",
 
     enterApiKeyMessage: "Enter your OpenAI API key to use the assistant:",
-    responseLength: "Maximum Response Length",
-    words: "words",
-    responseStyle: "Response Style",
-    conversational: "Conversational",
-    educational: "Educational",
-    technical: "Technical",
-    responseLanguage: "Response Language",
-
-    conversationalDesc:
-      "Friendly, easy-to-understand explanations using everyday language",
-    educationalDesc: "Structured explanations with clear points and examples",
-    technicalDesc:
-      "Precise terminology and thorough analysis for advanced understanding",
-    responseVerbosity: "Control how verbose the answers will be",
-    languageToggleDesc: "Select the language for the assistant",
 
     languageChanged:
       "Language has been switched to English. User interface and responses will be in English from now on.",
@@ -67,6 +52,22 @@ const translations = {
     account: "Account",
 
     welcome: "Ask me anything about this webpage",
+
+    responseLength: "Maximum Response Length:",
+    words: "words",
+    responseStyle: "Response Style",
+    conversational: "Conversational",
+    educational: "Educational",
+    technical: "Technical",
+    responseLanguage: "Response Language",
+    conversationalDesc:
+      "Friendly, easy-to-understand explanations using everyday language",
+    educationalDesc: "Structured explanations with clear points and examples",
+    technicalDesc:
+      "Precise terminology and thorough analysis for advanced understanding",
+    responseVerbosity: "Control how verbose the answers will be",
+    languageToggleDesc: "Select the language for the assistant",
+    saveSettings: "Save Settings",
   },
 
   vi: {
@@ -104,20 +105,6 @@ const translations = {
     createFirstNote: "Tạo ghi chú đầu tiên",
 
     enterApiKeyMessage: "Nhập khóa API OpenAI của bạn để sử dụng trợ lý:",
-    responseLength: "Độ Dài Phản Hồi Tối Đa",
-    words: "từ",
-    responseStyle: "Phong Cách Phản Hồi",
-    conversational: "Đàm Thoại",
-    educational: "Giáo Dục",
-    technical: "Kỹ Thuật",
-    responseLanguage: "Ngôn Ngữ Phản Hồi",
-
-    conversationalDesc:
-      "Giải thích thân thiện, dễ hiểu bằng ngôn ngữ hàng ngày",
-    educationalDesc: "Giải thích có cấu trúc với các điểm rõ ràng và ví dụ",
-    technicalDesc: "Thuật ngữ chính xác và phân tích kỹ lưỡng để hiểu sâu",
-    responseVerbosity: "Điều chỉnh độ chi tiết của câu trả lời",
-    languageToggleDesc: "Chọn ngôn ngữ cho trợ lý",
 
     languageChanged:
       "Ngôn ngữ đã được chuyển sang tiếng Việt. Giao diện và phản hồi sẽ bằng tiếng Việt từ bây giờ.",
@@ -133,6 +120,23 @@ const translations = {
     account: "Tài Khoản",
 
     welcome: "Hỏi tôi bất kì thứ gì về trang web này",
+
+    responseLength: "Độ dài phản hồi tối đa:",
+    words: "từ",
+    responseStyle: "Phong cách phản hồi",
+    conversational: "Thân mật",
+    educational: "Giáo dục",
+    technical: "Kỹ thuật",
+    responseLanguage: "Ngôn ngữ phản hồi",
+    conversationalDesc:
+      "Giải thích thân thiện, dễ hiểu bằng ngôn ngữ đời thường",
+    educationalDesc:
+      "Giải thích có cấu trúc với các điểm chính rõ ràng và ví dụ cụ thể",
+    technicalDesc:
+      "Thuật ngữ chính xác và phân tích chuyên sâu cho người dùng nâng cao",
+    responseVerbosity: "Điều chỉnh mức độ chi tiết của câu trả lời",
+    languageToggleDesc: "Chọn ngôn ngữ cho trợ lý",
+    saveSettings: "Lưu Cài Đặt",
   },
 };
 
@@ -216,9 +220,22 @@ export async function switchLanguage(language) {
   return translate("languageChanged");
 }
 
+/**
+ * Translates elements with `data-i18n` inside a given root.
+ * @param {HTMLElement} root
+ */
+export function translateElement(root = document.body) {
+  const elements = root.querySelectorAll("[data-i18n]");
+  for (const el of elements) {
+    const key = el.getAttribute("data-i18n");
+    el.textContent = translate(key);
+  }
+}
+
 export default {
   translate,
   switchLanguage,
   initializeLanguage,
   updatePageLanguage,
+  translateElement,
 };
