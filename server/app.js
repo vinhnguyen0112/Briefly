@@ -27,10 +27,8 @@ app.use(morgan("dev"));
 app.set("trust proxy", true);
 
 // swagger
-if (process.env.NODE_ENV === "development") {
-  const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-}
+const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 
 // routes
 app.use("/api", extractClientIp, extractVisitorId);
