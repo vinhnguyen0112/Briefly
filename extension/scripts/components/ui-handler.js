@@ -415,8 +415,10 @@ function injectSuggestedQuestions(container) {
 
 /**
  * Clear all suggested questions and display generate question button
+ * Stop is there's are questions being generated
  */
 export function resetSuggestedQuestionsContainer() {
+  if (state.isGeneratingQuestions) return;
   const suggestedQuestionsContainer = document.querySelector(
     ".suggested-questions-container"
   );

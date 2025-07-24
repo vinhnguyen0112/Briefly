@@ -359,9 +359,12 @@ export async function generateQuestionsFromContent(pageContent) {
     return { success: false, error: "No content available" };
   }
 
+  state.isGeneratingQuestions = true;
+
   try {
-    // Call backend API instead of OpenAI directly
     const language = state.language || "en";
+
+    // Call backend API instead of OpenAI directly
     const res = await sendRequest(
       `${SERVER_URL}/api/query/suggested-questions`,
       {
@@ -385,11 +388,13 @@ export async function generateQuestionsFromContent(pageContent) {
     } else {
       return {
         success: false,
-        error: res.error.message || "Failed to extract questions",
+        error: res.error?.message || "Failed to extract questions",
       };
     }
   } catch (error) {
     console.error("CocBot: Error generating questions", error);
     return { success: false, error: error.message };
+  } finally {
+    state.isGeneratingQuestions = false;
   }
 }
