@@ -4,7 +4,7 @@ export async function handleCaptionImages(imageUrls, content) {
   const newImages = imageUrls.filter((img) => !processedImages.has(img));
 
   if (newImages.length === 0) {
-    console.log("📭 All images already captioned, skipping.");
+    console.log("All images already captioned, skipping.");
     return [];
   }
 
@@ -68,12 +68,12 @@ async function callCaptionApi(images, content) {
 
 export function resetProcessedImages() {
   console.log(
-    "🧼 Resetting processedImages set. Before reset:",
+    "Resetting processedImages set. Before reset:",
     Array.from(processedImages)
   );
   processedImages.clear();
   console.log(
-    "✅ After reset, processedImages set is now:",
+    "After reset, processedImages set is now:",
     Array.from(processedImages)
   );
 }

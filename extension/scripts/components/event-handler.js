@@ -310,6 +310,7 @@ function setupAuthenticationButtons() {
                 ? "Signed in successfully"
                 : "Đăng nhập thành công",
             type: "success",
+            duration: 2000,
           });
         } else {
           updateToast(toastId, {
@@ -318,6 +319,7 @@ function setupAuthenticationButtons() {
                 ? "Google sign-in failed"
                 : "Đăng nhập Google thất bại",
             type: "error",
+            duration: 2000,
           });
         }
       });
@@ -345,6 +347,7 @@ function setupAuthenticationButtons() {
                 ? "Signed in successfully"
                 : "Đăng nhập thành công",
             type: "success",
+            duration: 2000,
           });
         } else {
           updateToast(toastId, {
@@ -353,6 +356,7 @@ function setupAuthenticationButtons() {
                 ? "Facebook sign-in failed"
                 : "Đăng nhập Facebook thất bại",
             type: "error",
+            duration: 2000,
           });
         }
       });
@@ -375,12 +379,14 @@ function setupAuthenticationButtons() {
               ? "Signed out successfully"
               : "Đăng xuất thành công",
           type: "success",
+          duration: 2000,
         });
       } else {
         updateToast(toastId, {
           message:
             state.language === "en" ? "Sign out failed" : "Đăng xuất thất bại",
           type: "error",
+          duration: 2000,
         });
       }
     });
