@@ -12,6 +12,7 @@ const testRoutes = require("./routes/testRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const queryRoutes = require("./routes/queryRoutes");
 const pageRoutes = require("./routes/pageRoutes");
+const pageSummaryRoutes = require("./routes/pageSummaryRoutes");
 const healthCheckRoutes = require("./routes/healthCheckRoutes");
 const {
   extractClientIp,
@@ -39,6 +40,7 @@ app.use("/api/chats", chatRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/query", queryRoutes);
 app.use("/api/pages", pageRoutes);
+app.use("/api/page-summaries", pageSummaryRoutes);
 app.use("/status", healthCheckRoutes);
 
 // health check

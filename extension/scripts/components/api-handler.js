@@ -21,9 +21,10 @@ const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
  * Generate response for query by sending a request to the backend server
  * @param {String} query Query
  * @param {Object} metadata Metadata
+ * @param {String} [metadata.event]
  * @returns
  */
-export async function processUserQuery(query, metadata = {}) {
+export async function processUserQuery(query, metadata = { event: "ask" }) {
   // Prevent spams
   if (state.isProcessingQuery) return;
 
@@ -57,8 +58,6 @@ export async function processUserQuery(query, metadata = {}) {
       state.currentChat.history,
       state.currentConfig
     );
-
-    metadata.page_url = state.pageContent?.url || window.location.href;
 
     const response = await callOpenAI(messages, metadata);
     removeTypingIndicator(typingIndicator);
@@ -230,8 +229,9 @@ export async function callOpenAI(messages, metadata) {
   const maxTokens = config.maxWordCount
     ? Math.ceil(config.maxWordCount * 1.3)
     : 1500;
-
   metadata.max_tokens = maxTokens;
+  metadata.page_url = state.pageContent?.url || window.location.href;
+  metadata.language = state.language || "en";
 
   const res = await sendRequest(`${SERVER_URL}/api/query/ask`, {
     method: "POST",

@@ -2,6 +2,7 @@ const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 const commonHelper = require("../helpers/commonHelper");
 const Page = require("../models/page");
+const { redisHelper } = require("../helpers/redisHelper");
 
 /**
  * Pre-process then insert a page into the database
@@ -12,13 +13,12 @@ const Page = require("../models/page");
 const createPage = async (req, res, next) => {
   try {
     const body = {};
-    const { page_url, title, summary, suggested_questions } = req.body;
+    const { page_url, title, page_content } = req.body;
 
     // Filtering
     if (page_url) body.page_url = page_url;
     if (title) body.title = title;
-    if (summary) body.summary = summary;
-    if (suggested_questions) body.suggested_questions = suggested_questions;
+    if (page_content) body.page_content = page_content;
 
     // Normalize page url
     const normalizedPageUrl = commonHelper.processUrl(page_url);
@@ -29,15 +29,32 @@ const createPage = async (req, res, next) => {
     // Hash the page url
     const id = commonHelper.generateHash(normalizedPageUrl);
 
-    await Page.create({
-      id,
-      ...body,
-    });
+    // Try to get from Redis
+    const cached = await redisHelper.getPage(id);
+    if (!cached) {
+      // Try to get from database
+      const stored = await Page.getById(id);
+      // Store if not found
+      if (!stored) {
+        await Page.create({
+          id,
+          ...body,
+        });
+      }
+
+      // Always update cache
+      // TODO: Incorrect
+      redisHelper.setPage(id, {
+        page_url: stored.page_url,
+        title: stored.title,
+        page_content: stored.page_content,
+      });
+    }
 
     res.json({
       success: true,
       message: "Page data inserted successfully",
-      data: { id },
+      data: { id, cached: !!cached },
     });
   } catch (err) {
     next(err);

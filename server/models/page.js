@@ -3,12 +3,12 @@ const dbHelper = require("../helpers/dbHelper");
 class Page {
   /**
    * Insert a page into the database.
+   * Ignored if a record already exists
    * @param {Object} pageData Page data object to insert
    * @param {String} pageData.id
    * @param {String} pageData.page_url
    * @param {String} pageData.title
-   * @param {String} pageData.summary
-   * @param {Object} [pageData.suggested_questions]
+   * @param {Object} [pageData.page_content]
    */
   async create(pageData) {
     if (!pageData || Object.keys(pageData).length <= 0) return;
@@ -56,6 +56,15 @@ class Page {
     values.push(id);
     const { affectedRows } = await dbHelper.executeQuery(query, values);
     return affectedRows;
+  }
+
+  /**
+   * Delete a page and its associated summaries.
+   * @param {String} id
+   */
+  async deleteById(id) {
+    const query = `DELETE FROM pages WHERE id = ?`;
+    await dbHelper.executeQuery(query, [id]);
   }
 }
 

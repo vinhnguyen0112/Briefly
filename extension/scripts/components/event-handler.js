@@ -276,11 +276,11 @@ export function setupQuickActionsEvent(container = document) {
 
         if (action === "summarize" && response?.success && response.message) {
           chrome.runtime.sendMessage({
-            action: "store_page_summary",
+            action: "store_page_metadata_and_summary",
             page_url: state.pageContent.url || window.location.href,
             title: state.pageContent.title || document.title,
+            page_content: state.pageContent.content,
             summary: response.message,
-            suggested_questions: [],
           });
         }
       }

@@ -671,25 +671,43 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
-  if (message.action === "store_page_summary") {
+  if (message.action === "store_page_metadata_and_summary") {
+    // Store page metadata first
     sendRequest(`${SERVER_URL}/api/pages`, {
       method: "POST",
       body: {
         page_url: message.page_url,
         title: message.title,
-        summary: message.summary,
-        suggested_questions: message.suggested_questions || [],
+        page_content: message.page_content,
       },
+      withVisitorId: false,
     })
       .then((res) => {
-        console.log("store_page_summary response: ", res);
+        if (res.success) {
+          // Store the summary after page is saved
+          return sendRequest(`${SERVER_URL}/api/page-summaries`, {
+            method: "POST",
+            body: {
+              page_url: message.page_url,
+              language: message.language || "en",
+              summary: message.summary,
+            },
+            withVisitorId: false,
+          });
+        }
+      })
+      .then((res) => {
+        console.log("Page summary saved:", res);
+        sendResponse({ success: true });
       })
       .catch((err) => {
-        console.error("Failed to store page summary:", err);
+        console.error("Failed to store page or summary:", err);
+        sendResponse({ success: false });
       });
 
-    return false;
+    return true;
   }
+
   if (message.action === "process_images") {
     resetProcessedImages();
     handleCaptionImages(message.images, message.content)
