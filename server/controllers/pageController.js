@@ -4,57 +4,89 @@ const commonHelper = require("../helpers/commonHelper");
 const Page = require("../models/page");
 const { redisHelper } = require("../helpers/redisHelper");
 
+const PAGE_FRESHNESS_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
+
 /**
- * Pre-process then insert a page into the database
+ * Check if a timestamp is expired based on max age
+ * @param {string|Date} updatedAt
+ * @returns {boolean}
+ */
+function isPageExpired(updatedAt) {
+  const updatedTime = new Date(updatedAt).getTime();
+  return Date.now() - updatedTime > PAGE_FRESHNESS_MS;
+}
+
+/**
+ * Pre-process then insert a page into the database (with freshness check and Redis fallback)
  * @param {Object} req
  * @param {Object} res
  * @param {Function} next
  */
 const createPage = async (req, res, next) => {
   try {
-    const body = {};
     const { page_url, title, page_content } = req.body;
 
-    // Filtering
-    if (page_url) body.page_url = page_url;
-    if (title) body.title = title;
-    if (page_content) body.page_content = page_content;
-
-    // Normalize page url
+    // Normalize and validate page_url
     const normalizedPageUrl = commonHelper.processUrl(page_url);
     if (!normalizedPageUrl) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
     }
 
-    // Hash the page url
     const id = commonHelper.generateHash(normalizedPageUrl);
 
-    // Try to get from Redis
+    // Try Redis first
     const cached = await redisHelper.getPage(id);
-    if (!cached) {
-      // Try to get from database
-      const stored = await Page.getById(id);
-      // Store if not found
-      if (!stored) {
-        await Page.create({
-          id,
-          ...body,
-        });
-      }
-
-      // Always update cache
-      // TODO: Incorrect
-      redisHelper.setPage(id, {
-        page_url: stored.page_url,
-        title: stored.title,
-        page_content: stored.page_content,
+    if (cached) {
+      return res.json({
+        success: true,
+        message: "Page found in cache",
+        data: { id, cached: true },
       });
     }
 
+    // Try database
+    let page = await Page.getById(id);
+
+    // If page doesn't exist in DB, insert new
+    if (!page) {
+      page = await Page.create({
+        id,
+        page_url: normalizedPageUrl,
+        title,
+        page_content,
+      });
+    }
+    // If page exists, check if it's stale
+    else if (isPageExpired(page.updated_at)) {
+      await Page.deleteById(id); // Delete page record to invalidate summaries as well
+      // Insert new
+      page = await Page.create({
+        id,
+        page_url: normalizedPageUrl,
+        title,
+        page_content,
+      });
+    }
+
+    // Ensure we have a valid page before caching
+    if (!page) {
+      throw new AppError(
+        ERROR_CODES.INTERNAL_ERROR,
+        "Failed to create or retrieve page"
+      );
+    }
+
+    // Update Redis cache
+    await redisHelper.setPage(id, {
+      page_url: page.page_url,
+      title: page.title,
+      page_content: page.page_content,
+    });
+
     res.json({
       success: true,
-      message: "Page data inserted successfully",
-      data: { id, cached: !!cached },
+      message: "Page record is fresh and available",
+      data: { id, cached: false },
     });
   } catch (err) {
     next(err);

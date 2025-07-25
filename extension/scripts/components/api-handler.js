@@ -94,6 +94,25 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
         tempMessageId
       );
 
+      chrome.runtime.sendMessage(
+        {
+          action: "store_page_metadata",
+          page_url: currentUrl,
+          title: state.pageContent?.title,
+          page_content: state.pageContent?.content,
+        },
+        (result) => {
+          if (result?.success && metadata.event === "summarize") {
+            chrome.runtime.sendMessage({
+              action: "store_page_summary",
+              page_url: currentUrl,
+              summary: assistantMessage,
+              language: state.currentConfig.language,
+            });
+          }
+        }
+      );
+
       return { success: true, message: assistantMessage };
     } else {
       addMessageToChat({

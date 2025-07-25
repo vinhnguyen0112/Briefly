@@ -33,6 +33,8 @@ function getNormalizedPageMeta(pageUrl) {
  * @param {Object} res
  * @param {Function} next
  */
+
+// TODO: Might want to do sth when summary is expired
 const handleUserQuery = async (req, res, next) => {
   try {
     const { messages, metadata } = req.body;

@@ -1,4 +1,9 @@
-import { saveUserSession, sendRequest } from "./components/state.js";
+import {
+  getStoredPageUrl,
+  saveStoredPageUrl,
+  saveUserSession,
+  sendRequest,
+} from "./components/state.js";
 import {
   authenticateWithFacebook,
   authenticateWithGoogle,
@@ -671,39 +676,31 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
-  if (message.action === "store_page_metadata_and_summary") {
-    // Store page metadata first
-    sendRequest(`${SERVER_URL}/api/pages`, {
-      method: "POST",
-      body: {
-        page_url: message.page_url,
-        title: message.title,
-        page_content: message.page_content,
-      },
-      withVisitorId: false,
-    })
-      .then((res) => {
-        if (res.success) {
-          // Store the summary after page is saved
-          return sendRequest(`${SERVER_URL}/api/page-summaries`, {
-            method: "POST",
-            body: {
-              page_url: message.page_url,
-              language: message.language || "en",
-              summary: message.summary,
-            },
-            withVisitorId: false,
-          });
-        }
+  if (message.action === "store_page_metadata") {
+    // Check if page url is already stored
+    getStoredPageUrl(message.page_url).then((stored) => {
+      if (stored) sendResponse({ success: true });
+
+      // If not, send request to server to store page metadata
+      sendRequest(`${SERVER_URL}/api/pages`, {
+        method: "POST",
+        body: {
+          page_url: message.page_url,
+          title: message.title,
+          page_content: message.page_content,
+        },
+        withVisitorId: false,
       })
-      .then((res) => {
-        console.log("Page summary saved:", res);
-        sendResponse({ success: true });
-      })
-      .catch((err) => {
-        console.error("Failed to store page or summary:", err);
-        sendResponse({ success: false });
-      });
+        .then((response) => {
+          // Store url in session storage
+          saveStoredPageUrl(message.page_url);
+          sendResponse({ success: response.success });
+        })
+        .catch((err) => {
+          console.error("Failed to store page or summary:", err);
+          sendResponse({ success: false });
+        });
+    });
 
     return true;
   }

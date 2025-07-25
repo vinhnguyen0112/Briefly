@@ -259,6 +259,24 @@ export async function saveLanguage(language) {
   });
 }
 
+// Page references management
+export async function getStoredPageUrl(url) {
+  return new Promise((resolve) => {
+    chrome.storage.session.get(url, (result) => {
+      resolve(result);
+    });
+  });
+}
+
+export async function saveStoredPageUrl(url) {
+  return new Promise((resolve) => {
+    chrome.storage.session.set({ url: true }, () => {
+      console.log("Briefly: Stored page url saved", url);
+      resolve(true);
+    });
+  });
+}
+
 export function resetCurrentChatState() {
   state.currentChat = {
     id: null,
