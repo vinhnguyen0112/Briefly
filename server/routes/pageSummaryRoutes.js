@@ -13,7 +13,7 @@ router.use(requireAuthenticatedSession);
 router.post(
   "/",
   validateAndSanitizeBody(createPageSummarySchema),
-  pageSummaryController.createOrUpdateSummary
+  pageSummaryController.createSummary
 );
 
 module.exports = router;

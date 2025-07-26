@@ -79,6 +79,7 @@ const createPage = async (req, res, next) => {
     // Update Redis cache
     await redisHelper.setPage(id, {
       page_url: page.page_url,
+      normalized_page_url: normalizedPageUrl,
       title: page.title,
       page_content: page.page_content,
     });

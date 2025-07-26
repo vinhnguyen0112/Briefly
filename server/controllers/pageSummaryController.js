@@ -1,13 +1,14 @@
 const commonHelper = require("../helpers/commonHelper");
 const PageSummary = require("../models/pageSummary");
 
-exports.createOrUpdateSummary = async (req, res, next) => {
+exports.createSummary = async (req, res, next) => {
   try {
     const { page_url, language, summary } = req.body;
 
-    const page_id = commonHelper.generateHash(page_url);
+    const normalizedPageUrl = commonHelper.processUrl(page_url);
+    const page_id = commonHelper.generateHash(normalizedPageUrl);
 
-    await PageSummary.upsert({
+    await PageSummary.insert({
       page_id,
       language,
       summary,

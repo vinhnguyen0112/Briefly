@@ -2,19 +2,18 @@ const dbHelper = require("../helpers/dbHelper");
 
 class PageSummary {
   /**
-   * Insert or update a page summary.
+   * Insert a page summary.
    * @param {Object} data
    * @param {String} data.page_id
    * @param {String} data.language
    * @param {String} data.summary
-   * @param {Object} [data.suggested_questions]
    * @returns {Promise<number>} Inserted summary's ID
    */
-  async upsert(data) {
+  async insert(data) {
     const { page_id, language, summary } = data;
 
     const query = `
-      INSERT IGNORE INTO page_summaries (page_id, language, summary) VALUES (?, ?, ?)
+      INSERT INTO page_summaries (page_id, language, summary) VALUES (?, ?, ?)
     `;
     const values = [page_id, language, summary];
     const result = await dbHelper.executeQuery(query, values);

@@ -220,6 +220,7 @@ async function getPage(pageId) {
  * @param {string} pageId
  * @param {Object} pageMetadata
  * @param {String} pageMetadata.page_url
+ * @param {String} pageMetadata.normalized_page_url
  * @param {String} pageMetadata.title
  * @param {String} pageMetadata.page_content
  */
