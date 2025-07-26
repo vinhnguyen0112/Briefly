@@ -15,7 +15,7 @@ import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -97,17 +97,17 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
       chrome.runtime.sendMessage(
         {
           action: "store_page_metadata",
-          page_url: currentUrl,
-          title: state.pageContent?.title,
+          page_url: state.pageContent.url || window.location.href,
+          title: state.pageContent?.title || document.title,
           page_content: state.pageContent?.content,
         },
         (result) => {
           if (result?.success && metadata.event === "summarize") {
             chrome.runtime.sendMessage({
               action: "store_page_summary",
-              page_url: currentUrl,
+              page_url: state.pageContent.url || window.location.href,
               summary: assistantMessage,
-              language: state.currentConfig.language,
+              language: state.language,
             });
           }
         }

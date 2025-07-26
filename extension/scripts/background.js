@@ -16,7 +16,7 @@ import {
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 const CHAT_QUERY_LIMIT = 20;
 //  first install
@@ -697,7 +697,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           sendResponse({ success: response.success });
         })
         .catch((err) => {
-          console.error("Failed to store page or summary:", err);
+          console.error("Failed to store page:", err);
+          sendResponse({ success: false });
+        });
+    });
+
+    return true;
+  }
+  if (message.action === "store_page_summary") {
+    // Check if page url is already stored
+    getStoredPageUrl(message.page_url).then((stored) => {
+      if (stored) sendResponse({ success: true });
+
+      // If not, send request to server to store page metadata
+      sendRequest(`${SERVER_URL}/api/page-summaries`, {
+        method: "POST",
+        body: {
+          page_url: message.page_url,
+          language: message.language,
+          summary: message.summary,
+        },
+        withVisitorId: false,
+      })
+        .then((response) => {
+          sendResponse({ success: response.success });
+        })
+        .catch((err) => {
+          console.error("Failed to store summary:", err);
           sendResponse({ success: false });
         });
     });

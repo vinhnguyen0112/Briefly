@@ -501,6 +501,16 @@ function showClearChatHistoryDialog() {
  */
 function clearChatHistoryEventHandler() {
   // TODO: Refactor event handler to exclude current chat from deletion
+
+  const toastId = showToast({
+    message:
+      state.language === "en"
+        ? "Deleting all history"
+        : "Đang xóa toàn bộ lịch sử",
+    type: "loading",
+    duration: null,
+  });
+
   chrome.runtime.sendMessage({ action: "clear_chat_history" }, (response) => {
     if (response.success) {
       console.log("Briefly: Clear chat history successfully");
@@ -510,8 +520,20 @@ function clearChatHistoryEventHandler() {
       // Reset current chat for now
       clearMessagesFromChatContainer();
       resetCurrentChatState();
+
+      updateToast(toastId, {
+        message:
+          state.language === "en" ? "Delete successfully" : "Xóa thành công",
+        type: "success",
+        duration: 2000,
+      });
     } else {
       console.log("Briefly: Clear user history failed!");
+      updateToast(toastId, {
+        message: state.language === "en" ? "Delete failed" : "Xóa thất bại",
+        type: "error",
+        duration: 2000,
+      });
     }
   });
 }

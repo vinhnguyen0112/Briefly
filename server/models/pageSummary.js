@@ -11,21 +11,12 @@ class PageSummary {
    * @returns {Promise<number>} Inserted summary's ID
    */
   async upsert(data) {
-    const { page_id, language, summary, suggested_questions = null } = data;
+    const { page_id, language, summary } = data;
 
     const query = `
-      INSERT INTO page_summaries (page_id, language, summary)
-      VALUES (?, ?, ?, ?)
-      ON DUPLICATE KEY UPDATE
-        summary = VALUES(summary),
-        updated_at = CURRENT_TIMESTAMP
+      INSERT IGNORE INTO page_summaries (page_id, language, summary) VALUES (?, ?, ?)
     `;
-    const values = [
-      page_id,
-      language,
-      summary,
-      JSON.stringify(suggested_questions),
-    ];
+    const values = [page_id, language, summary];
     const result = await dbHelper.executeQuery(query, values);
     return result.insertId;
   }

@@ -62,7 +62,7 @@ const querySchema = object({
 
     language: string()
       .strict()
-      .oneOf(["en", "vn"])
+      .oneOf(["en", "vi"])
       .required("language must be specified"),
 
     event: string().trim().default("ask"),
@@ -82,7 +82,7 @@ const updatePageSchema = object({
 
 const createPageSummarySchema = object({
   page_url: string().strict().trim().required(),
-  language: string().strict().trim().oneOf(["en", "vn"]).required(),
+  language: string().strict().trim().oneOf(["en", "vi"]).required(),
   summary: string().strict().trim().required(),
 });
 

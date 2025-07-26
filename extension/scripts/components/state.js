@@ -270,7 +270,7 @@ export async function getStoredPageUrl(url) {
 
 export async function saveStoredPageUrl(url) {
   return new Promise((resolve) => {
-    chrome.storage.session.set({ url: true }, () => {
+    chrome.storage.session.set({ url }, () => {
       console.log("Briefly: Stored page url saved", url);
       resolve(true);
     });
