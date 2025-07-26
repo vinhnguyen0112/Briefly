@@ -259,10 +259,10 @@ async function persistPageMetadataAndSummary({
   const authSession = await getUserSession();
   if (!authSession || !authSession.id) return; // Auth only
 
+  // Fall back
   const page_url = state.pageContent?.url || window.location.href;
   const title = state.pageContent?.title || document.title;
   const page_content = state.pageContent?.content;
-
   const language = state.language;
 
   chrome.runtime.sendMessage(

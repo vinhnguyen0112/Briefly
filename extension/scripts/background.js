@@ -677,56 +677,44 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     return true;
   }
   if (message.action === "store_page_metadata") {
-    // Check if page url is already stored
-    getStoredPageUrl(message.page_url).then((stored) => {
-      if (stored) sendResponse({ success: true });
-
-      // If not, send request to server to store page metadata
-      sendRequest(`${SERVER_URL}/api/pages`, {
-        method: "POST",
-        body: {
-          page_url: message.page_url,
-          title: message.title,
-          page_content: message.page_content,
-        },
-        withVisitorId: false,
+    sendRequest(`${SERVER_URL}/api/pages`, {
+      method: "POST",
+      body: {
+        page_url: message.page_url,
+        title: message.title,
+        page_content: message.page_content,
+      },
+      withVisitorId: false,
+    })
+      .then((response) => {
+        console.log("store_page_metadata response: ", response);
+        sendResponse({ success: response.success });
       })
-        .then((response) => {
-          // Store url in session storage
-          saveStoredPageUrl(message.page_url);
-          sendResponse({ success: response.success });
-        })
-        .catch((err) => {
-          console.error("Failed to store page:", err);
-          sendResponse({ success: false });
-        });
-    });
+      .catch((err) => {
+        console.error("Failed to store page:", err);
+        sendResponse({ success: false });
+      });
 
     return true;
   }
   if (message.action === "store_page_summary") {
-    // Check if page url is already stored
-    getStoredPageUrl(message.page_url).then((stored) => {
-      if (stored) sendResponse({ success: true });
-
-      // If not, send request to server to store page metadata
-      sendRequest(`${SERVER_URL}/api/page-summaries`, {
-        method: "POST",
-        body: {
-          page_url: message.page_url,
-          language: message.language,
-          summary: message.summary,
-        },
-        withVisitorId: false,
+    sendRequest(`${SERVER_URL}/api/page-summaries`, {
+      method: "POST",
+      body: {
+        page_url: message.page_url,
+        language: message.language,
+        summary: message.summary,
+      },
+      withVisitorId: false,
+    })
+      .then((response) => {
+        console.log("store_page_summary response: ", response);
+        sendResponse({ success: response.success });
       })
-        .then((response) => {
-          sendResponse({ success: response.success });
-        })
-        .catch((err) => {
-          console.error("Failed to store summary:", err);
-          sendResponse({ success: false });
-        });
-    });
+      .catch((err) => {
+        console.error("Failed to store summary:", err);
+        sendResponse({ success: false });
+      });
 
     return true;
   }

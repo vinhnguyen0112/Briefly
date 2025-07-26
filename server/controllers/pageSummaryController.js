@@ -1,4 +1,5 @@
 const commonHelper = require("../helpers/commonHelper");
+const { redisHelper } = require("../helpers/redisHelper");
 const PageSummary = require("../models/pageSummary");
 
 exports.createSummary = async (req, res, next) => {
@@ -6,10 +7,16 @@ exports.createSummary = async (req, res, next) => {
     const { page_url, language, summary } = req.body;
 
     const normalizedPageUrl = commonHelper.processUrl(page_url);
-    const page_id = commonHelper.generateHash(normalizedPageUrl);
+    const pageId = commonHelper.generateHash(normalizedPageUrl);
 
     await PageSummary.insert({
-      page_id,
+      page_id: pageId,
+      language,
+      summary,
+    });
+
+    await redisHelper.setPageSummary({
+      pageId,
       language,
       summary,
     });

@@ -118,6 +118,7 @@ async function getStoredPageSummary(pageId, language) {
   // Try to get from Redis
   const cached = await redisHelper.getPageSummary(pageId, language);
   if (cached) {
+    console.log("Page summary cache hit");
     return {
       message: cached,
       usage: null,
@@ -125,14 +126,23 @@ async function getStoredPageSummary(pageId, language) {
     };
   }
 
+  console.log("Page summary cache missed");
+
   // Try to get from database
   const stored = await PageSummary.getByPageIdAndLanguage(pageId, language);
   if (stored?.summary) {
     const createdAt = new Date(stored.created_at);
     const now = Date.now();
 
-    // If expired
+    // If not expired
     if (now - createdAt.getTime() <= FRESHNESS_THRESHOLD) {
+      // Update cache and return
+      await redisHelper.setPageSummary({
+        pageId: stored.page_id,
+        language: stored.language,
+        summary: stored.summary,
+      });
+
       return {
         message: stored.summary,
         usage: null,
@@ -140,7 +150,7 @@ async function getStoredPageSummary(pageId, language) {
       };
     }
 
-    // Invalidate the summary
+    // Otherwise, delete expired summary
     await PageSummary.deleteByPageIdAndLanguage(pageId, language);
   }
 

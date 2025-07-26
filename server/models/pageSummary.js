@@ -13,7 +13,7 @@ class PageSummary {
     const { page_id, language, summary } = data;
 
     const query = `
-      INSERT INTO page_summaries (page_id, language, summary) VALUES (?, ?, ?)
+      INSERT IGNORE INTO page_summaries (page_id, language, summary) VALUES (?, ?, ?)
     `;
     const values = [page_id, language, summary];
     const result = await dbHelper.executeQuery(query, values);

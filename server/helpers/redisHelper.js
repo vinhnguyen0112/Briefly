@@ -257,13 +257,16 @@ async function getPageSummary(pageId, language) {
 
 /**
  * Set page summary in Redis
- * @param {string} pageId
- * @param {string} language
- * @param {string} summary
+ * @param {Object} pageSummary
+ * @param {string} pageSummary.pageId
+ * @param {string} pageSummary.language
+ * @param {string} pageSummary.summary
  */
-async function setPageSummary(pageId, language, summary) {
-  const key = applyPrefix(`page_summary:${pageId}:${language}`);
-  await client.set(key, summary, { EX: process.env.SUMMARY_TTL });
+async function setPageSummary(pageSummary) {
+  const key = applyPrefix(
+    `page_summary:${pageSummary.pageId}:${pageSummary.language}`
+  );
+  await client.set(key, pageSummary.summary, { EX: process.env.SUMMARY_TTL });
 }
 
 const redisHelper = {
