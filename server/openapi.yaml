@@ -668,6 +668,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
   /pages:
     post:
       summary: Create a new page
@@ -710,55 +711,68 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-    # put:
-    #   summary: Update a page by ID
-    #   description: Updates a page record by its ID.
-    #   tags:
-    #     - Page
-    #   security:
-    #     - bearerAuth: []
-    #   parameters:
-    #     - in: path
-    #       name: id
-    #       required: true
-    #       schema:
-    #         type: string
-    #       description: Page ID (SHA256 hash of normalized page_url)
-    #   requestBody:
-    #     required: true
-    #     content:
-    #       application/json:
-    #         schema:
-    #           $ref: "#/components/schemas/UpdatePageRequest"
-    #   responses:
-    #     "200":
-    #       description: Page updated successfully
-    #       content:
-    #         application/json:
-    #           schema:
-    #             type: object
-    #             properties:
-    #               success:
-    #                 type: boolean
-    #               message:
-    #                 type: string
-    #               data:
-    #                 type: object
-    #                 properties:
-    #                   affectedRows:
-    #                     type: number
-    #     "400":
-    #       description: Invalid input or SQL errors
-    #       content:
-    #         application/json:
-    #           schema:
-    #             $ref: "#/components/schemas/ErrorResponse"
-    #     "401":
-    #       description: Unauthorized
-    #       content:
-    #         application/json:
-    #           schema:
-    #             $ref: "#/components/schemas/ErrorResponse"
+  /page-summaries:
+    post:
+      summary: Create a page summary
+      description: >
+        Creates and stores a summary for a specific page URL in a given language.
+        The page URL is normalized and a page ID is generated based on the URL hash.
+        The summary is also cached in Redis for faster retrieval.
+      tags:
+        - Page Summary
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePageSummaryRequest"
+            example:
+              page_url: "https://example.com/article"
+              language: "en"
+              summary: "This article discusses the latest developments in artificial intelligence and machine learning technologies."
+      responses:
+        "200":
+          description: Page summary created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Generated ID for the page summary record
+              example:
+                success: true
+                message: "Page summary saved successfully"
+                data:
+                  id: "abc123def456"
+        "400":
+          description: Invalid input - missing required fields or validation errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
   /query/ask:
     post:
@@ -1040,6 +1054,7 @@ components:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
   schemas:
     Chat:
       type: object
@@ -1078,21 +1093,38 @@ components:
           type: string
         title:
           type: string
-        summary:
+        page_content:
           type: string
-        suggested_questions:
-          type: array
-          items:
-            type: string
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
-        freshness:
+
+    PageSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the page summary
+        page_id:
+          type: string
+          description: Generated hash ID based on normalized page URL
+        language:
+          type: string
+          description: Language code for the summary
+        summary:
+          type: string
+          description: Summary content
+        created_at:
           type: string
           format: date-time
+          description: Timestamp when the summary was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the summary was last updated
 
     CreateChatRequest:
       type: object
@@ -1146,31 +1178,36 @@ components:
       type: object
       required:
         - page_url
-        - summary
+        - page_content
       properties:
         page_url:
           type: string
         title:
           type: string
           default: Untitled Page
-        summary:
+        page_content:
           type: string
-        suggested_questions:
-          type: array
-          items:
-            type: string
 
-    UpdatePageRequest:
+    CreatePageSummaryRequest:
       type: object
+      required:
+        - page_url
+        - language
+        - summary
       properties:
-        title:
+        page_url:
           type: string
+          format: uri
+          description: URL of the page to create summary for
+        language:
+          type: string
+          description: Language code for the summary (e.g., "en", "vi")
+          minLength: 2
+          maxLength: 5
         summary:
           type: string
-        suggested_questions:
-          type: array
-          items:
-            type: string
+          description: Summary content for the page
+          minLength: 1
 
     QueryRequest:
       type: object

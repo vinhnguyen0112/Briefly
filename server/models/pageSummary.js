@@ -7,7 +7,7 @@ class PageSummary {
    * @param {String} data.page_id
    * @param {String} data.language
    * @param {String} data.summary
-   * @returns {Promise<number>} Inserted summary's ID
+   * @returns {Promise<{insertId: number, affectedRows: number}>} Inserted summary's ID & number of affected rows
    */
   async insert(data) {
     const { page_id, language, summary } = data;
@@ -17,7 +17,7 @@ class PageSummary {
     `;
     const values = [page_id, language, summary];
     const result = await dbHelper.executeQuery(query, values);
-    return result.insertId;
+    return { insertId: result.insertId, affectedRows: result.affectedRows };
   }
 
   /**

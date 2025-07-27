@@ -4,7 +4,10 @@ const { ERROR_CODES } = require("../errors");
 
 // Redis initialization
 let client;
-if (process.env.NODE_ENV === "test" || process.env.NODE_ENV === "dev-test") {
+if (
+  process.env.NODE_ENV === "test" ||
+  process.env.NODE_ENV === "development_local"
+) {
   // Single-node Redis for testing
   client = redis.createClient({
     url: `redis://${process.env.REDIS_HOST}`,

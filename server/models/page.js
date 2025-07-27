@@ -15,6 +15,10 @@ class Page {
    * Insert a page into the database.
    * Ignored if a record already exists
    * @param {PageObject} pageData
+   * @param {String} pageData.id
+   * @param {String} pageData.title
+   * @param {String} pageData.page_url
+   * @param {String} pageData.page_content
    * @returns {Promise<PageObject|null>} The inserted page object or null if ignored
    */
   async create(pageData) {

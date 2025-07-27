@@ -44,31 +44,22 @@ const createPage = async (req, res, next) => {
       });
     }
 
-    // Try database
+    // Construct insert body (omit undefined/null/empty)
+    const insertBody = {
+      id,
+      page_url: normalizedPageUrl,
+      ...(title ? { title } : {}),
+      page_content,
+    };
+
     let page = await Page.getById(id);
 
-    // If page doesn't exist in DB, insert new
-    if (!page) {
-      page = await Page.create({
-        id,
-        page_url: normalizedPageUrl,
-        title,
-        page_content,
-      });
-    }
-    // If page exists, check if it's stale
-    else if (isPageExpired(page.updated_at)) {
-      await Page.deleteById(id); // Delete page record to invalidate summaries as well
-      // Insert new
-      page = await Page.create({
-        id,
-        page_url: normalizedPageUrl,
-        title,
-        page_content,
-      });
+    // Insert or re-insert if expired
+    if (!page || isPageExpired(page.updated_at)) {
+      if (page) await Page.deleteById(id);
+      page = await Page.create(insertBody);
     }
 
-    // Ensure we have a valid page before caching
     if (!page) {
       throw new AppError(
         ERROR_CODES.INTERNAL_ERROR,
@@ -76,7 +67,7 @@ const createPage = async (req, res, next) => {
       );
     }
 
-    // Update Redis cache
+    // Update Redis
     await redisHelper.setPage(id, {
       page_url: page.page_url,
       normalized_page_url: normalizedPageUrl,

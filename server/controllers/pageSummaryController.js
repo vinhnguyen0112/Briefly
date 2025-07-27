@@ -9,7 +9,7 @@ exports.createSummary = async (req, res, next) => {
     const normalizedPageUrl = commonHelper.processUrl(page_url);
     const pageId = commonHelper.generateHash(normalizedPageUrl);
 
-    await PageSummary.insert({
+    const { insertId, affectedRows } = await PageSummary.insert({
       page_id: pageId,
       language,
       summary,
@@ -21,9 +21,14 @@ exports.createSummary = async (req, res, next) => {
       summary,
     });
 
-    res
-      .status(200)
-      .json({ success: true, message: "Page summary saved successfully" });
+    res.status(200).json({
+      success: true,
+      message:
+        affectedRows === 0
+          ? "Page summary ignored"
+          : "Page summary saved successfully",
+      data: { id: insertId, affectedRows },
+    });
   } catch (err) {
     next(err);
   }

@@ -2,6 +2,7 @@ const { redisHelper } = require("../helpers/redisHelper");
 const { ERROR_CODES } = require("../errors");
 const { v4: uuidv4 } = require("uuid");
 describe("redisHelper", () => {
+  // Sample test data
   const userId = uuidv4();
   const testAuthSessionData = {
     user_id: userId,
@@ -22,28 +23,6 @@ describe("redisHelper", () => {
   afterAll(async () => {
     await redisHelper.client.quit();
   });
-
-  // afterEach(async () => {
-  //   try {
-  //     // for each master node in the cluster
-  //     for (const node of redisHelper.client.masters) {
-  //       const keys = [];
-  //       const iter = node.scanIterator({
-  //         MATCH: "*",
-  //       });
-
-  //       for await (const key of iter) {
-  //         keys.push(key);
-  //       }
-
-  //       if (keys.length > 0) {
-  //         await node.del(keys);
-  //       }
-  //     }
-  //   } catch (err) {
-  //     console.error("Error cleaning Redis keys after test:", err);
-  //   }
-  // });
 
   describe("createSession & getSession", () => {
     const authSessionId = uuidv4();
