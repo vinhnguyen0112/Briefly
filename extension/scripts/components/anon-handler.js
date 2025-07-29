@@ -1,0 +1,34 @@
+import { saveAnonSession, sendRequest } from "./state.js";
+import FingerprintJS from "../../libs/fingerprint.js";
+
+// Loads FingerprintJS and gets the visitorId
+export async function getFingerprint() {
+  const fp = await FingerprintJS.load();
+  const { visitorId } = await fp.get();
+
+  return visitorId;
+}
+
+// Requests a new anon session from the server
+async function requestAnonSession() {
+  const response = await sendRequest(
+    "https://dev-capstone-2025.coccoc.com/api/anon",
+    {
+      method: "POST",
+      withSession: false,
+    }
+  );
+
+  return response.data;
+}
+
+// Request an anon session from the server
+export async function setupAnonSession() {
+  try {
+    const visitorId = await getFingerprint();
+    const data = await requestAnonSession(visitorId);
+    return await saveAnonSession(data);
+  } catch (error) {
+    throw error;
+  }
+}

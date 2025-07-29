@@ -1,0 +1,9 @@
+server/node_modules
+server/.env
+server/.env.production
+server/.env.test
+server/.env.demo
+.DS_Store
+.idea
+.env
+docker/nginx/data/cache/*

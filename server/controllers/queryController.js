@@ -1,0 +1,335 @@
+const { OpenAI } = require("openai");
+const AppError = require("../models/appError");
+const { ERROR_CODES } = require("../errors");
+let pLimit = require("p-limit");
+const commonHelper = require("../helpers/commonHelper");
+const { redisHelper } = require("../helpers/redisHelper");
+const Page = require("../models/page");
+
+const limit = pLimit(5); // 5 concurrency
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+/**
+ * Helper function to get normalized page url & page ID (hash value)
+ * @param {String} pageUrl
+ */
+function getNormalizedPageMeta(pageUrl) {
+  const normalizedPageUrl = commonHelper.processUrl(pageUrl);
+  if (!normalizedPageUrl) return null;
+  const pageId = commonHelper.generateHash(normalizedPageUrl);
+  return { pageId, normalizedPageUrl };
+}
+
+/**
+ * Generate response for user query using OpenAI model
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const handleUserQuery = async (req, res, next) => {
+  try {
+    const { messages, metadata } = req.body;
+
+    const pageMeta = getNormalizedPageMeta(metadata.page_url);
+    if (!pageMeta) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+
+    let assistantMessage;
+    // Get stored summary
+    if (metadata.event === "summarize") {
+      assistantMessage = await getStoredPageSummary(pageMeta.pageId);
+    }
+    if (!assistantMessage) {
+      // If not a summarize event or if no cached || stored summary
+      // Generate response
+      assistantMessage = await generateAssistantResponse(
+        messages,
+        metadata.max_tokens
+      );
+    }
+
+    return res.json({
+      success: true,
+      data: {
+        message: assistantMessage.message,
+        usage: assistantMessage.usage,
+        model: assistantMessage.model,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Generates assistant response using OpenAI
+ * @param {Array} messages
+ * @param {number} max_tokens
+ * @returns {Promise<{message: string, usage: Object, model: string}>}
+ */
+async function generateAssistantResponse(messages, max_tokens) {
+  const completion = await openai.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0.7,
+    max_tokens,
+    messages,
+  });
+
+  if (
+    !completion ||
+    !completion.choices ||
+    !completion.choices[0] ||
+    !completion.choices[0].message
+  ) {
+    throw new AppError(
+      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+      "Invalid OpenAI response"
+    );
+  }
+
+  return {
+    message: completion.choices[0].message.content,
+    usage: completion.usage,
+    model: completion.model,
+  };
+}
+
+/**
+ * Try to get cached or stored page summary.
+ * Returns null if not found
+ * @param {String} pageId page ID
+ * @returns {Promise<String>}
+ */
+async function getStoredPageSummary(pageId) {
+  const cached = await redisHelper.getPageSummary(pageId);
+  if (cached)
+    return {
+      message: cached,
+      usage: null,
+      model: "cached",
+    };
+
+  const stored = await Page.getById(pageId);
+  if (stored && stored.summary)
+    return {
+      message: stored.summary,
+      usage: null,
+      model: "cached",
+    };
+
+  return null;
+}
+
+/**
+ * Generates 3 suggested questions based on provided content
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const generateSuggestedQuestions = async (req, res, next) => {
+  try {
+    const { pageContent, language = "en" } = req.body;
+
+    if (!pageContent || !pageContent.content) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing page content");
+    }
+
+    let systemPromptContent;
+    if (language === "vi") {
+      systemPromptContent = `Bạn là một AI tạo ra các câu hỏi thú vị về nội dung trang web.
+Hãy tạo 3 câu hỏi bằng tiếng Việt mà sẽ hữu ích cho người đọc trang này.
+Phản hồi của bạn CHỈ nên là một mảng gồm 3 câu hỏi tiếng Việt, định dạng dưới dạng mảng JSON các chuỗi.
+Ví dụ: ["Câu hỏi 1 bằng tiếng Việt?", "Câu hỏi 2 bằng tiếng Việt?", "Câu hỏi 3 bằng tiếng Việt?"]
+Không bao gồm bất kỳ thứ gì khác.`;
+    } else {
+      systemPromptContent = `You are an AI that generates 3 interesting questions about web page content. 
+Generate questions that would be useful to a reader of this page.
+Your response should be ONLY an array of 3 questions, formatted as a JSON array of strings.
+Do not include anything else, not even a JSON wrapper object.`;
+    }
+
+    const systemPrompt = {
+      role: "system",
+      content: systemPromptContent,
+    };
+
+    let contentPromptText = `Here is the web page content:
+Title: ${pageContent.title}
+${pageContent.content.substring(0, 3000)}`;
+
+    if (language === "vi") {
+      contentPromptText += `\n\nHãy tạo 3 câu hỏi bằng TIẾNG VIỆT về nội dung này.`;
+    } else {
+      contentPromptText += `\n\nGenerate 3 questions in ENGLISH about this content.`;
+    }
+
+    const contentPrompt = {
+      role: "user",
+      content: contentPromptText,
+    };
+
+    const temperature = language === "vi" ? 0.3 : 0.7;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [systemPrompt, contentPrompt],
+      temperature,
+      max_tokens: 500,
+    });
+
+    if (
+      !completion ||
+      !completion.choices ||
+      !completion.choices[0] ||
+      !completion.choices[0].message
+    ) {
+      throw new AppError(
+        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+        "Invalid OpenAI response"
+      );
+    }
+
+    const content = completion.choices[0].message.content.trim();
+    let questions = [];
+
+    try {
+      questions = JSON.parse(content);
+    } catch (parseError) {
+      // Try to extract questions from quoted strings
+      const questionMatches = content.match(/"([^"]+)"/g);
+      if (questionMatches && questionMatches.length > 0) {
+        questions = questionMatches.map((q) => q.replace(/"/g, ""));
+      } else {
+        // Fallback: split by lines
+        const lines = content
+          .split("\n")
+          .filter((line) => line.trim().length > 0);
+        if (lines.length > 0) {
+          questions = lines.slice(0, 3);
+        }
+      }
+    }
+
+    if (questions.length > 0) {
+      const result = {
+        success: true,
+        data: {
+          questions: questions.slice(0, 3),
+          usage: completion.usage || null,
+        },
+      };
+
+      console.log("Generated questions result: ", result);
+      return res.json(result);
+    } else {
+      throw new AppError(
+        ERROR_CODES.INTERNAL_ERROR,
+        "Failed to extract suggested questions"
+      );
+    }
+  } catch (err) {
+    console.error("Error generating questions:", err);
+    next(err);
+  }
+};
+
+/**
+ * Generates captions for an array of image sources using OpenAI.
+ * @param {String[]} sources Array of image sources (can be URLs or base64 strings).
+ * @param {String} context Contextual article/content for captioning.
+ * @returns {Promise<{ captions: String[], usage: Object }>}
+ * @throws on OpenAI or input errors.
+ */
+const captionize = async (req, res, next) => {
+  try {
+    const { sources, context } = req.body;
+
+    const tasks = sources.map((src, idx) =>
+      limit(async () => {
+        try {
+          const messages = [
+            {
+              role: "system",
+              content:
+                "You are a helpful assistant that generates short detail captions for images, using the article provided to infer names, events, or context.",
+            },
+            {
+              role: "user",
+              content: [
+                {
+                  type: "text",
+                  text: context.slice(0, 100000),
+                },
+                {
+                  type: "text",
+                  text: "Based on the article above, generate a short detail caption (no quotation marks) for the image below. Use the article to identify people, events, or context relevant to the image.",
+                },
+                {
+                  type: "image_url",
+                  image_url: {
+                    url: src,
+                    detail: "low",
+                  },
+                },
+              ],
+            },
+          ];
+
+          const response = await openai.chat.completions.create({
+            model: "gpt-4o-mini",
+            messages,
+            temperature: 0.5,
+          });
+
+          const raw = response.choices?.[0]?.message?.content?.trim() || "";
+          const clean = raw.replace(/^['"]+|['"]+$/g, "").split(/\r?\n/)[0];
+
+          const result = {
+            caption: clean,
+            usage: response.usage || {
+              prompt_tokens: 0,
+              completion_tokens: 0,
+              total_tokens: 0,
+            },
+          };
+
+          console.log("Generated questions response: ", result);
+
+          return res.json(result);
+        } catch (err) {
+          console.error(`Caption error for image ${idx}:`, err);
+          return {
+            caption: null,
+            usage: { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 },
+          };
+        }
+      })
+    );
+
+    const results = await Promise.all(tasks);
+
+    const captions = results.map((r) => r.caption);
+    const usage = results.reduce(
+      (acc, r) => ({
+        prompt_tokens: acc.prompt_tokens + r.usage.prompt_tokens,
+        completion_tokens: acc.completion_tokens + r.usage.completion_tokens,
+        total_tokens: acc.total_tokens + r.usage.total_tokens,
+      }),
+      { prompt_tokens: 0, completion_tokens: 0, total_tokens: 0 }
+    );
+
+    res.json({ success: true, data: { captions, usage } });
+  } catch (err) {
+    next(err);
+  }
+};
+
+module.exports = {
+  handleUserQuery,
+  generateSuggestedQuestions,
+  captionize,
+};
