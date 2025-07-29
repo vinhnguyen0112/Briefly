@@ -33,22 +33,21 @@ build_dev:
 
 deploy_dev:
     stage: deploy
-    image: ccr.itim.vn/product-backend/handy-scripts:1.1.1
+    id_tokens:
+        ID_TOKEN:
+            aud: kubernetes
+    image: ccr.itim.vn/admins/cicd-scripts:latest
     only:
         - /^[0-9]+\.[0-9]+\.[0-9]+\-dev$/
-    except:
-        - branches
-        - triggers
+    variables:
+        SERVICE_NAME: ${PROJECT_NAME}        # your service name, as defined in k8s manifest
+        NAMESPACE: product-backend-dev                # namespace, with -prod or -dev suffix
+        OVERLAYS: dev                      # overlays in k8s-manifest
+        IMAGES: $IMAGE_NAME:$CI_COMMIT_TAG       # allow multiple images, separate by commas (,). Please make sure using the right image tag or your service will crash
+        ID_TOKEN: $ID_TOKEN
+        CI_COMMIT_MESSAGE: $CI_COMMIT_MESSAGE
     script:
-        - |
-            export COMMAND=deploy \
-              && export JENKINS_TOKEN=$JENKINS_TOKEN \
-              && export JENKINS_JOB=DEV-build-k8s \
-              && export JENKINS_NAMESPACE=product-backend \
-              && export JENKINS_OVERLAYS=dev \
-              && export JENKINS_PROJECT=$PROJECT_NAME \
-              && export JENKINS_IMAGES=$IMAGE_NAME:$CI_COMMIT_TAG \
-              && start
+        - /script/deploy.py
 
 build_prod:
     stage: build
@@ -63,3 +62,21 @@ build_prod:
         - docker build -t $IMAGE_NAME:$CI_COMMIT_TAG -f ./server/Dockerfile ./server
         - docker push $IMAGE_NAME:$CI_COMMIT_TAG
         - echo "Pushed image $IMAGE_NAME:$CI_COMMIT_TAG"
+
+deploy_prod:
+    stage: deploy
+    id_tokens:
+        ID_TOKEN:
+            aud: kubernetes
+    image: ccr.itim.vn/admins/cicd-scripts:latest
+    only:
+        - /^[0-9]+\.[0-9]+\.[0-9]+$/
+    variables:
+        SERVICE_NAME: ${PROJECT_NAME}        # your service name, as defined in k8s manifest
+        NAMESPACE: product-backend-prod                # namespace, with -prod or -dev suffix
+        OVERLAYS: prod                      # overlays in k8s-manifest
+        IMAGES: $IMAGE_NAME:$CI_COMMIT_TAG       # allow multiple images, separate by commas (,). Please make sure using the right image tag or your service will crash
+        ID_TOKEN: $ID_TOKEN
+        CI_COMMIT_MESSAGE: $CI_COMMIT_MESSAGE
+    script:
+        - /script/deploy.py
