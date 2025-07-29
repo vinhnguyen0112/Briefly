@@ -6,12 +6,9 @@ import {
   getUserSession,
   resetCurrentChatState,
   resetPaginationState,
+  sendRequest,
 } from "./state.js";
-import {
-  renderContentInSidebar,
-  requestPageContent,
-  updateContentStatus,
-} from "./content-handler.js";
+import { requestPageContent, updateContentStatus } from "./content-handler.js";
 import {
   renderToggleAccountPopupUI,
   setupListenersForDynamicChatHistoryElements,
@@ -23,9 +20,12 @@ import {
   generateQuestionsFromContent,
   processUserQuery,
 } from "./api-handler.js";
+import { translateElement } from "./i18n.js";
 
-// close all panels
-export function closeAllPanels() {
+/**
+ * Close all screens and panels beside chat screen as it's main screen
+ */
+export function closeAllScreensAndPanels() {
   // hide config
   elements.configContainer.style.display = "none";
   elements.configButton.classList.remove("active");
@@ -38,6 +38,13 @@ export function closeAllPanels() {
 
   // hide sign in alert
   elements.signInAlertOverlay.style.display = "none";
+
+  // hide account popup
+  elements.accountPopup.style.display = "none";
+
+  // hide chat history screen
+  elements.chatHistoryScreen.style.display = "none";
+  document.getElementById("chat-history-button").classList.remove("active");
 
   // show main screen
   elements.chatScreen.style.display = "flex";
@@ -109,7 +116,7 @@ export function stopResize() {
 // switch from welcome to chat view
 export function switchToChat() {
   // hide chat history
-  elements.chatHistoryScreen.style.display = "none";
+  // elements.chatHistoryScreen.style.display = "none";
 
   // show chat
   elements.chatScreen.style.display = "flex";
@@ -117,44 +124,61 @@ export function switchToChat() {
   // focus input
   elements.userInput.focus();
 
-  // inject chat actions container if not exists
+  if (!elements.chatContainer.querySelector(".welcome-container")) {
+    const welcomeContainer = createWelcomeContainer();
+    elements.chatContainer.prepend(welcomeContainer);
+  }
   if (!elements.chatContainer.querySelector(".chat-actions-container")) {
+    // inject chat actions container if not exists
     const chatActionsContainer = createChatActionsContainer();
     elements.chatContainer.appendChild(chatActionsContainer);
   }
 }
 
-// add message to chat
-export async function addMessageToChat(message, role) {
+/**
+ * Add message element to chat screen.
+ * Assistant messages are attached a message ID.
+ * @param {Object} options Configuration object
+ * @param {String} options.message Message content
+ * @param {"user" | "assistant"} options.role
+ * @param {String} [options.messageId]
+ * @param {String} [options.tempMessageId]
+ * @param {String} [options.event]
+ * @returns {HTMLElement} Message element
+ */
+export async function addMessageToChat({
+  message,
+  role,
+  messageId = null,
+  tempMessageId = null,
+  event = null,
+}) {
   const messageElement = document.createElement("div");
   messageElement.className = `chat-message ${role}-message`;
 
-  if (role === "assistant") {
-    messageElement.innerHTML = `
-      <div class="message-content">${formatMessage(message)}</div>
-    `;
-
-    const userSession = await getUserSession();
-    if (userSession) {
-      const feedbackBtn = document.createElement("button");
-      feedbackBtn.className = "feedback-icon";
-      feedbackBtn.title = "Send feedback";
-      const img = document.createElement("img");
-      img.src = chrome.runtime.getURL("icons/feedback.png");
-      img.alt = "Feedback";
-      feedbackBtn.appendChild(img);
-      feedbackBtn.onclick = () => {
-        showFeedbackModal();
-      };
-      messageElement.appendChild(feedbackBtn);
-    }
-  } else {
-    messageElement.innerHTML = `
-      <div class="message-content">${formatMessage(message)}</div>
-    `;
+  // Set ID
+  if (messageId) {
+    messageElement.setAttribute("data-message-id", messageId);
+  } else if (tempMessageId) {
+    messageElement.setAttribute("data-temp-message-id", tempMessageId);
   }
 
-  // Insert message before actions container so actions stay at the bottom
+  // Conditionally add data-i18n if event is not "ask"
+  const i18nAttribute = event && event !== "ask" ? `data-i18n="${event}"` : "";
+
+  messageElement.innerHTML = `
+    <div class="message-content" ${i18nAttribute}>
+      ${formatMessage(message)}
+    </div>
+  `;
+
+  // Add feedback icon for assistant replies
+  if (role === "assistant" && messageId) {
+    addFeedbackIconToMessage(messageElement);
+  }
+
+  translateElement(messageElement);
+
   const actionsContainer = elements.chatContainer.querySelector(
     ".chat-actions-container"
   );
@@ -163,22 +187,96 @@ export async function addMessageToChat(message, role) {
   } else {
     elements.chatContainer.appendChild(messageElement);
   }
+
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
+
+  return messageElement;
 }
 
 /**
- * Clear all messages from chat container
- * and inject quick actions & suggested questions into chat container
+ * Clear all messages from chat container.
+ *
+ * Inject welcome section and quick actions & suggested questions
+ * and context indicator into chat container
  */
 export async function clearMessagesFromChatContainer() {
   if (!elements.chatContainer) return;
   elements.chatContainer.innerHTML = "";
+
+  const welcomeContainer = createWelcomeContainer();
+  elements.chatContainer.prepend(welcomeContainer);
 
   // Create a container for both quick actions and suggested questions
   const chatActionsContainer = createChatActionsContainer();
   elements.chatContainer.appendChild(chatActionsContainer);
 
   updateContentStatus();
+}
+
+/**
+ * Update message element with real message ID and show feedback icon
+ * @param {String} tempMessageId Temporary message ID
+ * @param {String} realMessageId Real message ID from backend
+ */
+export function updateMessageWithId(tempMessageId, realMessageId) {
+  const messageElement = document.querySelector(
+    `[data-temp-message-id="${tempMessageId}"]`
+  );
+  if (messageElement) {
+    // Remove temp ID and set real message ID
+    messageElement.removeAttribute("data-temp-message-id");
+    messageElement.setAttribute("data-message-id", realMessageId);
+
+    // Now show the feedback icon since we have a real message ID
+    addFeedbackIconToMessage(messageElement);
+  }
+}
+
+/**
+ * Add a feedback icon to the message element
+ * @param {HTMLElement} messageElement
+ */
+function addFeedbackIconToMessage(messageElement) {
+  // Check if feedback icon already exists
+  if (messageElement.querySelector(".feedback-button")) return;
+
+  const feedbackButton = document.createElement("button");
+  feedbackButton.className = "feedback-button";
+  feedbackButton.title = "Send feedback";
+  feedbackButton.innerHTML = `
+    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
+      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17h6l3 3v-3h2V9h-2M4 4h11v8H9l-3 3v-3H4V4Z"/>
+    </svg>
+  `;
+  feedbackButton.onclick = (event) => {
+    const messageId = messageElement.dataset.messageId;
+    console.log("Message Id: ", messageId);
+    showFeedbackModal(messageId);
+  };
+
+  messageElement.appendChild(feedbackButton);
+}
+
+/**
+ * Create a welcome container inside #chat-container, the container includes a logo and title
+ * @returns {HTMLElement}
+ */
+function createWelcomeContainer() {
+  const welcomeContainer = document.createElement("div");
+  welcomeContainer.className = "welcome-container";
+
+  welcomeContainer.innerHTML = `
+    <img
+      src="./icons/logo.png"
+      alt="logo"
+      id="welcome-logo"
+    />
+    <h3 data-i18n="welcome">Ask me anything about this webpage</h3>
+  `;
+
+  translateElement(welcomeContainer);
+
+  return welcomeContainer;
 }
 
 /**
@@ -227,47 +325,9 @@ function injectQuickActions(container) {
   `;
   container.appendChild(quickActions);
 
-  const quickActionButtons = quickActions.querySelectorAll(".action-button");
+  translateElement(quickActions);
 
-  quickActionButtons.forEach((button) => {
-    button.addEventListener("click", async () => {
-      console.log("Button clicked");
-      const action = button.getAttribute("data-action");
-      let query = "";
-      const metadata = {};
-
-      switch (action) {
-        case "summarize":
-          query = "Summarize this page in a concise way.";
-          metadata.event = "summarize";
-          break;
-        case "keypoints":
-          query = "What are the key points of this page?";
-          metadata.event = "keypoints";
-          break;
-        case "explain":
-          query = "Explain the content of this page as if I'm a beginner.";
-          metadata.event = "explain";
-          break;
-        default:
-          metadata.event = "ask";
-      }
-
-      if (query) {
-        switchToChat();
-        const response = await processUserQuery(query, metadata);
-        if (action === "summarize" && response?.success && response.message) {
-          chrome.runtime.sendMessage({
-            action: "store_page_summary",
-            page_url: state.pageContent.url || window.location.href,
-            title: state.pageContent.title || document.title,
-            summary: response.message,
-            suggested_questions: [],
-          });
-        }
-      }
-    });
-  });
+  setupQuickActionsEvent(container);
 }
 
 /**
@@ -288,11 +348,13 @@ function injectSuggestedQuestions(container) {
     </button>
     <div class="question-loading" style="display:none;margin-top:12px;">
       <div class="spinner-small"></div>
-      <span>Generating questions...</span>
+      <span data-i18n=generatingQuestions>Generating questions...</span>
     </div>
     <div class="question-buttons-container" style="margin-top:12px;"></div>
   `;
   container.appendChild(suggestedQuestionsContainer);
+
+  translateElement(suggestedQuestionsContainer);
 
   const generateQuestionsButton = suggestedQuestionsContainer.querySelector(
     ".generate-questions-button"
@@ -311,10 +373,13 @@ function injectSuggestedQuestions(container) {
     let result;
 
     // Use generated questions if have
-    if (state.generatedQuestions) {
+    if (
+      state.generatedQuestions[state.language] &&
+      state.generatedQuestions[state.language].length > 0
+    ) {
       result = {
         success: true,
-        questions: state.generatedQuestions,
+        questions: state.generatedQuestions[state.language],
       };
     } else {
       result = await generateQuestionsFromContent(state.pageContent);
@@ -322,6 +387,7 @@ function injectSuggestedQuestions(container) {
 
     loadingDiv.style.display = "none";
 
+    // Render generated questions
     if (result && result.success && Array.isArray(result.questions)) {
       questionButtonsContainer.innerHTML = "";
       result.questions.forEach((question) => {
@@ -337,11 +403,38 @@ function injectSuggestedQuestions(container) {
         };
         questionButtonsContainer.appendChild(questionButton);
       });
+
+      // Only store generated questions when it's displayabled
+      state.generatedQuestions[state.language] = result.questions;
     } else {
       questionButtonsContainer.innerHTML = `<div style="color:#E53E3E;">Failed to generate questions.</div>`;
       generateQuestionsButton.style.display = "block";
     }
   });
+}
+
+/**
+ * Clear all suggested questions and display generate question button
+ */
+export function resetSuggestedQuestionsContainer() {
+  const suggestedQuestionsContainer = document.querySelector(
+    ".suggested-questions-container"
+  );
+  if (suggestedQuestionsContainer) {
+    const generateQuestionsButton = suggestedQuestionsContainer.querySelector(
+      ".generate-questions-button"
+    );
+    const questionButtonsContainer = suggestedQuestionsContainer.querySelector(
+      ".question-buttons-container"
+    );
+
+    // Clear all questions
+    if (questionButtonsContainer) {
+      questionButtonsContainer.innerHTML = "";
+    }
+
+    generateQuestionsButton.style.display = "flex";
+  }
 }
 
 /**
@@ -353,72 +446,38 @@ export function clearChatHistoryList() {
   }
 }
 
-export async function updateFeedbackIconsForAssistantMessages() {
-  const userSession = await getUserSession();
-  if (!userSession) return;
-
-  const messages = document.querySelectorAll(".chat-message.assistant-message");
-  messages.forEach((msg) => {
-    if (msg.querySelector(".feedback-icon")) return;
-
-    const feedbackBtn = document.createElement("button");
-    feedbackBtn.className = "feedback-icon";
-    feedbackBtn.title = "Send feedback";
-    const img = document.createElement("img");
-    img.src = chrome.runtime.getURL("icons/feedback.png");
-    img.alt = "Feedback";
-    feedbackBtn.appendChild(img);
-    feedbackBtn.onclick = () => {
-      showFeedbackModal();
-    };
-    msg.appendChild(feedbackBtn);
-  });
-}
-
-async function showFeedbackModal() {
+async function showFeedbackModal(messageId) {
   const userSession = await getUserSession();
   if (!userSession) {
-    alert("you need to login to give feedback");
+    // TODO: Change to message passing to invoke dialog
+    alert("You need to login to give feedback.");
     return;
   }
 
+  // Prevent opening multiple modals
   if (document.getElementById("cocbot-feedback-modal")) return;
 
-  console.log("Opening feedback modal...");
-
-  // Add blur to sidebar
   const sidebar = document.querySelector(".sidebar");
   if (sidebar) sidebar.classList.add("cocbot-blur");
 
+  // Create modal element
   const modal = document.createElement("div");
   modal.id = "cocbot-feedback-modal";
-  modal.innerHTML = `
-    <div class="cocbot-modal-backdrop"></div>
-    <div class="cocbot-modal-content feedback-modal">
-      <h2 class="feedback-title">Give Feedback</h2>
-      <div class="feedback-subtitle">Rating your experience with Briefly</div>
-      ${renderStars()}
-      <div class="feedback-reason-label">
-        Write your feedback <span class="optional-label">(optional)</span>
-      </div>
-      <textarea class="feedback-reason-input" placeholder="please write here"></textarea>
-      <div class="feedback-modal-actions">
-        <button class="button feedback-submit">Submit</button>
-        <button class="button feedback-cancel">Cancel</button>
-      </div>
-    </div>
-  `;
+  modal.innerHTML = generateFeedbackModalHTML();
   document.body.appendChild(modal);
 
-  // Đóng modal khi click backdrop
+  // Close modal and remove blur
+  function closeModal() {
+    modal.remove();
+    if (sidebar) sidebar.classList.remove("cocbot-blur");
+  }
+
+  // Event: Click outside to close
   modal
     .querySelector(".cocbot-modal-backdrop")
-    .addEventListener("click", () => {
-      modal.remove();
-      if (sidebar) sidebar.classList.remove("cocbot-blur");
-    });
+    .addEventListener("click", closeModal);
 
-  // Ngăn nổi bọt khi click vào modal content
+  // Prevent modal click from closing
   modal
     .querySelector(".cocbot-modal-content")
     .addEventListener("click", (e) => {
@@ -426,151 +485,235 @@ async function showFeedbackModal() {
     });
 
   // Star rating logic
-  const ratingItems = modal.querySelectorAll(".feedback-rating-item");
   let selectedRate = null;
+  const ratingItems = modal.querySelectorAll(".feedback-rating-item");
   const submitBtn = modal.querySelector(".feedback-submit");
-  submitBtn.disabled = true; // Disable submit ban đầu
+  const cancelBtn = modal.querySelector(".feedback-cancel");
 
-  ratingItems.forEach((item, idx) => {
-    item.addEventListener("mouseenter", () => {
-      ratingItems.forEach((el, i) => {
-        el.classList.toggle("hovered", i <= idx);
-        el.classList.toggle(
-          "selected",
-          selectedRate && i < selectedRate && i <= idx
-        );
-      });
-    });
-    item.addEventListener("mouseleave", () => {
-      ratingItems.forEach((el) => el.classList.remove("hovered"));
-      ratingItems.forEach((el, i) => {
-        el.classList.toggle("selected", selectedRate && i < selectedRate);
-      });
-    });
-    item.addEventListener("click", () => {
-      if (selectedRate === idx + 1) {
-        selectedRate = null;
-        ratingItems.forEach((el) => el.classList.remove("selected"));
-        submitBtn.disabled = true; // Disable khi bỏ chọn
-      } else {
-        selectedRate = idx + 1;
-        ratingItems.forEach((el, i) => {
-          el.classList.toggle("selected", i < selectedRate);
-        });
-        submitBtn.disabled = false; // Enable khi đã chọn
-      }
-    });
+  submitBtn.disabled = true;
+
+  ratingItems.forEach((item, index) => {
+    item.addEventListener("mouseenter", () => updateStars(index));
+    item.addEventListener("mouseleave", restoreStars);
+    item.addEventListener("click", () => selectStars(index));
   });
 
-  // Submit/cancel logic
+  cancelBtn.onclick = closeModal;
+
   submitBtn.onclick = async () => {
     if (submitBtn.disabled) return;
+
     const stars = selectedRate;
     const comment = modal.querySelector(".feedback-reason-input").value.trim();
-    const userSession = await getUserSession();
-    const sessionId = "auth:" + userSession?.id;
+
+    const toastId = showToast({
+      message:
+        state.language === "en" ? "Submitting feedback" : "Đang gửi góp ý",
+      type: "loading",
+      duration: null,
+    });
 
     try {
-      const res = await fetch(
-        "https://dev-capstone-2025.coccoc.com/api/feedback",
+      const response = await sendRequest(
+        `https://dev-capstone-2025.coccoc.com/api/feedback`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${sessionId}`,
-          },
-          body: JSON.stringify({ stars, comment }),
+          body: { stars, comment, message_id: parseInt(messageId) },
         }
       );
-      const data = await res.json();
-      if (data.success) {
-        showToast("Feedback received!");
-        modal.remove();
-        if (sidebar) sidebar.classList.remove("cocbot-blur");
+
+      if (response.success) {
+        updateToast(toastId, {
+          message:
+            state.language === "en" ? "Feedback submitted" : "Gửi thành công",
+          type: "success",
+          duration: 2000,
+        });
       } else {
-        alert(data.error || "fail!");
+        updateToast(toastId, {
+          message:
+            state.language === "en"
+              ? "Something went wrong, please try again later"
+              : "Đã xảy ra lỗi, vui lòng thử lại sau",
+          type: "error",
+          duration: 2000,
+        });
       }
     } catch (err) {
-      alert("server fail");
+      console.error(err);
+      updateToast(toastId, {
+        message:
+          state.language === "en"
+            ? "Something went wrong, please try again later"
+            : "Đã xảy ra lỗi, vui lòng thử lại sau",
+        type: "error",
+        duration: 2000,
+      });
+    } finally {
+      closeModal();
     }
   };
 
-  function showToast(message) {
-    const toast = document.createElement("div");
-    toast.textContent = message;
-    toast.style.position = "fixed";
-    toast.style.top = "24px";
-    toast.style.left = "50%";
-    toast.style.transform = "translateX(-50%)";
-    toast.style.background = "#222";
-    toast.style.color = "#fff";
-    toast.style.padding = "12px 24px";
-    toast.style.borderRadius = "8px";
-    toast.style.zIndex = 99999;
-    toast.style.fontSize = "1rem";
-    toast.style.boxShadow = "0 2px 8px rgba(0,0,0,0.15)";
-    toast.style.opacity = "0.92";
-    document.body.appendChild(toast);
-    setTimeout(() => toast.remove(), 2200);
+  // Helper: Fill stars on hover
+  function updateStars(hoverIndex) {
+    ratingItems.forEach((el, i) => {
+      el.classList.toggle("hovered", i <= hoverIndex);
+      el.classList.toggle(
+        "selected",
+        selectedRate && i < selectedRate && i <= hoverIndex
+      );
+    });
   }
 
-  const cancelBtn = modal.querySelector(".feedback-cancel");
-  cancelBtn.onclick = () => {
-    modal.remove();
-    if (sidebar) sidebar.classList.remove("cocbot-blur");
-  };
+  // Helper: Restore stars on leave
+  function restoreStars() {
+    ratingItems.forEach((el, i) => {
+      el.classList.remove("hovered");
+      el.classList.toggle("selected", selectedRate && i < selectedRate);
+    });
+  }
+
+  // Helper: Select/deselect stars
+  function selectStars(index) {
+    if (selectedRate === index + 1) {
+      selectedRate = null;
+      ratingItems.forEach((el) => el.classList.remove("selected"));
+      submitBtn.disabled = true;
+    } else {
+      selectedRate = index + 1;
+      ratingItems.forEach((el, i) => {
+        el.classList.toggle("selected", i < selectedRate);
+      });
+      submitBtn.disabled = false;
+    }
+  }
 }
 
+// Extracted HTML rendering logic
+function generateFeedbackModalHTML() {
+  return `
+    <div class="cocbot-modal-backdrop"></div>
+    <div class="cocbot-modal-content feedback-modal">
+      <h2 class="feedback-title" data-i18n="feedbackTitle">Give Feedback</h2>
+      <div class="feedback-subtitle">Rate your experience with Briefly</div>
+      ${renderStars()}
+      <div class="feedback-reason-label">
+        Write your feedback <span class="optional-label">(optional)</span>
+      </div>
+      <textarea class="feedback-reason-input" placeholder="please write here"></textarea>
+      <div class="feedback-modal-actions">
+        <button class="action-button feedback-submit">Submit</button>
+        <button class="action-button feedback-cancel">Cancel</button>
+      </div>
+    </div>
+  `;
+}
+
+/**
+ * Create stars rating row using Font Awesome SVG
+ * @returns {string}
+ */
 function renderStars() {
-  if (window.innerWidth < 386) {
-    // 3 trên, 2 dưới
-    return `
-      <div class="feedback-rating-row">
-        <div class="feedback-rating-stars-row">
-          ${[0, 1, 2]
-            .map(
-              (i) => `
-            <div class="feedback-rating-item" data-rate="${i + 1}">
-              <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
-                i + 1
-              }" class="feedback-rating-icon" />
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-        <div class="feedback-rating-stars-row">
-          ${[3, 4]
-            .map(
-              (i) => `
-            <div class="feedback-rating-item" data-rate="${i + 1}">
-              <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
-                i + 1
-              }" class="feedback-rating-icon" />
-            </div>
-          `
-            )
-            .join("")}
-        </div>
-      </div>
-    `;
-  } else {
-    // 5 sao 1 hàng
-    return `
-      <div class="feedback-rating-row">
-        ${[0, 1, 2, 3, 4]
-          .map(
-            (i) => `
-          <div class="feedback-rating-item" data-rate="${i + 1}">
-            <img src="${chrome.runtime.getURL("icons/star.png")}" alt="Star ${
-              i + 1
-            }" class="feedback-rating-icon" />
-          </div>
-        `
-          )
-          .join("")}
-      </div>
-    `;
+  const starSVG = `
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" width="32" height="32" class="feedback-rating-item" data-rate="{RATE}">
+      <path fill="#FFD43B" d="M316.9 18C311.6 7 300.4 0 288.1 0s-23.4 7-28.8 18L195 150.3 51.4 171.5c-12 1.8-22 10.2-25.7 21.7s-.7 24.2 7.9 32.7L137.8 329 113.2 474.7c-2 12 3 24.2 12.9 31.3s23 8 33.8 2.3l128.3-68.5 128.3 68.5c10.8 5.7 23.9 4.9 33.8-2.3s14.9-19.3 12.9-31.3L438.5 329 542.7 225.9c8.6-8.5 11.7-21.2 7.9-32.7s-13.7-19.9-25.7-21.7L381.2 150.3 316.9 18z"/>
+    </svg>
+  `;
+
+  return `
+    <div class="feedback-rating-row">
+      ${[1, 2, 3, 4, 5].map((i) => starSVG.replace("{RATE}", i)).join("")}
+    </div>
+  `;
+}
+
+/**
+ * Show a dynamic toast notification
+ * @param {Object} options
+ * @param {string} options.message The main toast text
+ * @param {'info'|'success'|'error'|'loading'} [options.type='info'] Toast category
+ * @param {number|null} [options.duration] Duration in ms. If null, stays until removed manually
+ * @returns {string} toastId Can be used to update/dismiss later
+ */
+export function showToast({ message, type = "info", duration = 2000 }) {
+  const toastId = `toast-${state.toastIdCounter++}`;
+  const toast = document.createElement("div");
+  toast.className = `toast toast-${type}`;
+  toast.id = toastId;
+
+  const icon = getToastIcon(type);
+  toast.innerHTML = `
+    <span class="toast-icon">${icon}</span>
+    <span class="toast-message">${message}</span>
+  `;
+
+  document.body.appendChild(toast);
+
+  if (duration !== null) {
+    setTimeout(() => removeToast(toastId), duration);
+  }
+
+  return toastId;
+}
+
+/**
+ * Update an existing toast by ID
+ * @param {string} toastId
+ * @param {Object} options
+ * @param {string} [options.message]
+ * @param {'info'|'success'|'error'|'loading'} [options.type]
+ * @param {number|null} [options.duration] Reset or extend timeout
+ */
+export function updateToast(toastId, { message, type, duration }) {
+  const toast = document.getElementById(toastId);
+  if (!toast) return;
+
+  if (message) toast.querySelector(".toast-message").textContent = message;
+  if (type) {
+    toast.className = `toast toast-${type}`;
+    toast.querySelector(".toast-icon").innerHTML = getToastIcon(type);
+  }
+
+  if (duration !== undefined) {
+    setTimeout(() => removeToast(toastId), duration);
+  }
+}
+
+/**
+ * Remove a toast by ID
+ * @param {string} toastId
+ */
+export function removeToast(toastId) {
+  const toast = document.getElementById(toastId);
+  if (toast) toast.remove();
+}
+
+/**
+ * Get icon HTML by type
+ */
+function getToastIcon(type) {
+  switch (type) {
+    case "success":
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" class="toast-icon">
+          <path fill="currentColor" d="M434.8 70.1c14.3 10.4 17.5 30.4 7.1 44.7l-256 352c-5.5 7.6-14 12.3-23.4 13.1s-18.5-2.7-25.1-9.3l-128-128c-12.5-12.5-12.5-32.8 0-45.3s32.8-12.5 45.3 0l101.5 101.5 234-321.7c10.4-14.3 30.4-17.5 44.7-7.1z"/>
+        </svg>
+        `;
+    case "error":
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" class="toast-icon">
+          <path fill="currentColor" d="M55.1 73.4c-12.5-12.5-32.8-12.5-45.3 0s-12.5 32.8 0 45.3L147.2 256 9.9 393.4c-12.5 12.5-12.5 32.8 0 45.3s32.8 12.5 45.3 0L192.5 301.3 329.9 438.6c12.5 12.5 32.8 12.5 45.3 0s12.5-32.8 0-45.3L237.8 256 375.1 118.6c12.5-12.5 12.5-32.8 0-45.3s-32.8-12.5-45.3 0L192.5 210.7 55.1 73.4z"/>
+        </svg>
+      `;
+    case "loading":
+      return `<span class="toast-spinner"></span>`;
+    case "info":
+    default:
+      return `
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 192 512" class="toast-icon">
+          <path fill="currentColor" d="M48 48a48 48 0 1 1 96 0 48 48 0 1 1 -96 0zM0 192c0-17.7 14.3-32 32-32l64 0c17.7 0 32 14.3 32 32l0 256 32 0c17.7 0 32 14.3 32 32s-14.3 32-32 32L32 512c-17.7 0-32-14.3-32-32s14.3-32 32-32l32 0 0-224-32 0c-17.7 0-32-14.3-32-32z"/>
+        </svg>
+      `;
   }
 }
 
@@ -637,13 +780,6 @@ export function handleContentMessage(message) {
       // Request fresh content
       requestPageContent();
 
-      // If in welcome mode, reset any generated questions
-      state.generatedQuestions = null;
-      const questionsContainer = document.querySelector(".generated-questions");
-      if (questionsContainer) {
-        questionsContainer.style.display = "none";
-      }
-
       break;
 
     case "auth_session_changed":
@@ -686,7 +822,7 @@ function handleAuthStateChange(isAuth) {
   configureChatHistoryElementsOnAuthState(isAuth);
 
   // Navigate back to welcome page
-  closeAllPanels();
+  closeAllScreensAndPanels();
 
   // Reset state
   resetCurrentChatState();
@@ -798,6 +934,7 @@ export function configureChatHistoryElementsOnAuthState(isAuth) {
               <button
                 id="close-chat-history-button"
                 class="icon-button"
+                data-i18n-title="close"
                 title="Close"
               >
                 <svg
@@ -859,14 +996,4 @@ export function configureChatHistoryElementsOnAuthState(isAuth) {
       chatHistoryButton.remove();
     }
   }
-}
-
-// remove feedback icons from assistant messages
-export function removeFeedbackIconsForAssistantMessages() {
-  const messages = document.querySelectorAll(".chat-message.assistant-message");
-  messages.forEach((msg) => {
-    // TODO: Same height with message component, consider fixing
-    const feedbackBtn = msg.querySelector(".feedback-icon");
-    if (feedbackBtn) feedbackBtn.remove();
-  });
 }

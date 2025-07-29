@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "CocBot",
+  "name": "Briefly",
   "version": "1.0.0",
   "description": "A Chrome extension that helps you read and understand webpages with the power of AI.",
   "icons": {
@@ -8,7 +8,7 @@
     "48": "icons/logo.png",
     "128": "icons/logo.png"
   },
-  "permissions": ["storage", "activeTab", "sidePanel", "scripting", "identity"],
+  "permissions": ["storage", "activeTab", "scripting", "identity"],
   "host_permissions": [
     "https://api.openai.com/*",
     "https://dev-capstone-2025.coccoc.com/api/*"

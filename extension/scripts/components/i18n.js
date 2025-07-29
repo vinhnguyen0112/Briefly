@@ -8,6 +8,11 @@ const translations = {
     save: "Save",
     cancel: "Cancel",
 
+    // Authentications
+    signOut: "Sign Out",
+    signInGoogle: "Sign In With Google",
+    signInFacebook: "Sign In With Facebook",
+
     pageContentViewer: "Page Content Viewer",
     apiKeySettings: "API Key Settings",
     responseSettings: "Response Settings",
@@ -27,31 +32,21 @@ const translations = {
     configure: "Configure",
     notes: "Notes",
 
+    refreshPageContext: "Refresh Page Context",
+
     askAnything: "Ask me anything...",
     writeNote: "Write your note here...",
     enterApiKey: "Enter OpenAI API Key",
 
     processingContent: "Processing page content...",
     generatingQuestions: "Generating questions...",
+
+    // Notes
     noNotes: "No notes for this page yet.",
     createFirstNote: "Create your first note",
+    addNote: "Add Note",
 
     enterApiKeyMessage: "Enter your OpenAI API key to use the assistant:",
-    responseLength: "Maximum Response Length",
-    words: "words",
-    responseStyle: "Response Style",
-    conversational: "Conversational",
-    educational: "Educational",
-    technical: "Technical",
-    responseLanguage: "Response Language",
-
-    conversationalDesc:
-      "Friendly, easy-to-understand explanations using everyday language",
-    educationalDesc: "Structured explanations with clear points and examples",
-    technicalDesc:
-      "Precise terminology and thorough analysis for advanced understanding",
-    responseVerbosity: "Control how verbose the answers will be",
-    languageToggleDesc: "Select the language for the assistant",
 
     languageChanged:
       "Language has been switched to English. User interface and responses will be in English from now on.",
@@ -65,6 +60,24 @@ const translations = {
     delete: "Delete",
 
     account: "Account",
+
+    welcome: "Ask me anything about this webpage",
+
+    responseLength: "Maximum Response Length:",
+    words: "words",
+    responseStyle: "Response Style",
+    conversational: "Conversational",
+    educational: "Educational",
+    technical: "Technical",
+    responseLanguage: "Response Language",
+    conversationalDesc:
+      "Friendly, easy-to-understand explanations using everyday language",
+    educationalDesc: "Structured explanations with clear points and examples",
+    technicalDesc:
+      "Precise terminology and thorough analysis for advanced understanding",
+    responseVerbosity: "Control how verbose the answers will be",
+    languageToggleDesc: "Select the language for the assistant",
+    saveSettings: "Save Settings",
   },
 
   vi: {
@@ -72,6 +85,11 @@ const translations = {
     close: "Đóng",
     save: "Lưu",
     cancel: "Hủy",
+
+    // Authentications
+    signOut: "Đăng Xuất",
+    signInGoogle: "Đăng Nhập Với Google",
+    signInFacebook: "Đăng Nhập Với Facebook",
 
     pageContentViewer: "Trình Xem Nội Dung Trang",
     apiKeySettings: "Cài Đặt Khóa API",
@@ -92,30 +110,21 @@ const translations = {
     configure: "Cấu Hình",
     notes: "Ghi Chú",
 
+    refreshPageContext: "Tải Lại Nội Dung Trang",
+
     askAnything: "Hỏi tôi bất cứ điều gì...",
     writeNote: "Viết ghi chú của bạn tại đây...",
     enterApiKey: "Nhập Khóa API OpenAI",
 
     processingContent: "Đang xử lý nội dung trang...",
     generatingQuestions: "Đang tạo câu hỏi...",
+
+    // Notes
     noNotes: "Chưa có ghi chú nào cho trang này.",
     createFirstNote: "Tạo ghi chú đầu tiên",
+    addNote: "Thêm Ghi Chú",
 
     enterApiKeyMessage: "Nhập khóa API OpenAI của bạn để sử dụng trợ lý:",
-    responseLength: "Độ Dài Phản Hồi Tối Đa",
-    words: "từ",
-    responseStyle: "Phong Cách Phản Hồi",
-    conversational: "Đàm Thoại",
-    educational: "Giáo Dục",
-    technical: "Kỹ Thuật",
-    responseLanguage: "Ngôn Ngữ Phản Hồi",
-
-    conversationalDesc:
-      "Giải thích thân thiện, dễ hiểu bằng ngôn ngữ hàng ngày",
-    educationalDesc: "Giải thích có cấu trúc với các điểm rõ ràng và ví dụ",
-    technicalDesc: "Thuật ngữ chính xác và phân tích kỹ lưỡng để hiểu sâu",
-    responseVerbosity: "Điều chỉnh độ chi tiết của câu trả lời",
-    languageToggleDesc: "Chọn ngôn ngữ cho trợ lý",
 
     languageChanged:
       "Ngôn ngữ đã được chuyển sang tiếng Việt. Giao diện và phản hồi sẽ bằng tiếng Việt từ bây giờ.",
@@ -129,6 +138,25 @@ const translations = {
     delete: "Xóa",
 
     account: "Tài Khoản",
+
+    welcome: "Hỏi tôi bất kì thứ gì về trang web này",
+
+    responseLength: "Độ Dài Phản Hồi Tối Đa:",
+    words: "từ",
+    responseStyle: "Phong Cách Phản Hồi",
+    conversational: "Thân Mật",
+    educational: "Giáo Dục",
+    technical: "Kỹ Thuật",
+    responseLanguage: "Ngôn ngữ phản hồi",
+    conversationalDesc:
+      "Giải thích thân thiện, dễ hiểu bằng ngôn ngữ đời thường",
+    educationalDesc:
+      "Giải thích có cấu trúc với các điểm chính rõ ràng và ví dụ cụ thể",
+    technicalDesc:
+      "Thuật ngữ chính xác và phân tích chuyên sâu cho người dùng nâng cao",
+    responseVerbosity: "Điều chỉnh mức độ chi tiết của câu trả lời",
+    languageToggleDesc: "Chọn ngôn ngữ cho trợ lý",
+    saveSettings: "Lưu Cài Đặt",
   },
 };
 
@@ -189,27 +217,39 @@ export async function switchLanguage(language) {
 
   await updatePageLanguage();
 
-  state.generatedQuestions = null;
-  const questionsContainer = document.querySelector(".generated-questions");
-  if (questionsContainer) {
-    const buttonContainer = document.querySelector(
-      ".question-buttons-container"
-    );
-    if (buttonContainer) {
-      buttonContainer.innerHTML = `
-        <div class="question-loading">
-          <div class="spinner-small"></div>
-          <span data-i18n="generatingQuestions">${translate(
-            "generatingQuestions"
-          )}</span>
-        </div>
-      `;
-    }
+  // state.generatedQuestions[language] = [];
+  // const questionsContainer = document.querySelector(".generated-questions");
+  // if (questionsContainer) {
+  //   const buttonContainer = document.querySelector(
+  //     ".question-buttons-container"
+  //   );
+  //   if (buttonContainer) {
+  //     buttonContainer.innerHTML = `
+  //       <div class="question-loading">
+  //         <div class="spinner-small"></div>
+  //         <span data-i18n="generatingQuestions">${translate(
+  //           "generatingQuestions"
+  //         )}</span>
+  //       </div>
+  //     `;
+  //   }
 
-    questionsContainer.style.display = "block";
-  }
+  //   questionsContainer.style.display = "block";
+  // }
 
   return translate("languageChanged");
+}
+
+/**
+ * Translates elements with `data-i18n` inside a given root.
+ * @param {HTMLElement} root
+ */
+export function translateElement(root = document.body) {
+  const elements = root.querySelectorAll("[data-i18n]");
+  for (const el of elements) {
+    const key = el.getAttribute("data-i18n");
+    el.textContent = translate(key);
+  }
 }
 
 export default {
@@ -217,4 +257,5 @@ export default {
   switchLanguage,
   initializeLanguage,
   updatePageLanguage,
+  translateElement,
 };

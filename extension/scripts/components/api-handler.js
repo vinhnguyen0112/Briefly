@@ -9,6 +9,7 @@ import {
   addMessageToChat,
   addTypingIndicator,
   removeTypingIndicator,
+  updateMessageWithId,
 } from "./ui-handler.js";
 import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
@@ -16,7 +17,6 @@ import chatHandler from "./chat-handler.js";
 import { RequestQueue } from "../../components/RequestQueue.js";
 
 const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
-const persistenceQueue = new RequestQueue(); // Create a request queue
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -40,12 +40,18 @@ export async function processUserQuery(query, metadata = {}) {
     return;
   }
 
-  addMessageToChat(query, "user");
+  // Show user prompt with thinking indicator
+  addMessageToChat({
+    message: query,
+    role: "user",
+    event: metadata.event,
+  });
   const typingIndicator = addTypingIndicator();
 
   state.isProcessingQuery = true;
 
   try {
+    // Build prompt
     const messages = await constructPromptWithPageContent(
       query,
       state.pageContent,
@@ -61,9 +67,17 @@ export async function processUserQuery(query, metadata = {}) {
     if (response.success) {
       const assistantMessage = response.message;
 
-      // Show assistant response immediately
-      addMessageToChat(assistantMessage, "assistant");
+      // Show assistant response immediately with temporary ID
+      const tempMessageId = `temp_${Date.now()}_${Math.random()
+        .toString(36)
+        .substr(2, 9)}`;
+      const messageElement = addMessageToChat({
+        message: assistantMessage,
+        role: "assistant",
+        tempMessageId,
+      });
 
+      // Update current chat history for context-aware responses
       state.currentChat.history.push({ role: "user", content: query });
       state.currentChat.history.push({
         role: "assistant",
@@ -74,12 +88,20 @@ export async function processUserQuery(query, metadata = {}) {
         state.currentChat.history = state.currentChat.history.slice(-6);
       }
 
-      // Queue persistence separately
-      persistChatAndMessages(query, assistantMessage, response.model);
+      // Persist and get real message IDs, then update the UI
+      persistChatAndMessages(
+        query,
+        assistantMessage,
+        response.model,
+        tempMessageId
+      );
 
       return { success: true, message: assistantMessage };
     } else {
-      addMessageToChat("Oops, got an error: " + response.error, "assistant");
+      addMessageToChat({
+        message: `Oops, got an error: ${response.error}`,
+        role: "assistant",
+      });
       if (state.currentChat.history.length <= 0) {
         resetCurrentChatState();
       }
@@ -88,7 +110,10 @@ export async function processUserQuery(query, metadata = {}) {
   } catch (error) {
     console.error("CocBot: Query error:", error);
     removeTypingIndicator(typingIndicator);
-    addMessageToChat("Something went wrong. Try again?", "assistant");
+    addMessageToChat({
+      message: "Something went wrong. Try again?",
+      role: "assistant",
+    });
     if (state.currentChat.history.length <= 0) {
       resetCurrentChatState();
     }
@@ -98,8 +123,22 @@ export async function processUserQuery(query, metadata = {}) {
   }
 }
 
-async function persistChatAndMessages(userQuery, assistantMessage, model) {
+/**
+ *
+ * @param {String} userQuery
+ * @param {String} assistantMessage
+ * @param {String} model
+ * @param {String} tempMessageId
+ * @returns
+ */
+async function persistChatAndMessages(
+  userQuery,
+  assistantMessage,
+  model,
+  tempMessageId
+) {
   const userSession = await getUserSession();
+  // Increase anonymous session's query count
   if (!userSession || !userSession.id) {
     await increaseAnonQueryCount();
     return;
@@ -110,9 +149,7 @@ async function persistChatAndMessages(userQuery, assistantMessage, model) {
 
   const currentChatId = state.currentChat.id;
   const isNewChat = !currentChatId;
-  const queueKey = currentChatId || "__new__";
-
-  await persistenceQueue.enqueue(queueKey, async () => {
+  try {
     let chatId = currentChatId;
 
     // Create a new chat if needed
@@ -126,7 +163,7 @@ async function persistChatAndMessages(userQuery, assistantMessage, model) {
 
       chatId = result.data.id;
 
-      // Update state if not already set (to avoid race)
+      // Update current chat state to new chat
       if (!state.currentChat.id) {
         state.currentChat.id = chatId;
         state.currentChat.title = pageTitle;
@@ -138,24 +175,27 @@ async function persistChatAndMessages(userQuery, assistantMessage, model) {
           title: pageTitle,
           page_url: pageUrl,
         });
-
-        state.chatHistory.unshift({
-          id: chatId,
-          title: pageTitle,
-          page_url: pageUrl,
-          created_at: Date.now(),
-        });
       }
     }
 
-    // Store + cache messages
-    await chatHandler.addMessage(chatId, { role: "user", content: userQuery });
-    await chatHandler.addMessage(chatId, {
+    // Store messages and get their IDs back
+    const userMessageResult = await chatHandler.addMessage(chatId, {
+      role: "user",
+      content: userQuery,
+    });
+
+    const assistantMessageResult = await chatHandler.addMessage(chatId, {
       role: "assistant",
       content: assistantMessage,
       model,
     });
 
+    // Update the message element with real message ID
+    if (assistantMessageResult?.success && assistantMessageResult?.data?.id) {
+      updateMessageWithId(tempMessageId, assistantMessageResult.data.id);
+    }
+
+    // Cache locally
     await idbHandler.addMessageToChat(chatId, {
       role: "user",
       content: userQuery,
@@ -164,7 +204,20 @@ async function persistChatAndMessages(userQuery, assistantMessage, model) {
       role: "assistant",
       content: assistantMessage,
     });
-  });
+
+    // Insert new chat into local chat history list after messages are processed successfuly
+    if (isNewChat) {
+      state.chatHistory.unshift({
+        id: chatId,
+        title: pageTitle,
+        page_url: pageUrl,
+        created_at: Date.now(),
+      });
+    }
+  } catch (error) {
+    console.error("Failed to persist messages:", error);
+    // Handle error - maybe show a retry option or remove feedback icon
+  }
 }
 
 /**

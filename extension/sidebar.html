@@ -12,9 +12,12 @@
     <div class="sidebar">
       <div id="sidebar-resize-handle" class="resize-handle"></div>
       <div class="sidebar-header">
-        <h2 id="cocbot-title" class="cocbot-title" data-i18n="title">
-          Briefly
-        </h2>
+        <div id="title-container">
+          <h2 id="cocbot-title" class="cocbot-title" data-i18n="title">
+            Briefly
+          </h2>
+        </div>
+
         <div class="sidebar-actions">
           <!-- New chat button -->
           <button
@@ -168,7 +171,7 @@
               <span class="toggle-label" id="en-label">EN</span>
               <label class="switch">
                 <input type="checkbox" id="language-toggle" />
-                <span class="slider round"></span>
+                <span class="lang-slider round"></span>
               </label>
               <span class="toggle-label" id="vi-label">VI</span>
             </div>
@@ -216,11 +219,16 @@
           <div class="notes-header">
             <h3 data-i18n="pageNotes">Page Notes</h3>
             <div class="notes-actions">
-              <button id="add-note-button" class="icon-button" title="Add Note">
+              <button
+                id="add-note-button"
+                class="icon-button"
+                data-i18n-title="addNote"
+                title="Add Note"
+              >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
-                  width="14"
-                  height="14"
+                  width="16"
+                  height="16"
                   viewBox="0 0 24 24"
                   fill="none"
                   stroke="currentColor"
@@ -310,7 +318,7 @@
         </div>
 
         <!-- Chat History Screen (hidden initially) -->
-        <div id="chat-history-screen" style="display: none">
+        <div id="chat-history-screen" class="full-screen" style="display: none">
           <div class="chat-history-header">
             <h3 data-i18n="chatHistory">Chat History</h3>
             <div class="chat-history-header-actions">
@@ -363,6 +371,7 @@
               <button
                 id="close-chat-history-button"
                 class="icon-button"
+                data-i18n-title="close"
                 title="Close"
               >
                 <svg
@@ -392,23 +401,127 @@
             </div>
           </div>
         </div>
-      </div>
 
-      <!-- Configuration container (hidden initially) -->
-      <div id="config-container" class="config-container" style="display: none">
-        <div class="config-header">
-          <h3 data-i18n="responseSettings">Response Settings</h3>
-          <button
-            id="config-close"
-            class="config-close"
-            data-i18n-title="close"
-            title="Close"
-          >
-            ×
-          </button>
-        </div>
-        <div id="config-content">
-          <!-- Configuration UI will be rendered here -->
+        <!-- Configuration container (hidden initially) -->
+        <div
+          id="config-container"
+          class="config-container"
+          style="display: none"
+        >
+          <div class="config-header">
+            <h3 data-i18n="responseSettings">Response Settings</h3>
+            <button
+              id="config-close"
+              class="config-close"
+              data-i18n-title="close"
+              title="Close"
+            >
+              &times;
+            </button>
+          </div>
+          <div id="config-content">
+            <div class="config-section">
+              <div class="config-form">
+                <div class="form-group">
+                  <label for="max-word-count" class="form-label">
+                    <span data-i18n="responseLength"
+                      >Maximum Response Length:</span
+                    >
+                    <span id="word-count-value">150</span>
+                    <span data-i18n="words">words</span>
+                  </label>
+                  <div class="slider-container">
+                    <input
+                      type="range"
+                      id="max-word-count"
+                      min="50"
+                      max="500"
+                      step="10"
+                      value="150"
+                      class="slider"
+                    />
+                    <div class="slider-markers" id="slider-markers"></div>
+                  </div>
+                  <div class="help-text" data-i18n="responseVerbosity">
+                    Control how verbose the answers will be
+                  </div>
+                </div>
+
+                <div class="form-group response-style-group">
+                  <label class="form-label" data-i18n="responseStyle"
+                    >Response Style:</label
+                  >
+                  <div class="radio-options">
+                    <label class="radio-card" data-style="conversational">
+                      <input
+                        type="radio"
+                        name="response-style"
+                        value="conversational"
+                      />
+                      <div class="radio-card-content">
+                        <span
+                          class="radio-card-title"
+                          data-i18n="conversational"
+                          >Conversational</span
+                        >
+                        <span
+                          class="radio-card-desc"
+                          data-i18n="conversationalDesc"
+                          >Friendly, easy-to-understand explanations using
+                          everyday language</span
+                        >
+                      </div>
+                    </label>
+                    <label class="radio-card" data-style="educational">
+                      <input
+                        type="radio"
+                        name="response-style"
+                        value="educational"
+                      />
+                      <div class="radio-card-content">
+                        <span class="radio-card-title" data-i18n="educational"
+                          >Educational</span
+                        >
+                        <span
+                          class="radio-card-desc"
+                          data-i18n="educationalDesc"
+                          >Structured explanations with clear points and
+                          examples</span
+                        >
+                      </div>
+                    </label>
+                    <label class="radio-card" data-style="technical">
+                      <input
+                        type="radio"
+                        name="response-style"
+                        value="technical"
+                      />
+                      <div class="radio-card-content">
+                        <span class="radio-card-title" data-i18n="technical"
+                          >Technical</span
+                        >
+                        <span class="radio-card-desc" data-i18n="technicalDesc"
+                          >Precise terminology and thorough analysis for
+                          advanced understanding</span
+                        >
+                      </div>
+                    </label>
+                  </div>
+                </div>
+
+                <div class="form-actions">
+                  <button
+                    id="save-config"
+                    type="button"
+                    class="btn-primary"
+                    data-i18n="saveSettings"
+                  >
+                    Save Settings
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -416,7 +529,7 @@
     <div id="account-popup" class="popup" style="display: none">
       <div class="popup-content">
         <button id="sign-out-button" class="button button-secondary">
-          Sign Out
+          <span data-i18n="signOut" data-i18n-title="signOut">Sign Out</span>
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -425,7 +538,6 @@
             viewBox="0 0 24 24"
             class="auth-icon"
           >
-            <title>logout</title>
             <path
               d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.58L17 17L22 12M4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z"
             />
@@ -458,7 +570,9 @@
               ></path>
             </g>
           </svg>
-          Sign in with Google
+          <span data-i18n="signInGoogle" data-i18n-title="signInGoogle"
+            >Sign in with Google</span
+          >
         </button>
 
         <button class="button auth-button facebook-login-button header-button">
@@ -474,7 +588,9 @@
               d="M512 256C512 114.6 397.4 0 256 0S0 114.6 0 256C0 376 82.7 476.8 194.2 504.5V334.2H141.4V256h52.8V222.3c0-87.1 39.4-127.5 125-127.5c16.2 0 44.2 3.2 55.7 6.4V172c-6-.6-16.5-1-29.6-1c-42 0-58.2 15.9-58.2 57.2V256h83.6l-14.4 78.2H287V510.1C413.8 494.8 512 386.9 512 256h0z"
             />
           </svg>
-          Sign in with Facebook
+          <span data-i18n="signInFacebook" data-i18n-title="signInFacebook"
+            >Sign in with Facebook</span
+          >
         </button>
       </div>
     </div>
@@ -545,6 +661,7 @@
     <script type="module" src="scripts/sidebar.js"></script>
 
     <style>
+      /* LANGUAGE TOGGLE STYLING */
       .sidebar-toolbar {
         display: flex;
         padding: 8px 16px;
@@ -578,7 +695,7 @@
         height: 0;
       }
 
-      .slider {
+      .lang-slider {
         position: absolute;
         cursor: pointer;
         top: 0;
@@ -589,7 +706,7 @@
         transition: 0.4s;
       }
 
-      .slider:before {
+      .lang-slider:before {
         position: absolute;
         content: "";
         height: 14px;
@@ -600,23 +717,23 @@
         transition: 0.4s;
       }
 
-      input:checked + .slider {
+      input:checked + .lang-slider {
         background-color: var(--primary);
       }
 
-      input:focus + .slider {
+      input:focus + .lang-slider {
         box-shadow: 0 0 1px var(--primary);
       }
 
-      input:checked + .slider:before {
+      input:checked + .lang-slider:before {
         transform: translateX(16px);
       }
 
-      .slider.round {
+      .lang-slider.round {
         border-radius: 20px;
       }
 
-      .slider.round:before {
+      .lang-slider.round:before {
         border-radius: 50%;
       }
     </style>

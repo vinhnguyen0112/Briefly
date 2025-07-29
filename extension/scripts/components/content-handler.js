@@ -1,76 +1,88 @@
 // handles page content extraction and rendering
 import { elements } from "./dom-elements.js";
 import { state } from "./state.js";
-import { switchToChat } from "./ui-handler.js";
+import {
+  resetSuggestedQuestionsContainer,
+  switchToChat,
+} from "./ui-handler.js";
 import {
   generateQuestionsFromContent,
   processUserQuery,
 } from "./api-handler.js";
+import { translateElement } from "./i18n.js";
 
-// request page content from background script
+/**
+ * Extracts page content by messaging the background script.
+ * Retries on failure up to `state.maxContentFetchAttempts`.
+ *
+ * @returns {Promise<Object>} Resolves with content (full or partial), or rejects on failure.
+ */
 export function requestPageContent() {
-  console.log("CocBot: Requesting page content");
+  return new Promise((resolve, reject) => {
+    console.log("CocBot: Requesting page content");
 
-  // reset questions
-  // state.generatedQuestions = null;
-  // const questionsContainer = document.querySelector(".generated-questions");
-  // if (questionsContainer) {
-  //   questionsContainer.style.display = "none";
-  // }
+    // Increment the retry attempt counter
+    state.contentFetchAttempts++;
 
-  // track attempts
-  state.contentFetchAttempts++;
+    // Clear any previous content to force fresh extraction
+    state.pageContent = null;
 
-  // Clear the previous content to force a fresh extraction
-  state.pageContent = null;
+    // Internal function that performs the actual extraction logic (with retry support)
+    function tryFetch() {
+      chrome.runtime.sendMessage(
+        { action: "extract_page_content", forceRefresh: true },
+        (response) => {
+          // No response from background script
+          if (!response) {
+            console.error("CocBot: No response from background script");
+            return reject("No response from background script");
+          }
 
-  chrome.runtime.sendMessage(
-    { action: "extract_page_content", forceRefresh: true },
-    (response) => {
-      if (!response) {
-        console.error("CocBot: No response from background script");
-        return;
-      }
+          // Content extraction successful
+          if (response.success) {
+            console.log("CocBot: Got page content!");
+            state.pageContent = response.content; // Assign new page content
 
-      if (response && response.success) {
-        console.log("CocBot: Got page content!");
-        state.pageContent = response.content;
+            // Update UI and reset retry counter
+            updateContentStatus();
+            state.contentFetchAttempts = 0;
 
-        // update ui
-        updateContentStatus();
+            return resolve(response.content);
+          }
 
-        // reset counter on success
-        state.contentFetchAttempts = 0;
-      } else {
-        console.log(
-          "CocBot: Content extraction failed:",
-          response?.error || "Unknown error"
-        );
+          // If there's partial content (e.g., a title), use it anyway
+          if (response.content && response.content.title) {
+            console.log("CocBot: Using partial content result");
+            state.pageContent = {
+              ...response.content,
+              extractionSuccess: false,
+            };
 
-        // If we have a partial content result, still use it
-        if (response.content && response.content.title) {
-          console.log("CocBot: Using partial content result");
-          state.pageContent = response.content;
-          state.pageContent.extractionSuccess = false;
-          updateContentStatus();
+            updateContentStatus();
+            return resolve(state.pageContent);
+          }
+
+          // Retry logic: check if more attempts are allowed
+          if (state.contentFetchAttempts < state.maxContentFetchAttempts) {
+            console.warn(
+              `CocBot: Will retry in 2 seconds (attempt ${state.contentFetchAttempts} of ${state.maxContentFetchAttempts})`
+            );
+
+            setTimeout(tryFetch, 2000);
+          } else {
+            // Exhausted all retry attempts
+            console.error(
+              "CocBot: Max content fetch attempts reached, giving up"
+            );
+            return reject("Max content fetch attempts reached");
+          }
         }
-
-        // retry up to max attempts
-        if (state.contentFetchAttempts < state.maxContentFetchAttempts) {
-          console.log(
-            `CocBot: Will retry in 2 seconds (attempt ${state.contentFetchAttempts} of ${state.maxContentFetchAttempts})`
-          );
-          setTimeout(() => {
-            requestPageContent();
-          }, 2000);
-        } else {
-          console.error(
-            "CocBot: Max content fetch attempts reached, giving up"
-          );
-        }
-      }
+      );
     }
-  );
+
+    // Start the first attempt
+    tryFetch();
+  });
 }
 
 // display content in sidebar
@@ -104,41 +116,61 @@ export function renderContentInSidebar(content) {
   }
 }
 
-// update page context in welcome screen
+/**
+ * Updates the chat container with a context indicator that shows
+ * the current page's title and favicon. If `.welcome-container`
+ * exists, the indicator is inserted after it; otherwise, it is
+ * prepended to `#chat-container`.
+ */
 export function updateContentStatus() {
   const chatContainer = document.getElementById("chat-container");
   if (!chatContainer) return;
 
-  // Remove existing indicator
+  // Remove any existing indicator
   const existingIndicator = chatContainer.querySelector(
     ".chat-context-indicator"
   );
   if (existingIndicator) existingIndicator.remove();
 
+  const indicator = buildContextIndicator();
+
+  const welcomeSection = chatContainer.querySelector(".welcome-container");
+  if (welcomeSection) {
+    welcomeSection.after(indicator);
+  } else {
+    chatContainer.prepend(indicator);
+  }
+}
+
+/**
+ * Creates the context indicator element based on the current page content.
+ * Includes a favicon, page title, and a refresh button to reload context.
+ * @returns {HTMLDivElement} The DOM element representing the context indicator.
+ */
+function buildContextIndicator() {
   const indicator = document.createElement("div");
   indicator.className = "chat-context-indicator";
 
   if (!state.pageContent) {
     indicator.textContent = "Loading page context...";
-    chatContainer.prepend(indicator);
-    return;
+    return indicator;
   }
 
   if (state.pageContent.extractionSuccess === false) {
     indicator.innerHTML = `⚠️ Limited page context available`;
-    chatContainer.prepend(indicator);
-    return;
+    return indicator;
   }
 
   const pageTitle = state.pageContent.title || "Untitled Page";
-  const domain = (() => {
-    try {
-      const url = new URL(state.pageContent.url || window.location.href);
-      return url.hostname;
-    } catch {
-      return "";
-    }
-  })();
+  const rawUrl = state.pageContent.url || window.location.href;
+
+  // Extract domain from URL
+  let domain = "";
+  try {
+    domain = new URL(rawUrl).hostname;
+  } catch {
+    domain = "";
+  }
 
   const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
 
@@ -156,88 +188,94 @@ export function updateContentStatus() {
   // Refresh button
   const refreshBtn = document.createElement("button");
   refreshBtn.className = "chat-context-refresh-btn";
-  refreshBtn.innerHTML = `\
+  refreshBtn.dataset.i18nTitle = "refreshPageContext";
+  refreshBtn.title = "Refresh Page Context";
+  refreshBtn.innerHTML = `
     <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
       <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
     </svg>
   `;
-  refreshBtn.title = "Refresh page context";
-
-  refreshBtn.addEventListener("click", async () => {
-    requestPageContent();
+  refreshBtn.addEventListener("click", () => {
+    requestPageContent().then(() => {
+      // reset questions
+      resetSuggestedQuestionsContainer();
+      state.generatedQuestions = {};
+    });
   });
+
+  translateElement(refreshBtn);
 
   indicator.appendChild(favicon);
   indicator.appendChild(title);
   indicator.appendChild(refreshBtn);
 
-  chatContainer.prepend(indicator);
+  return indicator;
 }
 
 // generate and display questions about the content
-export async function generateAndDisplayQuestions() {
-  // check if we already have questions
-  if (
-    state.generatedQuestions ||
-    state.isGeneratingQuestions ||
-    !state.pageContent
-  ) {
-    return;
-  }
+// export async function generateAndDisplayQuestions() {
+//   // check if we already have questions
+//   if (
+//     state.generatedQuestions ||
+//     state.isGeneratingQuestions ||
+//     !state.pageContent
+//   ) {
+//     return;
+//   }
 
-  // get reference to questions container
-  const questionsContainer = document.querySelector(".generated-questions");
-  const buttonContainer = document.querySelector(".question-buttons-container");
+//   // get reference to questions container
+//   const questionsContainer = document.querySelector(".generated-questions");
+//   const buttonContainer = document.querySelector(".question-buttons-container");
 
-  // check if we have the elements
-  if (!questionsContainer || !buttonContainer) {
-    console.error("CocBot: Missing question container elements");
-    return;
-  }
+//   // check if we have the elements
+//   if (!questionsContainer || !buttonContainer) {
+//     console.error("CocBot: Missing question container elements");
+//     return;
+//   }
 
-  // show the container with loading state
-  questionsContainer.style.display = "block";
+//   // show the container with loading state
+//   questionsContainer.style.display = "block";
 
-  // set flag to prevent multiple calls
-  state.isGeneratingQuestions = true;
+//   // set flag to prevent multiple calls
+//   state.isGeneratingQuestions = true;
 
-  try {
-    // generate questions
-    const result = await generateQuestionsFromContent(state.pageContent);
+//   try {
+//     // generate questions
+//     const result = await generateQuestionsFromContent(state.pageContent);
 
-    console.log("Generated questions result: ", result);
+//     console.log("Generated questions result: ", result);
 
-    // clear the loading indicator
-    buttonContainer.innerHTML = "";
+//     // clear the loading indicator
+//     buttonContainer.innerHTML = "";
 
-    if (result.success && result.questions && result.questions.length > 0) {
-      console.log("CocBot: Successfully generated questions", result.questions);
+//     if (result.success && result.questions && result.questions.length > 0) {
+//       console.log("CocBot: Successfully generated questions", result.questions);
 
-      // save the questions
-      state.generatedQuestions = result.questions;
+//       // save the questions
+//       state.generatedQuestions = result.questions;
 
-      // add each question as a button
-      result.questions.forEach((question) => {
-        const questionButton = document.createElement("button");
-        questionButton.className = "question-button";
-        questionButton.textContent = question;
-        questionButton.onclick = () => {
-          processUserQuery(question);
-        };
+//       // add each question as a button
+//       result.questions.forEach((question) => {
+//         const questionButton = document.createElement("button");
+//         questionButton.className = "question-button";
+//         questionButton.textContent = question;
+//         questionButton.onclick = () => {
+//           processUserQuery(question);
+//         };
 
-        buttonContainer.appendChild(questionButton);
-      });
-    } else {
-      console.error("CocBot: Failed to generate questions", result.error);
-      questionsContainer.style.display = "none";
-    }
-  } catch (error) {
-    console.error("CocBot: Error in generating questions", error);
-    questionsContainer.style.display = "none";
-  } finally {
-    state.isGeneratingQuestions = false;
-  }
-}
+//         buttonContainer.appendChild(questionButton);
+//       });
+//     } else {
+//       console.error("CocBot: Failed to generate questions", result.error);
+//       questionsContainer.style.display = "none";
+//     }
+//   } catch (error) {
+//     console.error("CocBot: Error in generating questions", error);
+//     questionsContainer.style.display = "none";
+//   } finally {
+//     state.isGeneratingQuestions = false;
+//   }
+// }
 
 // setup improved content extraction reliability
 export function setupContentExtractionReliability() {

@@ -2,14 +2,7 @@
 
 .config-container {
   padding: 16px;
-  background-color: var(--background);
-  border-radius: var(--radius);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  position: absolute;
-  top: 60px;
-  left: 16px;
-  right: 16px;
-  z-index: 100;
+  overflow: auto;
 }
 
 .config-form {
@@ -211,8 +204,8 @@
     flex-direction: column;
     gap: 8px;
   }
-  
+
   .preset-container {
     flex-wrap: wrap;
   }
-} 
+}

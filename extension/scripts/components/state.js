@@ -12,7 +12,10 @@ export const state = {
   contentFetchAttempts: 0,
   maxContentFetchAttempts: 5,
   isGeneratingQuestions: false,
-  generatedQuestions: null,
+  generatedQuestions: {
+    vn: [],
+    en: [],
+  },
   isNotesOpen: false,
   currentPageUrl: "",
   isEditingNote: false,
@@ -31,17 +34,8 @@ export const state = {
   },
   chatHistory: [],
   isChatHistoryEventsInitialized: false,
-  screenStack: [],
+  toastIdCounter: 0,
 };
-
-/**
- * Push screen into the stack, avoid duplicate
- * @param {String} screen name of the screen
- */
-export function addToScreenStack(screen) {
-  if (state.screenStack.includes(screen)) return;
-  state.screenStack.push(screen);
-}
 
 // Load sidebar width from storage
 export function loadSidebarWidth() {
