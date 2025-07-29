@@ -134,6 +134,7 @@ export function updateContentStatus() {
 
   const indicator = buildContextIndicator();
 
+  // Insert after welcome section
   const welcomeSection = chatContainer.querySelector(".welcome-container");
   if (welcomeSection) {
     welcomeSection.after(indicator);
@@ -278,6 +279,7 @@ function buildContextIndicator() {
 // }
 
 // setup improved content extraction reliability
+
 export function setupContentExtractionReliability() {
   // listen for page changes and refresh content accordingly
   setInterval(() => {

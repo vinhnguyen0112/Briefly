@@ -22,9 +22,12 @@ import { initializeLanguage } from "./components/i18n.js";
 import { isUserAuthenticated } from "./components/auth-handler.js";
 import { getFingerprint, setupAnonSession } from "./components/anon-handler.js";
 import {
-  clearMessagesFromChatContainer,
+  clearMessagesFromMessageContainer,
   configureChatHistoryElementsOnAuthState,
+  createChatActionsContainer,
+  createWelcomeContainer,
 } from "./components/ui-handler.js";
+import { elements } from "./components/dom-elements.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -139,9 +142,23 @@ document.addEventListener("DOMContentLoaded", () => {
   // make sure content extraction is reliable
   setupContentExtractionReliability();
 
-  // Call clearMessagesFromChatContainer() to inject welcome section, context indicator and quick actions
-  clearMessagesFromChatContainer();
+  initializeStartupUI();
 });
 
 // expose certain functions to the global scope that might be needed by inline event handlers
 window.processUserQuery = processUserQuery;
+
+function initializeStartupUI() {
+  // Make sure message container is empty on startup
+  clearMessagesFromMessageContainer();
+
+  // Inject welcome container & chat actions container
+  if (!elements.chatContainer.querySelector(".welcome-container")) {
+    const welcomeContainer = createWelcomeContainer();
+    elements.chatContainer.prepend(welcomeContainer);
+  }
+  if (!elements.chatContainer.querySelector(".chat-actions-container")) {
+    const chatActionsContainer = createChatActionsContainer();
+    elements.chatContainer.appendChild(chatActionsContainer);
+  }
+}

@@ -15,7 +15,7 @@ import {
   closeAllScreensAndPanels,
   switchToChat,
   handleContentMessage,
-  clearMessagesFromChatContainer,
+  clearMessagesFromMessageContainer,
   clearChatHistoryList,
   showToast,
   removeToast,
@@ -206,7 +206,7 @@ export function setupEventListeners() {
   elements.newChatButton.addEventListener("click", () => {
     resetCurrentChatState();
     closeAllScreensAndPanels();
-    clearMessagesFromChatContainer();
+    clearMessagesFromMessageContainer();
     switchToChat();
   });
 
@@ -505,7 +505,7 @@ function clearChatHistoryEventHandler() {
       renderAllChatHistory();
 
       // Reset current chat for now
-      clearMessagesFromChatContainer();
+      clearMessagesFromMessageContainer();
       resetCurrentChatState();
 
       updateToast(toastId, {
@@ -750,10 +750,13 @@ async function handleChatHistoryItemClick(e, chat, item) {
   ) {
     return;
   }
-  clearMessagesFromChatContainer();
+  // UI tasks
+  clearMessagesFromMessageContainer();
   closeAllScreensAndPanels();
   switchToChat();
+  resetSuggestedQuestionsContainer();
 
+  // Fetch and display messages
   let messages = [];
   if (navigator.onLine) {
     const response = await new Promise((resolve) => {
@@ -921,7 +924,7 @@ function showDeleteChatDialog(chat) {
             );
             removeChatHistoryItem(chat.id);
             if (chat.id === state.currentChat.id) {
-              clearMessagesFromChatContainer();
+              clearMessagesFromMessageContainer();
               resetCurrentChatState();
             }
 
