@@ -86,6 +86,60 @@ const createPage = async (req, res, next) => {
 };
 
 /**
+ * Get a page by ID
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const getPageById = async (req, res, next) => {
+  try {
+    const { page_url } = req.query;
+    if (!page_url) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing page_url");
+    }
+
+    // Normalize and hash
+    const normalizedPageUrl = commonHelper.processUrl(page_url);
+    if (!normalizedPageUrl) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+
+    const id = commonHelper.generateHash(normalizedPageUrl);
+
+    // Check Redis cache
+    const cached = await redisHelper.getPage(id);
+    if (cached) {
+      return res.json({
+        success: true,
+        message: "Page found in cache",
+        data: { cached: true, page: { ...cached } },
+      });
+    }
+
+    // Fallback to DB
+    const page = await Page.getById(id);
+
+    // Update Redis
+    if (page) {
+      await redisHelper.setPage(id, {
+        page_url: page.page_url,
+        normalized_page_url: normalizedPageUrl,
+        title: page.title,
+        page_content: page.page_content,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Page fetched from database",
+      data: { cached: false, page },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * Update a page record by ID
  * @param {Object} req
  * @param {Object} res
@@ -124,5 +178,6 @@ const updatePage = async (req, res, next) => {
 
 module.exports = {
   createPage,
+  getPageById,
   updatePage,
 };

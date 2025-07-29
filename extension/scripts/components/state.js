@@ -5,6 +5,7 @@ export const state = {
   pageContent: {},
   isAnimating: false,
   isProcessingQuery: false,
+  isViewingChatHistory: false,
   history: [],
   currentConfig: null,
   isResizing: false,
@@ -26,6 +27,7 @@ export const state = {
     title: "",
     pageUrl: "",
     history: [],
+    pageContent: null,
   },
   pagination: {
     currentPage: 0,
@@ -283,6 +285,7 @@ export function resetCurrentChatState() {
     title: "",
     pageUrl: "",
     history: [],
+    pageContent: null,
   };
 }
 
