@@ -86,6 +86,23 @@ const createPageSummarySchema = object({
   summary: string().strict().trim().required(),
 });
 
+const createNoteSchema = object({
+  page_url: string().strict().trim().required(),
+  note: string()
+    .strict()
+    .trim()
+    .required()
+    .min(1, "Note content cannot be empty"),
+});
+
+const updateNoteSchema = object({
+  note: string()
+    .strict()
+    .trim()
+    .required()
+    .min(1, "Note content cannot be empty"),
+});
+
 module.exports = {
   createChatSchema,
   updateChatSchema,
@@ -96,4 +113,6 @@ module.exports = {
   createPageSchema,
   updatePageSchema,
   createPageSummarySchema,
+  createNoteSchema,
+  updateNoteSchema,
 };

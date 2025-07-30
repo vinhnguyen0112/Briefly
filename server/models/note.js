@@ -1,0 +1,116 @@
+const dbHelper = require("../helpers/dbHelper");
+
+class Note {
+  /**
+   * Insert a note into the database
+   * @param {Object} noteData Note data object
+   * @param {String} [noteData.id]
+   * @param {String} [noteData.user_id]
+   * @param {String} [noteData.page_url]
+   * @param {String} [noteData.note]
+   */
+  async create(noteData) {
+    if (!noteData || Object.keys(noteData).length <= 0) return;
+
+    const columns = Object.keys(noteData).join(", ");
+    const placeholders = Object.keys(noteData)
+      .map(() => "?")
+      .join(", ");
+    const values = Object.values(noteData);
+
+    const query = `INSERT INTO notes (${columns}) VALUES (${placeholders})`;
+    await dbHelper.executeQuery(query, values);
+  }
+
+  /**
+   * Get notes by user ID and page URL
+   * @param {String} userId
+   * @param {String} pageUrl
+   * @returns {Promise<Array>}
+   */
+  async getByUserAndPage(userId, pageUrl) {
+    const query =
+      "SELECT * FROM notes WHERE user_id = ? AND page_url = ? ORDER BY created_at DESC";
+    const rows = await dbHelper.executeQuery(query, [userId, pageUrl]);
+    return rows;
+  }
+
+  /**
+   * Get all notes by user ID
+   * @param {String} userId
+   * @returns {Promise<Array>}
+   */
+  async getByUser(userId) {
+    const query =
+      "SELECT * FROM notes WHERE user_id = ? ORDER BY created_at DESC";
+    const rows = await dbHelper.executeQuery(query, [userId]);
+    return rows;
+  }
+
+  /**
+   * Update a note
+   * @param {String} id
+   * @param {Object} updates
+   * @returns {Promise<number>}
+   */
+  async update(id, updates) {
+    if (!updates || Object.keys(updates).length <= 0) return 0;
+
+    const fields = [];
+    const values = [];
+    for (const [key, value] of Object.entries(updates)) {
+      fields.push(`${key} = ?`);
+      values.push(value);
+    }
+
+    fields.push("updated_at = CURRENT_TIMESTAMP");
+    const query = `UPDATE notes SET ${fields.join(", ")} WHERE id = ?`;
+    values.push(id);
+
+    const { affectedRows } = await dbHelper.executeQuery(query, values);
+    return affectedRows;
+  }
+
+  /**
+   * Delete a note
+   * @param {String} id
+   * @returns {Promise<number>}
+   */
+  async delete(id) {
+    const query = "DELETE FROM notes WHERE id = ?";
+    const { affectedRows } = await dbHelper.executeQuery(query, [id]);
+    return affectedRows;
+  }
+
+  /**
+   * Get note count by user
+   * @param {String} userId
+   * @param {String} [pageUrl] - optional page URL filter
+   * @returns {Promise<number>}
+   */
+  async getCount(userId, pageUrl = null) {
+    let query = "SELECT COUNT(*) as count FROM notes WHERE user_id = ?";
+    const values = [userId];
+
+    if (pageUrl) {
+      query += " AND page_url = ?";
+      values.push(pageUrl);
+    }
+
+    const rows = await dbHelper.executeQuery(query, values);
+    return rows[0].count;
+  }
+
+  /**
+   * Get a note by ID
+   * @param {String} id
+   * @returns {Promise<Object|null>}
+   */
+  async getById(id) {
+    const query = "SELECT * FROM notes WHERE id = ?";
+    const rows = await dbHelper.executeQuery(query, [id]);
+    return rows[0] || null;
+  }
+}
+
+module.exports = new Note();
