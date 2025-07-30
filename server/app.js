@@ -27,9 +27,11 @@ app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 app.set("trust proxy", true);
 
-// swagger
-const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+// swagger, only available in development environment
+if (process.env.NODE_ENV === "development") {
+  const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+}
 
 // routes
 app.use("/api", extractClientIp, extractVisitorId);
