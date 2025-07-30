@@ -14,7 +14,6 @@ import {
 import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
-import { RequestQueue } from "../../components/RequestQueue.js";
 
 const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
 
