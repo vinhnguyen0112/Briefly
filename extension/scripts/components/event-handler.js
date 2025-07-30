@@ -207,6 +207,7 @@ export function setupEventListeners() {
     resetCurrentChatState();
     closeAllScreensAndPanels();
     clearMessagesFromMessageContainer();
+    resetSuggestedQuestionsContainer();
     switchToChat();
   });
 

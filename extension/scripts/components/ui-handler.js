@@ -185,9 +185,6 @@ export async function addMessageToChat({
 
 /**
  * Clear all messages from chat container.
- *
- * Inject welcome section and quick actions & suggested questions
- * and context indicator into chat container
  */
 export async function clearMessagesFromMessageContainer() {
   if (!elements.messageContainer) return;
@@ -395,7 +392,8 @@ function injectSuggestedQuestions(container) {
 }
 
 /**
- * Clear all suggested questions and display generate question button
+ * Clear all suggested questions and display generate question button.
+ *
  * Stop is there's are questions being generated
  */
 export function resetSuggestedQuestionsContainer() {
