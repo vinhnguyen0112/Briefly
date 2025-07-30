@@ -24,6 +24,7 @@ export const elements = {
   chatForm: document.getElementById("chat-form"),
   userInput: document.getElementById("user-input"),
   chatContainer: document.getElementById("chat-container"),
+  messageContainer: document.getElementById("message-container"),
 
   // Sidebar elements
   closeSidebarButton: document.getElementById("close-sidebar"),

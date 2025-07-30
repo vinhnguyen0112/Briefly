@@ -5,8 +5,12 @@ let pLimit = require("p-limit");
 const commonHelper = require("../helpers/commonHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const Page = require("../models/page");
+const PageSummary = require("../models/pageSummary");
 
 const limit = pLimit(5); // 5 concurrency
+const ONE_DAY_MS = 24 * 60 * 60 * 1000; // 1 day in ms
+const FRESHNESS_BUFFER_MS = 5 * 60 * 1000; // 5 mins offset for clock drift
+const FRESHNESS_THRESHOLD = ONE_DAY_MS - FRESHNESS_BUFFER_MS;
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -29,6 +33,8 @@ function getNormalizedPageMeta(pageUrl) {
  * @param {Object} res
  * @param {Function} next
  */
+
+// TODO: Might want to do sth when summary is expired
 const handleUserQuery = async (req, res, next) => {
   try {
     const { messages, metadata } = req.body;
@@ -41,7 +47,10 @@ const handleUserQuery = async (req, res, next) => {
     let assistantMessage;
     // Get stored summary
     if (metadata.event === "summarize") {
-      assistantMessage = await getStoredPageSummary(pageMeta.pageId);
+      assistantMessage = await getStoredPageSummary(
+        pageMeta.pageId,
+        metadata.language
+      );
     }
     if (!assistantMessage) {
       // If not a summarize event or if no cached || stored summary
@@ -100,26 +109,50 @@ async function generateAssistantResponse(messages, max_tokens) {
 
 /**
  * Try to get cached or stored page summary.
- * Returns null if not found
- * @param {String} pageId page ID
- * @returns {Promise<String>}
+ * Returns null if not found or expired.
+ * @param {String} pageId
+ * @param {String} language
+ * @returns {Promise<{message: string, usage: null, model: string} | null>}
  */
-async function getStoredPageSummary(pageId) {
-  const cached = await redisHelper.getPageSummary(pageId);
-  if (cached)
+async function getStoredPageSummary(pageId, language) {
+  // Try to get from Redis
+  const cached = await redisHelper.getPageSummary(pageId, language);
+  if (cached) {
+    console.log("Page summary cache hit");
     return {
       message: cached,
       usage: null,
       model: "cached",
     };
+  }
 
-  const stored = await Page.getById(pageId);
-  if (stored && stored.summary)
-    return {
-      message: stored.summary,
-      usage: null,
-      model: "cached",
-    };
+  console.log("Page summary cache missed");
+
+  // Try to get from database
+  const stored = await PageSummary.getByPageIdAndLanguage(pageId, language);
+  if (stored?.summary) {
+    const createdAt = new Date(stored.created_at);
+    const now = Date.now();
+
+    // If not expired
+    if (now - createdAt.getTime() <= FRESHNESS_THRESHOLD) {
+      // Update cache and return
+      await redisHelper.setPageSummary({
+        pageId: stored.page_id,
+        language: stored.language,
+        summary: stored.summary,
+      });
+
+      return {
+        message: stored.summary,
+        usage: null,
+        model: "cached",
+      };
+    }
+
+    // Otherwise, delete expired summary
+    await PageSummary.deleteByPageIdAndLanguage(pageId, language);
+  }
 
   return null;
 }

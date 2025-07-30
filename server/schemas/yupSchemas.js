@@ -60,6 +60,11 @@ const querySchema = object({
       .max(4096, "Max tokens exceeds model limit")
       .required("max_tokens is required"),
 
+    language: string()
+      .strict()
+      .oneOf(["en", "vi"])
+      .required("language must be specified"),
+
     event: string().trim().default("ask"),
   }).required("metadata is required"),
 });
@@ -67,14 +72,18 @@ const querySchema = object({
 const createPageSchema = object({
   page_url: string().strict().trim().required(),
   title: string().strict().trim().default("Untitled Page"),
-  summary: string().strict().trim().required(),
-  generated_questions: array().of(string().strict().trim()).nullable(),
+  page_content: string().strict().trim().required(),
 });
 
 const updatePageSchema = object({
   title: string().strict().trim().nullable(),
-  summary: string().strict().trim().nullable(),
-  generated_questions: array().of(string().strict().trim()).nullable(),
+  page_content: string().strict().trim().nullable(),
+});
+
+const createPageSummarySchema = object({
+  page_url: string().strict().trim().required(),
+  language: string().strict().trim().oneOf(["en", "vi"]).required(),
+  summary: string().strict().trim().required(),
 });
 
 module.exports = {
@@ -86,4 +95,5 @@ module.exports = {
   querySchema,
   createPageSchema,
   updatePageSchema,
+  createPageSummarySchema,
 };

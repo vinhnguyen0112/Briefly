@@ -113,26 +113,15 @@ export function stopResize() {
   }
 }
 
-// switch from welcome to chat view
+/**
+ * Switch to chat screen
+ */
 export function switchToChat() {
-  // hide chat history
-  // elements.chatHistoryScreen.style.display = "none";
-
   // show chat
   elements.chatScreen.style.display = "flex";
 
   // focus input
   elements.userInput.focus();
-
-  if (!elements.chatContainer.querySelector(".welcome-container")) {
-    const welcomeContainer = createWelcomeContainer();
-    elements.chatContainer.prepend(welcomeContainer);
-  }
-  if (!elements.chatContainer.querySelector(".chat-actions-container")) {
-    // inject chat actions container if not exists
-    const chatActionsContainer = createChatActionsContainer();
-    elements.chatContainer.appendChild(chatActionsContainer);
-  }
 }
 
 /**
@@ -179,15 +168,16 @@ export async function addMessageToChat({
 
   translateElement(messageElement);
 
-  const actionsContainer = elements.chatContainer.querySelector(
-    ".chat-actions-container"
-  );
-  if (actionsContainer) {
-    elements.chatContainer.insertBefore(messageElement, actionsContainer);
-  } else {
-    elements.chatContainer.appendChild(messageElement);
-  }
+  // const actionsContainer = elements.chatContainer.querySelector(
+  //   ".chat-actions-container"
+  // );
+  // if (actionsContainer) {
+  //   elements.chatContainer.insertBefore(messageElement, actionsContainer);
+  // } else {
+  //   elements.chatContainer.appendChild(messageElement);
+  // }
 
+  elements.messageContainer.appendChild(messageElement);
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 
   return messageElement;
@@ -199,18 +189,9 @@ export async function addMessageToChat({
  * Inject welcome section and quick actions & suggested questions
  * and context indicator into chat container
  */
-export async function clearMessagesFromChatContainer() {
-  if (!elements.chatContainer) return;
-  elements.chatContainer.innerHTML = "";
-
-  const welcomeContainer = createWelcomeContainer();
-  elements.chatContainer.prepend(welcomeContainer);
-
-  // Create a container for both quick actions and suggested questions
-  const chatActionsContainer = createChatActionsContainer();
-  elements.chatContainer.appendChild(chatActionsContainer);
-
-  updateContentStatus();
+export async function clearMessagesFromMessageContainer() {
+  if (!elements.messageContainer) return;
+  elements.messageContainer.innerHTML = "";
 }
 
 /**
@@ -261,7 +242,7 @@ function addFeedbackIconToMessage(messageElement) {
  * Create a welcome container inside #chat-container, the container includes a logo and title
  * @returns {HTMLElement}
  */
-function createWelcomeContainer() {
+export function createWelcomeContainer() {
   const welcomeContainer = document.createElement("div");
   welcomeContainer.className = "welcome-container";
 
@@ -283,7 +264,7 @@ function createWelcomeContainer() {
  * Creates and returns the chat actions container with quick actions and suggested questions.
  * @returns {HTMLElement} The chat actions container element.
  */
-function createChatActionsContainer() {
+export function createChatActionsContainer() {
   const actionsContainer = document.createElement("div");
   actionsContainer.className = "chat-actions-container";
 
@@ -415,8 +396,10 @@ function injectSuggestedQuestions(container) {
 
 /**
  * Clear all suggested questions and display generate question button
+ * Stop is there's are questions being generated
  */
 export function resetSuggestedQuestionsContainer() {
+  if (state.isGeneratingQuestions) return;
   const suggestedQuestionsContainer = document.querySelector(
     ".suggested-questions-container"
   );
@@ -813,7 +796,7 @@ export function escapeHtml(text) {
 function handleAuthStateChange(isAuth) {
   // Reset UI
   renderToggleAccountPopupUI(isAuth);
-  clearMessagesFromChatContainer();
+  clearMessagesFromMessageContainer();
   clearChatHistoryList();
 
   state.isChatHistoryEventsInitialized = false;

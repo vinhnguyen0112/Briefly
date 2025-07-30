@@ -15,7 +15,7 @@ import {
   closeAllScreensAndPanels,
   switchToChat,
   handleContentMessage,
-  clearMessagesFromChatContainer,
+  clearMessagesFromMessageContainer,
   clearChatHistoryList,
   showToast,
   removeToast,
@@ -206,7 +206,7 @@ export function setupEventListeners() {
   elements.newChatButton.addEventListener("click", () => {
     resetCurrentChatState();
     closeAllScreensAndPanels();
-    clearMessagesFromChatContainer();
+    clearMessagesFromMessageContainer();
     switchToChat();
   });
 
@@ -270,19 +270,6 @@ export function setupQuickActionsEvent(container = document) {
       if (query) {
         switchToChat();
         const response = await processUserQuery(query, metadata);
-
-        const authSession = await getUserSession();
-        if (!authSession || !authSession.id) return;
-
-        if (action === "summarize" && response?.success && response.message) {
-          chrome.runtime.sendMessage({
-            action: "store_page_summary",
-            page_url: state.pageContent.url || window.location.href,
-            title: state.pageContent.title || document.title,
-            summary: response.message,
-            suggested_questions: [],
-          });
-        }
       }
     });
   });
@@ -310,6 +297,7 @@ function setupAuthenticationButtons() {
                 ? "Signed in successfully"
                 : "Đăng nhập thành công",
             type: "success",
+            duration: 2000,
           });
         } else {
           updateToast(toastId, {
@@ -318,6 +306,7 @@ function setupAuthenticationButtons() {
                 ? "Google sign-in failed"
                 : "Đăng nhập Google thất bại",
             type: "error",
+            duration: 2000,
           });
         }
       });
@@ -345,6 +334,7 @@ function setupAuthenticationButtons() {
                 ? "Signed in successfully"
                 : "Đăng nhập thành công",
             type: "success",
+            duration: 2000,
           });
         } else {
           updateToast(toastId, {
@@ -353,6 +343,7 @@ function setupAuthenticationButtons() {
                 ? "Facebook sign-in failed"
                 : "Đăng nhập Facebook thất bại",
             type: "error",
+            duration: 2000,
           });
         }
       });
@@ -375,12 +366,14 @@ function setupAuthenticationButtons() {
               ? "Signed out successfully"
               : "Đăng xuất thành công",
           type: "success",
+          duration: 2000,
         });
       } else {
         updateToast(toastId, {
           message:
             state.language === "en" ? "Sign out failed" : "Đăng xuất thất bại",
           type: "error",
+          duration: 2000,
         });
       }
     });
@@ -495,6 +488,16 @@ function showClearChatHistoryDialog() {
  */
 function clearChatHistoryEventHandler() {
   // TODO: Refactor event handler to exclude current chat from deletion
+
+  const toastId = showToast({
+    message:
+      state.language === "en"
+        ? "Deleting all history"
+        : "Đang xóa toàn bộ lịch sử",
+    type: "loading",
+    duration: null,
+  });
+
   chrome.runtime.sendMessage({ action: "clear_chat_history" }, (response) => {
     if (response.success) {
       console.log("Briefly: Clear chat history successfully");
@@ -502,10 +505,22 @@ function clearChatHistoryEventHandler() {
       renderAllChatHistory();
 
       // Reset current chat for now
-      clearMessagesFromChatContainer();
+      clearMessagesFromMessageContainer();
       resetCurrentChatState();
+
+      updateToast(toastId, {
+        message:
+          state.language === "en" ? "Delete successfully" : "Xóa thành công",
+        type: "success",
+        duration: 2000,
+      });
     } else {
       console.log("Briefly: Clear user history failed!");
+      updateToast(toastId, {
+        message: state.language === "en" ? "Delete failed" : "Xóa thất bại",
+        type: "error",
+        duration: 2000,
+      });
     }
   });
 }
@@ -735,10 +750,13 @@ async function handleChatHistoryItemClick(e, chat, item) {
   ) {
     return;
   }
-  clearMessagesFromChatContainer();
+  // UI tasks
+  clearMessagesFromMessageContainer();
   closeAllScreensAndPanels();
   switchToChat();
+  resetSuggestedQuestionsContainer();
 
+  // Fetch and display messages
   let messages = [];
   if (navigator.onLine) {
     const response = await new Promise((resolve) => {
@@ -906,7 +924,7 @@ function showDeleteChatDialog(chat) {
             );
             removeChatHistoryItem(chat.id);
             if (chat.id === state.currentChat.id) {
-              clearMessagesFromChatContainer();
+              clearMessagesFromMessageContainer();
               resetCurrentChatState();
             }
 

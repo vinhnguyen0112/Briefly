@@ -668,6 +668,7 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+
   /pages:
     post:
       summary: Create a new page
@@ -710,55 +711,332 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-    # put:
-    #   summary: Update a page by ID
-    #   description: Updates a page record by its ID.
-    #   tags:
-    #     - Page
-    #   security:
-    #     - bearerAuth: []
-    #   parameters:
-    #     - in: path
-    #       name: id
-    #       required: true
-    #       schema:
-    #         type: string
-    #       description: Page ID (SHA256 hash of normalized page_url)
-    #   requestBody:
-    #     required: true
-    #     content:
-    #       application/json:
-    #         schema:
-    #           $ref: "#/components/schemas/UpdatePageRequest"
-    #   responses:
-    #     "200":
-    #       description: Page updated successfully
-    #       content:
-    #         application/json:
-    #           schema:
-    #             type: object
-    #             properties:
-    #               success:
-    #                 type: boolean
-    #               message:
-    #                 type: string
-    #               data:
-    #                 type: object
-    #                 properties:
-    #                   affectedRows:
-    #                     type: number
-    #     "400":
-    #       description: Invalid input or SQL errors
-    #       content:
-    #         application/json:
-    #           schema:
-    #             $ref: "#/components/schemas/ErrorResponse"
-    #     "401":
-    #       description: Unauthorized
-    #       content:
-    #         application/json:
-    #           schema:
-    #             $ref: "#/components/schemas/ErrorResponse"
+  /page-summaries:
+    post:
+      summary: Create a page summary
+      description: >
+        Creates and stores a summary for a specific page URL in a given language.
+        The page URL is normalized and a page ID is generated based on the URL hash.
+        The summary is also cached in Redis for faster retrieval.
+      tags:
+        - Page Summary
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreatePageSummaryRequest"
+            example:
+              page_url: "https://example.com/article"
+              language: "en"
+              summary: "This article discusses the latest developments in artificial intelligence and machine learning technologies."
+      responses:
+        "200":
+          description: Page summary created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: Generated ID for the page summary record
+              example:
+                success: true
+                message: "Page summary saved successfully"
+                data:
+                  id: "abc123def456"
+        "400":
+          description: Invalid input - missing required fields or validation errors
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /query/ask:
+    post:
+      summary: Handle user query with AI assistant
+      description: >
+        Processes user messages and generates AI assistant responses using OpenAI.
+        Can handle both regular queries and summarization requests based on metadata.event.
+        For summarize events, it first tries to get cached/stored summaries before generating new ones.
+      tags:
+        - Query
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/QueryRequest"
+            example:
+              messages:
+                - role: "user"
+                  content: "What is this page about?"
+              metadata:
+                page_url: "https://example.com/article"
+                max_tokens: 1000
+                event: "ask"
+      responses:
+        "200":
+          description: AI assistant response generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      message:
+                        type: string
+                        description: AI assistant response content
+                      usage:
+                        type: object
+                        nullable: true
+                        properties:
+                          prompt_tokens:
+                            type: integer
+                          completion_tokens:
+                            type: integer
+                          total_tokens:
+                            type: integer
+                        description: OpenAI usage statistics (null for cached responses)
+                      model:
+                        type: string
+                        description: Model used for generation or "cached" for stored responses
+              example:
+                success: true
+                data:
+                  message: "This page appears to be about artificial intelligence and machine learning concepts..."
+                  usage:
+                    prompt_tokens: 150
+                    completion_tokens: 75
+                    total_tokens: 225
+                  model: "gpt-4o-mini"
+        "400":
+          description: Invalid input - missing required fields or invalid page URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: External service error or internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /query/suggested-questions:
+    post:
+      summary: Generate suggested questions for page content
+      description: >
+        Generates 3 interesting questions based on provided web page content using OpenAI.
+        Supports both English and Vietnamese languages.
+        Questions are designed to be useful for readers of the page.
+      tags:
+        - Query
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - pageContent
+              properties:
+                pageContent:
+                  type: object
+                  required:
+                    - content
+                  properties:
+                    title:
+                      type: string
+                      description: Page title
+                    content:
+                      type: string
+                      description: Page content (first 3000 characters used)
+                language:
+                  type: string
+                  enum: ["en", "vi"]
+                  default: "en"
+                  description: Language for generated questions
+            example:
+              pageContent:
+                title: "Introduction to Machine Learning"
+                content: "Machine learning is a subset of artificial intelligence that focuses on..."
+              language: "en"
+      responses:
+        "200":
+          description: Suggested questions generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      questions:
+                        type: array
+                        items:
+                          type: string
+                        maxItems: 3
+                        description: Array of 3 generated questions
+                      usage:
+                        type: object
+                        nullable: true
+                        properties:
+                          prompt_tokens:
+                            type: integer
+                          completion_tokens:
+                            type: integer
+                          total_tokens:
+                            type: integer
+                        description: OpenAI usage statistics
+              example:
+                success: true
+                data:
+                  questions:
+                    - "What are the main types of machine learning algorithms?"
+                    - "How does supervised learning differ from unsupervised learning?"
+                    - "What are some real-world applications of machine learning?"
+                  usage:
+                    prompt_tokens: 120
+                    completion_tokens: 45
+                    total_tokens: 165
+        "400":
+          description: Missing page content or invalid input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Failed to extract suggested questions or external service error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /query/captionize:
+    post:
+      summary: Generate captions for images
+      description: >
+        Generates detailed captions for an array of images using OpenAI's vision model.
+        Uses provided article context to identify people, events, or relevant context in images.
+        Processes multiple images concurrently with a limit of 5 concurrent requests.
+      tags:
+        - Query
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateImageCaptionRequest"
+            example:
+              sources:
+                - "https://example.com/image1.jpg"
+                - "data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD..."
+              context: "This article discusses the recent AI conference where industry leaders gathered to discuss the future of artificial intelligence..."
+      responses:
+        "200":
+          description: Image captions generated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      captions:
+                        type: array
+                        items:
+                          type: string
+                          nullable: true
+                        description: Array of generated captions (null for failed images)
+                      usage:
+                        type: object
+                        properties:
+                          prompt_tokens:
+                            type: integer
+                          completion_tokens:
+                            type: integer
+                          total_tokens:
+                            type: integer
+                        description: Aggregated OpenAI usage statistics
+              example:
+                success: true
+                data:
+                  captions:
+                    - "AI researchers presenting their latest findings at the technology conference"
+                    - "Industry leaders engaged in a panel discussion about machine learning ethics"
+                  usage:
+                    prompt_tokens: 250
+                    completion_tokens: 80
+                    total_tokens: 330
+        "400":
+          description: Invalid input - missing sources or context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: External service error or internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
 
 components:
   securitySchemes:
@@ -766,14 +1044,17 @@ components:
       type: http
       scheme: bearer
       bearerFormat: custom
+
     googleAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
     facebookAuth:
       type: http
       scheme: bearer
       bearerFormat: JWT
+
   schemas:
     Chat:
       type: object
@@ -788,6 +1069,7 @@ components:
           type: string
         title:
           type: string
+
     Message:
       type: object
       properties:
@@ -801,6 +1083,7 @@ components:
           type: string
         model:
           type: string
+
     Page:
       type: object
       properties:
@@ -810,21 +1093,39 @@ components:
           type: string
         title:
           type: string
-        summary:
+        page_content:
           type: string
-        suggested_questions:
-          type: array
-          items:
-            type: string
         created_at:
           type: string
           format: date-time
         updated_at:
           type: string
           format: date-time
-        freshness:
+
+    PageSummary:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the page summary
+        page_id:
+          type: string
+          description: Generated hash ID based on normalized page URL
+        language:
+          type: string
+          description: Language code for the summary
+        summary:
+          type: string
+          description: Summary content
+        created_at:
           type: string
           format: date-time
+          description: Timestamp when the summary was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the summary was last updated
+
     CreateChatRequest:
       type: object
       required:
@@ -835,11 +1136,13 @@ components:
           type: string
         title:
           type: string
+
     UpdateChatRequest:
       type: object
       properties:
         title:
           type: string
+
     CreateMessageRequest:
       type: object
       required:
@@ -852,6 +1155,7 @@ components:
           type: string
         model:
           type: string
+
     CreateFeedbackRequest:
       type: object
       required:
@@ -869,34 +1173,100 @@ components:
         message_id:
           type: number
           description: Required message ID of the feedback
+
     CreatePageRequest:
       type: object
       required:
         - page_url
-        - summary
+        - page_content
       properties:
         page_url:
           type: string
         title:
           type: string
           default: Untitled Page
-        summary:
+        page_content:
           type: string
-        suggested_questions:
-          type: array
-          items:
-            type: string
-    UpdatePageRequest:
+
+    CreatePageSummaryRequest:
       type: object
+      required:
+        - page_url
+        - language
+        - summary
       properties:
-        title:
+        page_url:
           type: string
+          format: uri
+          description: URL of the page to create summary for
+        language:
+          type: string
+          description: Language code for the summary (e.g., "en", "vi")
+          minLength: 2
+          maxLength: 5
         summary:
           type: string
-        suggested_questions:
+          description: Summary content for the page
+          minLength: 1
+
+    QueryRequest:
+      type: object
+      required:
+        - messages
+        - metadata
+      properties:
+        messages:
           type: array
+          minItems: 1
+          items:
+            type: object
+            required:
+              - role
+              - content
+            properties:
+              role:
+                type: string
+                enum: ["user", "assistant", "system"]
+              content:
+                type: string
+                minLength: 1
+        metadata:
+          type: object
+          required:
+            - page_url
+            - max_tokens
+          properties:
+            page_url:
+              type: string
+              format: uri
+              description: URL of the page being queried
+            max_tokens:
+              type: integer
+              minimum: 1
+              maximum: 4096
+              description: Maximum tokens for AI response
+            event:
+              type: string
+              default: "ask"
+              description: Type of query event (e.g., "ask", "summarize")
+
+    CreateImageCaptionRequest:
+      type: object
+      required:
+        - sources
+        - context
+      properties:
+        sources:
+          type: array
+          minItems: 1
           items:
             type: string
+          description: Array of image URLs or base64 encoded images
+        context:
+          type: string
+          minLength: 1
+          description: Article content to provide context for image captioning
+
     ErrorResponse:
       type: object
       properties:

@@ -2,42 +2,83 @@ const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 const commonHelper = require("../helpers/commonHelper");
 const Page = require("../models/page");
+const { redisHelper } = require("../helpers/redisHelper");
+
+const PAGE_FRESHNESS_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 
 /**
- * Pre-process then insert a page into the database
+ * Check if a timestamp is expired based on max age
+ * @param {string|Date} updatedAt
+ * @returns {boolean}
+ */
+function isPageExpired(updatedAt) {
+  const updatedTime = new Date(updatedAt).getTime();
+  return Date.now() - updatedTime > PAGE_FRESHNESS_MS;
+}
+
+/**
+ * Pre-process then insert a page into the database (with freshness check and Redis fallback)
  * @param {Object} req
  * @param {Object} res
  * @param {Function} next
  */
 const createPage = async (req, res, next) => {
   try {
-    const body = {};
-    const { page_url, title, summary, suggested_questions } = req.body;
+    const { page_url, title, page_content } = req.body;
 
-    // Filtering
-    if (page_url) body.page_url = page_url;
-    if (title) body.title = title;
-    if (summary) body.summary = summary;
-    if (suggested_questions) body.suggested_questions = suggested_questions;
-
-    // Normalize page url
+    // Normalize and validate page_url
     const normalizedPageUrl = commonHelper.processUrl(page_url);
     if (!normalizedPageUrl) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
     }
 
-    // Hash the page url
     const id = commonHelper.generateHash(normalizedPageUrl);
 
-    await Page.create({
+    // Try Redis first
+    const cached = await redisHelper.getPage(id);
+    if (cached) {
+      return res.json({
+        success: true,
+        message: "Page found in cache",
+        data: { id, cached: true },
+      });
+    }
+
+    // Construct insert body (omit undefined/null/empty)
+    const insertBody = {
       id,
-      ...body,
+      page_url: normalizedPageUrl,
+      ...(title ? { title } : {}),
+      page_content,
+    };
+
+    let page = await Page.getById(id);
+
+    // Insert or re-insert if expired
+    if (!page || isPageExpired(page.updated_at)) {
+      if (page) await Page.deleteById(id);
+      page = await Page.create(insertBody);
+    }
+
+    if (!page) {
+      throw new AppError(
+        ERROR_CODES.INTERNAL_ERROR,
+        "Failed to create or retrieve page"
+      );
+    }
+
+    // Update Redis
+    await redisHelper.setPage(id, {
+      page_url: page.page_url,
+      normalized_page_url: normalizedPageUrl,
+      title: page.title,
+      page_content: page.page_content,
     });
 
     res.json({
       success: true,
-      message: "Page data inserted successfully",
-      data: { id },
+      message: "Page record is fresh and available",
+      data: { id, cached: false },
     });
   } catch (err) {
     next(err);

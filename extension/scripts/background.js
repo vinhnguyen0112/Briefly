@@ -1,4 +1,9 @@
-import { saveUserSession, sendRequest } from "./components/state.js";
+import {
+  getStoredPageUrl,
+  saveStoredPageUrl,
+  saveUserSession,
+  sendRequest,
+} from "./components/state.js";
 import {
   authenticateWithFacebook,
   authenticateWithGoogle,
@@ -671,25 +676,49 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
-  if (message.action === "store_page_summary") {
+  if (message.action === "store_page_metadata") {
     sendRequest(`${SERVER_URL}/api/pages`, {
       method: "POST",
       body: {
         page_url: message.page_url,
         title: message.title,
-        summary: message.summary,
-        suggested_questions: message.suggested_questions || [],
+        page_content: message.page_content,
       },
+      withVisitorId: false,
     })
-      .then((res) => {
-        console.log("store_page_summary response: ", res);
+      .then((response) => {
+        console.log("store_page_metadata response: ", response);
+        sendResponse({ success: response.success });
       })
       .catch((err) => {
-        console.error("Failed to store page summary:", err);
+        console.error("Failed to store page:", err);
+        sendResponse({ success: false });
       });
 
-    return false;
+    return true;
   }
+  if (message.action === "store_page_summary") {
+    sendRequest(`${SERVER_URL}/api/page-summaries`, {
+      method: "POST",
+      body: {
+        page_url: message.page_url,
+        language: message.language,
+        summary: message.summary,
+      },
+      withVisitorId: false,
+    })
+      .then((response) => {
+        console.log("store_page_summary response: ", response);
+        sendResponse({ success: response.success });
+      })
+      .catch((err) => {
+        console.error("Failed to store summary:", err);
+        sendResponse({ success: false });
+      });
+
+    return true;
+  }
+
   if (message.action === "process_images") {
     resetProcessedImages();
     handleCaptionImages(message.images, message.content)
