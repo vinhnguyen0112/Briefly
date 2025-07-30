@@ -28,13 +28,15 @@ import {
   openNoteEditor,
   closeNoteEditor,
   handleSaveNote,
+  reloadNotes,
+  switchNotesTab,
 } from "./notes-handler.js";
 import { switchLanguage, translateElement } from "./i18n.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { updateContentStatus } from "./content-handler.js";
+import { isSignInNeeded } from "./auth-handler.js";
 
-// wires up all the event listeners in the app
 export function setupEventListeners() {
   elements.closeSidebarButton.addEventListener("click", () => {
     window.parent.postMessage({ action: "close_sidebar" }, "*");
@@ -91,6 +93,16 @@ export function setupEventListeners() {
     }
   });
 
+  elements.createFirstNoteButtonCurrent?.addEventListener("click", async () => {
+    console.log("🚀 Create first note (current) clicked");
+    await openNoteEditor();
+  });
+
+  elements.createFirstNoteButtonAll?.addEventListener("click", async () => {
+    console.log("🚀 Create first note (all) clicked");
+    await openNoteEditor();
+  });
+
   // Handle submit via button click
   elements.chatForm.addEventListener("submit", (e) => {
     e.preventDefault(); // prevent real form submission
@@ -110,17 +122,33 @@ export function setupEventListeners() {
     }
   });
 
-  elements.notesButton.addEventListener("click", () => {
+  elements.notesButton.addEventListener("click", async () => {
     if (state.isNotesOpen) {
       elements.notesScreen.style.display = "none";
       elements.notesButton.classList.remove("active");
       state.isNotesOpen = false;
 
+      const toolbar = document.querySelector(".sidebar-toolbar");
+      if (toolbar) {
+        toolbar.classList.remove("notes-open");
+      }
+
       elements.chatScreen.style.display = "flex";
     } else {
-      closeAllScreensAndPanels();
+      const notAllowed = await isSignInNeeded();
+      if (notAllowed) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "sign_in_required",
+            });
+          }
+        });
+        return;
+      }
 
-      openNotesPanel();
+      closeAllScreensAndPanels();
+      await openNotesPanel();
       elements.notesButton.classList.add("active");
       state.isNotesOpen = true;
     }
@@ -131,19 +159,28 @@ export function setupEventListeners() {
     elements.notesButton.classList.remove("active");
     state.isNotesOpen = false;
 
+    const toolbar = document.querySelector(".sidebar-toolbar");
+    if (toolbar) {
+      toolbar.classList.remove("notes-open");
+    }
+
     elements.chatScreen.style.display = "flex";
   });
 
-  elements.addNoteButton.addEventListener("click", () => {
-    openNoteEditor();
+  elements.addNoteButton.addEventListener("click", async () => {
+    await openNoteEditor();
   });
 
-  elements.createFirstNoteButton.addEventListener("click", () => {
-    openNoteEditor();
+  elements.createFirstNoteButton?.addEventListener("click", async () => {
+    await openNoteEditor();
   });
 
-  elements.saveNoteButton.addEventListener("click", () => {
-    handleSaveNote();
+  elements.reloadNotesButton?.addEventListener("click", () => {
+    reloadNotes();
+  });
+
+  elements.saveNoteButton.addEventListener("click", async () => {
+    await handleSaveNote();
   });
 
   elements.cancelNoteButton.addEventListener("click", () => {
@@ -152,6 +189,14 @@ export function setupEventListeners() {
 
   elements.closeEditorButton.addEventListener("click", () => {
     closeNoteEditor();
+  });
+
+  elements.notesTabCurrent?.addEventListener("click", () => {
+    switchNotesTab("current");
+  });
+
+  elements.notesTabAll?.addEventListener("click", () => {
+    switchNotesTab("all");
   });
 
   // language toggle
@@ -165,27 +210,6 @@ export function setupEventListeners() {
       enLabel.classList.toggle("active", language === "en");
       viLabel.classList.toggle("active", language === "vi");
     }
-
-    // const questionsContainer = document.querySelector(".generated-questions");
-    // if (questionsContainer && questionsContainer.style.display !== "none") {
-    //   const buttonContainer = document.querySelector(
-    //     ".question-buttons-container"
-    //   );
-    //   if (buttonContainer) {
-    //     buttonContainer.innerHTML = `
-    //       <div class="question-loading">
-    //         <div class="spinner-small"></div>
-    //         <span data-i18n="generatingQuestions">
-    //           ${
-    //             language === "vi"
-    //               ? "Đang tạo câu hỏi..."
-    //               : "Generating questions..."
-    //           }
-    //         </span>
-    //       </div>
-    //     `;
-    //   }
-    // }
 
     // Use the new internationalization module to switch language
     switchLanguage(language).then((message) => {

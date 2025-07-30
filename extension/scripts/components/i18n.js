@@ -78,6 +78,17 @@ const translations = {
     responseVerbosity: "Control how verbose the answers will be",
     languageToggleDesc: "Select the language for the assistant",
     saveSettings: "Save Settings",
+
+    forThisPage: "For This Page",
+    allNotes: "All Notes",
+    noNotesThisPage: "No notes for this page yet.",
+    noNotesAtAll: "No notes created yet.",
+    reloadNotes: "Reload Notes",
+    deleteNote: "Delete Note",
+    deleteNoteConfirmation:
+      "Are you sure you want to delete this note? This action cannot be undone.",
+    confirmDelete: "Delete",
+    cancel: "Cancel",
   },
 
   vi: {
@@ -95,7 +106,7 @@ const translations = {
     apiKeySettings: "Cài Đặt Khóa API",
     responseSettings: "Cài Đặt Phản Hồi",
     pageNotes: "Ghi Chú Trang",
-    editNote: "Chỉnh Sửa Ghi Chú",
+    editNote: "Sửa Ghi Chú",
 
     quickActions: "Thao Tác Nhanh",
     summarize: "Tóm tắt trang web này cho tôi",
@@ -157,6 +168,17 @@ const translations = {
     responseVerbosity: "Điều chỉnh mức độ chi tiết của câu trả lời",
     languageToggleDesc: "Chọn ngôn ngữ cho trợ lý",
     saveSettings: "Lưu Cài Đặt",
+
+    forThisPage: "Cho Trang Này",
+    allNotes: "Tất Cả Ghi Chú",
+    noNotesThisPage: "Chưa có ghi chú nào cho trang này.",
+    noNotesAtAll: "Chưa có ghi chú nào được tạo.",
+    reloadNotes: "Tải Lại Ghi Chú",
+    deleteNote: "Xóa Ghi Chú",
+    deleteNoteConfirmation:
+      "Bạn có chắc chắn muốn xóa ghi chú này không? Hành động này không thể hoàn tác.",
+    confirmDelete: "Xóa",
+    cancel: "Hủy",
   },
 };
 

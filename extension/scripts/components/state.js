@@ -20,7 +20,9 @@ export const state = {
   currentPageUrl: "",
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
-  language: "en", // Default language is English
+  currentNotesTab: "current",
+  currentEditingNoteUrl: null,
+  language: "en",
   currentChat: {
     id: null,
     title: "",
@@ -176,66 +178,110 @@ export async function saveConfig(config) {
 
 // Notes management
 export async function getNotesForUrl(url) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["notes"], (result) => {
-      const allNotes = result.notes || {};
-      resolve(allNotes[url] || []);
-    });
-  });
+  try {
+    const response = await sendRequest(
+      `http://localhost:3000/api/notes?page_url=${encodeURIComponent(url)}`
+    );
+    return response.data.notes.map((note) => ({
+      content: note.note,
+      timestamp: new Date(note.created_at).getTime(),
+      url: note.page_url,
+      id: note.id,
+    }));
+  } catch (error) {
+    console.error("Error fetching notes:", error);
+    return [];
+  }
+}
+
+export async function getAllNotes() {
+  try {
+    const response = await sendRequest("http://localhost:3000/api/notes/all");
+    return response.data.notes.map((note) => ({
+      content: note.note,
+      timestamp: new Date(note.created_at).getTime(),
+      url: note.page_url,
+      id: note.id,
+    }));
+  } catch (error) {
+    console.error("Error fetching all notes:", error);
+    return [];
+  }
 }
 
 export async function saveNote(note) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["notes"], (result) => {
-      const allNotes = result.notes || {};
-      const urlNotes = allNotes[note.url] || [];
-      urlNotes.push(note);
-      allNotes[note.url] = urlNotes;
-
-      chrome.storage.local.set({ notes: allNotes }, () => {
-        resolve();
-      });
+  try {
+    const response = await sendRequest("http://localhost:3000/api/notes", {
+      method: "POST",
+      body: {
+        page_url: note.url,
+        note: note.content,
+      },
     });
-  });
+    return response.data.id;
+  } catch (error) {
+    console.error("Error saving note:", error);
+    throw error;
+  }
 }
 
-export async function updateNote(timestamp, content) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["notes"], (result) => {
-      const allNotes = result.notes || {};
-      const urlNotes = allNotes[state.currentPageUrl] || [];
-
-      const noteIndex = urlNotes.findIndex(
-        (note) => note.timestamp === timestamp
-      );
-      if (noteIndex !== -1) {
-        urlNotes[noteIndex].content = content;
-        allNotes[state.currentPageUrl] = urlNotes;
-
-        chrome.storage.local.set({ notes: allNotes }, () => {
-          resolve();
-        });
-      } else {
-        resolve();
+export async function updateNote(id, content) {
+  try {
+    const response = await sendRequest(
+      `http://localhost:3000/api/notes/${id}`,
+      {
+        method: "PUT",
+        body: {
+          note: content,
+        },
       }
-    });
-  });
+    );
+    return response.data.affectedRows > 0;
+  } catch (error) {
+    console.error("Error updating note:", error);
+    throw error;
+  }
 }
 
-export async function deleteNote(timestamp) {
+export async function deleteNote(id) {
+  try {
+    const response = await sendRequest(
+      `http://localhost:3000/api/notes/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return response.data.affectedRows > 0;
+  } catch (error) {
+    console.error("Error deleting note:", error);
+    throw error;
+  }
+}
+
+export async function getNotesCount(pageUrl = null) {
+  try {
+    const url = pageUrl
+      ? `http://localhost:3000/api/notes/count?page_url=${encodeURIComponent(
+          pageUrl
+        )}`
+      : "http://localhost:3000/api/notes/count";
+
+    const response = await sendRequest(url);
+    return response.data;
+  } catch (error) {
+    console.error("Error fetching notes count:", error);
+    return { total: 0, page: 0 };
+  }
+}
+
+export async function getCurrentTabUrl() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["notes"], (result) => {
-      const allNotes = result.notes || {};
-      const urlNotes = allNotes[state.currentPageUrl] || [];
-
-      const filteredNotes = urlNotes.filter(
-        (note) => note.timestamp !== timestamp
-      );
-      allNotes[state.currentPageUrl] = filteredNotes;
-
-      chrome.storage.local.set({ notes: allNotes }, () => {
-        resolve();
-      });
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0]) {
+        resolve(tabs[0].url);
+      } else {
+        resolve(state.currentPageUrl || state.pageContent?.url || "");
+      }
     });
   });
 }

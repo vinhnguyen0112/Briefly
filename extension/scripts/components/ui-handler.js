@@ -27,27 +27,51 @@ import { translateElement } from "./i18n.js";
  */
 export function closeAllScreensAndPanels() {
   // hide config
-  elements.configContainer.style.display = "none";
-  elements.configButton.classList.remove("active");
+  if (elements.configContainer) {
+    elements.configContainer.style.display = "none";
+  }
+  if (elements.configButton) {
+    elements.configButton.classList.remove("active");
+  }
   state.isConfigOpen = false;
 
   // hide notes
-  elements.notesScreen.style.display = "none";
-  elements.notesButton.classList.remove("active");
+  if (elements.notesScreen) {
+    elements.notesScreen.style.display = "none";
+  }
+  if (elements.notesButton) {
+    elements.notesButton.classList.remove("active");
+  }
   state.isNotesOpen = false;
 
+  const toolbar = document.querySelector(".sidebar-toolbar");
+  if (toolbar) {
+    toolbar.classList.remove("notes-open");
+  }
+
   // hide sign in alert
-  elements.signInAlertOverlay.style.display = "none";
+  if (elements.signInAlertOverlay) {
+    elements.signInAlertOverlay.style.display = "none";
+  }
 
   // hide account popup
-  elements.accountPopup.style.display = "none";
+  if (elements.accountPopup) {
+    elements.accountPopup.style.display = "none";
+  }
 
   // hide chat history screen
-  elements.chatHistoryScreen.style.display = "none";
-  document.getElementById("chat-history-button").classList.remove("active");
+  if (elements.chatHistoryScreen) {
+    elements.chatHistoryScreen.style.display = "none";
+  }
+  const chatHistoryButton = document.getElementById("chat-history-button");
+  if (chatHistoryButton) {
+    chatHistoryButton.classList.remove("active");
+  }
 
-  // show main screen
-  elements.chatScreen.style.display = "flex";
+  // show main screen - safe access
+  if (elements.chatScreen) {
+    elements.chatScreen.style.display = "flex";
+  }
 }
 
 // handle resize events
