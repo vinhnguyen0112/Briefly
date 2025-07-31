@@ -8,6 +8,16 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
+(function detectPDF() {
+  const url = window.location.href;
+  if (url.toLowerCase().endsWith(".pdf")) {
+    chrome.runtime.sendMessage({
+      type: "PDF_DETECTED",
+      url: url
+    });
+  }
+})();
+
 // Boot up
 (function initializeContentExtractor() {
   console.log("CocBot: Content Extractor initialized");

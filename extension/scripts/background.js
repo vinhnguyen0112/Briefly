@@ -390,6 +390,21 @@ function openContentViewerPopup(content) {
   return { success: true };
 }
 
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.type === "PDF_DETECTED") {
+    console.log("PDF detected:", message.url);
+
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          type: "EXTRACT_PDF",
+          url: message.url,
+        });
+      }
+    });
+  }
+});
+
 //opening settings popup if requested
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Background received message:", message.action);

@@ -28,6 +28,32 @@ import {
   createWelcomeContainer,
 } from "./components/ui-handler.js";
 import { elements } from "./components/dom-elements.js";
+import { extractTextFromPDF } from "./components/pdf-handler.js";
+
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  if (message.type === "EXTRACT_PDF") {
+    console.log("Extracting PDF from:", message.url);
+
+    try {
+      const result = await extractTextFromPDF(message.url);
+
+      if (result?.content) {
+        state.pageContent = {
+          url: message.url,
+          title: "PDF Document",
+          content: result.content,
+          extractionSuccess: true,
+        };
+
+        console.log("PDF content stored in state.pageContent");
+      } else {
+        console.warn("PDF extraction returned empty content");
+      }
+    } catch (err) {
+      console.error("Error extracting PDF:", err);
+    }
+  }
+});
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
