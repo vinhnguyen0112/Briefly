@@ -2,6 +2,7 @@ const { v4: uuidv4 } = require("uuid");
 const Note = require("../models/note");
 const { ERROR_CODES } = require("../errors");
 const AppError = require("../models/appError");
+const commonHelper = require("../helpers/commonHelper");
 
 /**
  * Create a new note
@@ -12,13 +13,20 @@ const AppError = require("../models/appError");
 const createNote = async (req, res, next) => {
   try {
     const { page_url, note } = req.body;
+
+    // Normalize URL before saving
+    const normalizedPageUrl = commonHelper.processUrl(page_url);
+    if (!normalizedPageUrl) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+
     const id = uuidv4();
     const createdAt = new Date();
 
     await Note.create({
       id,
       user_id: req.session.user_id,
-      page_url,
+      page_url: normalizedPageUrl,
       note,
       created_at: createdAt,
       updated_at: createdAt,
@@ -47,7 +55,15 @@ const getNotesForPage = async (req, res, next) => {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Page URL is required");
     }
 
-    const notes = await Note.getByUserAndPage(req.session.user_id, page_url);
+    const normalizedPageUrl = commonHelper.processUrl(page_url);
+    if (!normalizedPageUrl) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+
+    const notes = await Note.getByUserAndPage(
+      req.session.user_id,
+      normalizedPageUrl
+    );
 
     res.json({
       success: true,
@@ -151,9 +167,14 @@ const getNotesCount = async (req, res, next) => {
     const { page_url } = req.query;
 
     const totalCount = await Note.getCount(req.session.user_id);
-    const pageCount = page_url
-      ? await Note.getCount(req.session.user_id, page_url)
-      : 0;
+
+    let pageCount = 0;
+    if (page_url) {
+      const normalizedPageUrl = commonHelper.processUrl(page_url);
+      if (normalizedPageUrl) {
+        pageCount = await Note.getCount(req.session.user_id, normalizedPageUrl);
+      }
+    }
 
     res.json({
       success: true,
