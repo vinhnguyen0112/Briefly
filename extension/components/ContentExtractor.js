@@ -8,13 +8,29 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
-(function detectPDF() {
+(async function detectPDF() {
   const url = window.location.href;
-  if (url.toLowerCase().endsWith(".pdf")) {
+
+  function sendDetected() {
     chrome.runtime.sendMessage({
       type: "PDF_DETECTED",
       url: url
     });
+  }
+
+  // 1. URL ends with .pdf
+  if (url.toLowerCase().endsWith(".pdf")) {
+    return sendDetected();
+  }
+
+  // 2. contentType directly from document
+  if (document.contentType === "application/pdf") {
+    return sendDetected();
+  }
+
+  // 3. No DOM/ Empty DOM
+  if (!document.body || document.body.children.length === 0) {
+    return sendDetected();
   }
 })();
 
