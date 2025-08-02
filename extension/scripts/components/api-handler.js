@@ -59,6 +59,8 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
       state.currentConfig
     );
 
+    console.log("Constructed messages:", messages);
+
     const response = await callOpenAI(messages, metadata);
     removeTypingIndicator(typingIndicator);
 

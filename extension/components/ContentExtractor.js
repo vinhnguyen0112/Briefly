@@ -28,8 +28,19 @@ window.isContentExtractorReady = function () {
     return sendDetected();
   }
 
-  // 3. No DOM/ Empty DOM
+  // 3. Empty DOM
   if (!document.body || document.body.children.length === 0) {
+    return sendDetected();
+  }
+
+  // 4. Detect <embed> or <object> with PDF type
+  const embeds = Array.from(document.getElementsByTagName("embed"));
+  const objects = Array.from(document.getElementsByTagName("object"));
+
+  const pdfEmbed = embeds.find(e => e.type?.includes("pdf"));
+  const pdfObject = objects.find(o => o.type?.includes("pdf"));
+
+  if (pdfEmbed || pdfObject) {
     return sendDetected();
   }
 })();
