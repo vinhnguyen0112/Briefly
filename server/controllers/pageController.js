@@ -86,12 +86,12 @@ const createPage = async (req, res, next) => {
 };
 
 /**
- * Get a page by ID
+ * Get a page by URL
  * @param {Object} req
  * @param {Object} res
  * @param {Function} next
  */
-const getPageById = async (req, res, next) => {
+const getPageByUrl = async (req, res, next) => {
   try {
     const { page_url } = req.query;
     if (!page_url) {
@@ -140,6 +140,53 @@ const getPageById = async (req, res, next) => {
 };
 
 /**
+ * Get a page by ID
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const getPageById = async (req, res, next) => {
+  try {
+    const { page_id } = req.params;
+    if (!page_id) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing page_id");
+    }
+
+    const id = page_id.trim();
+
+    // Check Redis cache
+    const cached = await redisHelper.getPage(id);
+    if (cached) {
+      return res.json({
+        success: true,
+        message: "Page found in cache",
+        data: { cached: true, page: { ...cached } },
+      });
+    }
+
+    // Fallback to DB
+    const page = await Page.getById(id);
+
+    if (page) {
+      await redisHelper.setPage(id, {
+        page_url: page.page_url,
+        normalized_page_url: page.normalized_page_url,
+        title: page.title,
+        page_content: page.page_content,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: page ? "Page fetched from database" : "Page not found",
+      data: { cached: false, page },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * Update a page record by ID
  * @param {Object} req
  * @param {Object} res
@@ -178,6 +225,7 @@ const updatePage = async (req, res, next) => {
 
 module.exports = {
   createPage,
+  getPageByUrl,
   getPageById,
   updatePage,
 };

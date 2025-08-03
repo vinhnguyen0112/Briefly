@@ -718,7 +718,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+  if (message.action === "get_page") {
+    sendRequest(`${SERVER_URL}/api/pages/${message.page_id}`, {
+      method: "GET",
+    }).then((response) => {
+      sendResponse({
+        success: response.success,
+        page: response.data.page,
+      });
+    });
 
+    return true;
+  }
   if (message.action === "process_images") {
     resetProcessedImages();
     handleCaptionImages(message.images, message.content)

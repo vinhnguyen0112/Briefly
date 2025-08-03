@@ -3,9 +3,10 @@
 
 export const state = {
   pageContent: {},
+  chatHistoryPageContent: null,
   isAnimating: false,
   isProcessingQuery: false,
-  isViewingChatHistory: false,
+  isViewChatHistory: false,
   history: [],
   currentConfig: null,
   isResizing: false,
@@ -27,7 +28,6 @@ export const state = {
     title: "",
     pageUrl: "",
     history: [],
-    pageContent: null,
   },
   pagination: {
     currentPage: 0,
@@ -279,6 +279,8 @@ export async function saveStoredPageUrl(url) {
   });
 }
 
+// Chat state management
+
 export function resetCurrentChatState() {
   state.currentChat = {
     id: null,
@@ -287,17 +289,8 @@ export function resetCurrentChatState() {
     history: [],
     pageContent: null,
   };
-}
 
-/**
- * Reset pagination state to default
- */
-export function resetPaginationState() {
-  state.pagination = {
-    currentPage: 0,
-    hasMore: true,
-    isFetching: false,
-  };
+  state.isViewChatHistory = false;
 }
 
 /**
@@ -314,6 +307,17 @@ export function setCurrentChatState(chat = {}) {
     title: chat.title || "",
     pageUrl: chat.pageUrl || "",
     history: chat.history || [],
+  };
+}
+
+/**
+ * Reset pagination state to default
+ */
+export function resetPaginationState() {
+  state.pagination = {
+    currentPage: 0,
+    hasMore: true,
+    isFetching: false,
   };
 }
 

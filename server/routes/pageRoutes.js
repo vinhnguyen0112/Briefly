@@ -10,9 +10,10 @@ const {
 // Protected
 router.use(requireAuthenticatedSession);
 
+router.route("/:page_id").get(pageController.getPageById);
+
 router
   .route("/")
-  .get(pageController.getPageById)
   .post(validateAndSanitizeBody(createPageSchema), pageController.createPage);
 
 // router.put(

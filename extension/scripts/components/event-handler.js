@@ -595,6 +595,7 @@ function mergeFetchedChats(chats) {
         id: chat.id,
         title: chat.title,
         page_url: chat.page_url,
+        page_id: chat.page_id,
         created_at: chat.created_at,
       },
     ])
@@ -743,6 +744,7 @@ function createChatHistoryItem(chat) {
  * @param {HTMLElement} item
  */
 async function handleChatHistoryItemClick(e, chat, item) {
+  console.log("Chat history item clicked:", chat);
   if (
     e.target.closest(".chat-history-actions-menu") ||
     e.target.classList.contains("chat-history-actions-button") ||
@@ -756,19 +758,35 @@ async function handleChatHistoryItemClick(e, chat, item) {
   switchToChat();
   resetSuggestedQuestionsContainer();
 
-  // Fetch and display messages
   let messages = [];
   if (navigator.onLine) {
-    const response = await new Promise((resolve) => {
+    // Fetch and display messages
+    const fetchMessageResponse = await new Promise((resolve) => {
       chrome.runtime.sendMessage(
         { action: "fetch_chat_messages", chatId: chat.id },
         (res) => resolve(res || {})
       );
     });
-    messages = response.messages || [];
+    messages = fetchMessageResponse.messages || [];
     const found = await idbHandler.getChatById(chat.id);
     if (!found) await idbHandler.upsertChat(chat);
     await idbHandler.overwriteChatMessages(chat.id, messages);
+
+    // Fetch original page content
+    const getPageResponse = await new Promise((resolve) => {
+      chrome.runtime.sendMessage(
+        { action: "get_page", page_id: chat.page_id },
+        (res) => resolve(res || {})
+      );
+    });
+
+    // Set original page content
+    if (getPageResponse.success) {
+      console.log("Page fetched, content: ", getPageResponse.page);
+      state.chatHistoryPageContent = getPageResponse.page.page_content;
+    }
+
+    state.isViewChatHistory = true;
   } else {
     messages = await idbHandler.getMessagesForChat(chat.id);
   }
@@ -786,7 +804,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
 }
 
 /**
- * Sets up actions (rename/delete) for a chat history item.
+ * Sets up actions for a chat history item.
  * @param {HTMLElement} item
  * @param {Object} chat
  */
@@ -794,17 +812,20 @@ function setupChatHistoryActions(item, chat) {
   const actionsBtn = item.querySelector(".chat-history-actions-button");
   const menu = item.querySelector(".chat-history-actions-menu");
 
+  // Open menu
   actionsBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     toggleChatHistoryMenu(menu);
   });
 
+  // Rename
   item.querySelector("#rename-button").addEventListener("click", (e) => {
     e.stopPropagation();
     menu.classList.add("hidden");
     showRenameChatInput(item, chat);
   });
 
+  // Delete
   item.querySelector("#delete-button").addEventListener("click", (e) => {
     e.stopPropagation();
     menu.classList.add("hidden");
