@@ -39,13 +39,15 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 
       if (result?.content) {
         const trimmedContent = result.content.split(/\s+/).slice(0, 90000).join(" ").trim();
-
-        state.pageContent = {
+        
+        state.pageContent = state.pageContent || {};
+        state.pageContent.pdfContent = {
           url: message.url,
           title: "PDF Document",
           content: trimmedContent,
           extractionSuccess: true,
         };
+
         
         console.log("PDF content extracted successfully:", result.content);
         console.log("PDF content stored in state.pageContent");

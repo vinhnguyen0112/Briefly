@@ -386,7 +386,13 @@ ${styleInstructions}`,
 
     if (pageContent.content) {
       contextMessage.content += pageContent.content;
-    } else {
+    }
+    
+    if (pageContent.pdfContent?.content) {
+      contextMessage.content += `\n\n--- Embedded PDF Content ---\n${pageContent.pdfContent.content}`;
+    }
+
+    else {
       contextMessage.content +=
         "The page content extraction failed. I have limited context about this page.";
     }

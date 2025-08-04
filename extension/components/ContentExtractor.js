@@ -8,42 +8,26 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
-(async function detectPDF() {
+async function detectPDF() {
   const url = window.location.href;
 
-  function sendDetected() {
+  const sendDetected = () => {
     chrome.runtime.sendMessage({
-      type: "PDF_DETECTED",
-      url: url
+      action: "pdf_detected",
+      url
     });
-  }
+  };
 
-  // 1. URL ends with .pdf
-  if (url.toLowerCase().endsWith(".pdf")) {
+  if (url.toLowerCase().endsWith(".pdf")) return sendDetected();
+  if (document.contentType === "application/pdf") return sendDetected();
+
+  const embeds = [...document.getElementsByTagName("embed")];
+  const objects = [...document.getElementsByTagName("object")];
+
+  if (embeds.find(e => e.type?.includes("pdf")) || objects.find(o => o.type?.includes("pdf"))) {
     return sendDetected();
   }
-
-  // 2. contentType directly from document
-  if (document.contentType === "application/pdf") {
-    return sendDetected();
-  }
-
-  // 3. Empty DOM
-  if (!document.body || document.body.children.length === 0) {
-    return sendDetected();
-  }
-
-  // 4. Detect <embed> or <object> with PDF type
-  const embeds = Array.from(document.getElementsByTagName("embed"));
-  const objects = Array.from(document.getElementsByTagName("object"));
-
-  const pdfEmbed = embeds.find(e => e.type?.includes("pdf"));
-  const pdfObject = objects.find(o => o.type?.includes("pdf"));
-
-  if (pdfEmbed || pdfObject) {
-    return sendDetected();
-  }
-})();
+}
 
 // Boot up
 (function initializeContentExtractor() {
@@ -378,7 +362,8 @@ function waitForDomReady(callback) {
 }
 
 // 🚀 Start auto image extraction loop, then fallback to MutationObserver
-waitForDomReady(() => {
+waitForDomReady(() => { 
+  detectPDF(); // detect if this is a PDF when DOM is ready
   sentImages.clear();
   totalImagesSent = 0;
   const extracted = extractPageContent();

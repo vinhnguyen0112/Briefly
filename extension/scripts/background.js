@@ -391,7 +391,7 @@ function openContentViewerPopup(content) {
 }
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === "PDF_DETECTED") {
+  if (message.action === "pdf_detected") {
     console.log("PDF detected:", message.url);
 
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
