@@ -390,10 +390,12 @@ function openContentViewerPopup(content) {
   return { success: true };
 }
 
+// Listen for PDF detection messages from content scripts
+// This is used to extract PDF content when detected and send it to the background script for processing
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "pdf_detected") {
     console.log("PDF detected:", message.url);
-
+    // Send a message to the active tab to extract PDF content
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length > 0) {
         chrome.tabs.sendMessage(tabs[0].id, {

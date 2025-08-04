@@ -387,7 +387,8 @@ ${styleInstructions}`,
     if (pageContent.content) {
       contextMessage.content += pageContent.content;
     }
-    
+
+    // If PDF content is available, append it
     if (pageContent.pdfContent?.content) {
       contextMessage.content += `\n\n--- Embedded PDF Content ---\n${pageContent.pdfContent.content}`;
     }

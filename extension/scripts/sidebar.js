@@ -30,6 +30,7 @@ import {
 import { elements } from "./components/dom-elements.js";
 import { extractTextFromPDF } from "./components/pdf-handler.js";
 
+// Listen for messages from the background script to extract PDF content
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (message.type === "EXTRACT_PDF") {
     console.log("Extracting PDF from:", message.url);
@@ -38,8 +39,10 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       const result = await extractTextFromPDF(message.url);
 
       if (result?.content) {
+        // Trim the content to a maximum of 90,000 characters
+        // This is to ensure we don't exceed the limits of the OpenAI API
         const trimmedContent = result.content.split(/\s+/).slice(0, 90000).join(" ").trim();
-        
+        // Store the extracted PDF content in the state
         state.pageContent = state.pageContent || {};
         state.pageContent.pdfContent = {
           url: message.url,
@@ -48,7 +51,6 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
           extractionSuccess: true,
         };
 
-        
         console.log("PDF content extracted successfully:", result.content);
         console.log("PDF content stored in state.pageContent");
       } else {

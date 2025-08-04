@@ -8,24 +8,63 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
-async function detectPDF() {
+// Wait for the DOM to be ready before initializing the content extractor
+async function detectPDF() {   // Detect if this is a PDF document
   const url = window.location.href;
 
-  const sendDetected = () => {
+  const sendDetected = (pdfUrl = url) => { // Send a message to the background script
     chrome.runtime.sendMessage({
       action: "pdf_detected",
-      url
+      url: pdfUrl
     });
   };
-
+// Check if the URL ends with .pdf or has a PDF content type
   if (url.toLowerCase().endsWith(".pdf")) return sendDetected();
+
+  // Check if the content type is PDF
   if (document.contentType === "application/pdf") return sendDetected();
 
+  // Check for <embed> or <object> tags with PDF content
   const embeds = [...document.getElementsByTagName("embed")];
   const objects = [...document.getElementsByTagName("object")];
 
+  // Check if any embed or object has a PDF type
   if (embeds.find(e => e.type?.includes("pdf")) || objects.find(o => o.type?.includes("pdf"))) {
     return sendDetected();
+  }
+
+  // Check for <iframe> tags with PDF content
+  if (url.includes("viewer.html") && url.includes("file=")) {
+    try {
+      const params = new URLSearchParams(url.split("?")[1]);
+      const file = params.get("file");
+      if (file) {
+        const absoluteUrl = new URL(decodeURIComponent(file), window.location.origin).href;
+        return sendDetected(absoluteUrl);
+      }
+    } catch (e) {
+      console.warn("Failed to extract PDF from viewer URL:", e);
+      return sendDetected(); // fallback if error
+    }
+  }
+
+  // Check for iframes that might contain PDF viewers
+  const iframes = [...document.getElementsByTagName("iframe")];
+  for (const iframe of iframes) {
+    const src = iframe.src || iframe.getAttribute("src") || "";
+    if (src.includes("viewer.html") && src.includes("file=")) {
+      try {
+        const params = new URLSearchParams(src.split("?")[1]);
+        const file = params.get("file");
+        if (file) {
+          const absoluteUrl = new URL(decodeURIComponent(file), window.location.origin).href;
+          return sendDetected(absoluteUrl);
+        }
+      } catch (e) {
+        console.warn("Failed to extract PDF from iframe viewer:", e);
+        return sendDetected(); // fallback if error
+      }
+    }
   }
 }
 
