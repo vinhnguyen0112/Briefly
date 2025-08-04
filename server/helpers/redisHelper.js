@@ -272,6 +272,37 @@ async function setPageSummary(pageSummary) {
   await client.set(key, pageSummary.summary, { EX: process.env.SUMMARY_TTL });
 }
 
+/**
+ * Delete all summaries under a given pageId
+ * @param {string} pageId
+ * @returns {Promise<number>} Number of deleted keys
+ */
+async function deletePageSummaries(pageId) {
+  const pattern = applyPrefix(`page_summary:${pageId}:*`);
+  let cursor = 0;
+  let totalDeleted = 0;
+
+  do {
+    const result = await client.scan(cursor, {
+      MATCH: pattern,
+      COUNT: 100,
+    });
+
+    cursor = result.cursor;
+    const keys = result.keys;
+
+    console.log("Scanning... cursor:", cursor, "keys found:", keys.length);
+
+    if (keys.length > 0) {
+      await client.del(keys);
+      totalDeleted += keys.length;
+    }
+  } while (cursor !== 0);
+
+  console.log(`Deleted ${totalDeleted} keys for pageId: ${pageId}`);
+  return totalDeleted;
+}
+
 const redisHelper = {
   client,
   createSession,
@@ -285,6 +316,7 @@ const redisHelper = {
   deletePage,
   getPageSummary,
   setPageSummary,
+  deletePageSummaries,
 };
 
 module.exports = {

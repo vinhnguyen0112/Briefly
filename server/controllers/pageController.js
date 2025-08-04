@@ -24,6 +24,7 @@ function isPageExpired(updatedAt) {
  */
 const createPage = async (req, res, next) => {
   try {
+    let expired = false;
     const { page_url, title, page_content } = req.body;
 
     // Normalize and validate page_url
@@ -40,11 +41,10 @@ const createPage = async (req, res, next) => {
       return res.json({
         success: true,
         message: "Page found in cache",
-        data: { id, cached: true },
+        data: { id, cached: true, expired },
       });
     }
 
-    // Construct insert body (omit undefined/null/empty)
     const insertBody = {
       id,
       page_url: normalizedPageUrl,
@@ -54,9 +54,11 @@ const createPage = async (req, res, next) => {
 
     let page = await Page.getById(id);
 
-    // Insert or re-insert if expired
+    // If not found or expired, create a new page
     if (!page || isPageExpired(page.updated_at)) {
-      if (page) await Page.deleteById(id);
+      expired = !!page; // only true if it existed and is expired
+      if (expired) await Page.deleteById(id); // Invalidate old page
+      await redisHelper.deletePageSummaries(id); // Invalidate cached summaries
       page = await Page.create(insertBody);
     }
 
@@ -67,7 +69,7 @@ const createPage = async (req, res, next) => {
       );
     }
 
-    // Update Redis
+    // Update cache
     await redisHelper.setPage(id, {
       page_url: page.page_url,
       normalized_page_url: normalizedPageUrl,
@@ -78,7 +80,7 @@ const createPage = async (req, res, next) => {
     res.json({
       success: true,
       message: "Page record is fresh and available",
-      data: { id, cached: false },
+      data: { id, cached: false, expired },
     });
   } catch (err) {
     next(err);

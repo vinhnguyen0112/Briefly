@@ -297,7 +297,11 @@ async function persistPageMetadataAndSummary({
       page_content,
     },
     (result) => {
-      if (result?.success && metadata?.event === "summarize") {
+      if (
+        result?.success &&
+        metadata?.event === "summarize" &&
+        !result.data?.expired
+      ) {
         chrome.runtime.sendMessage({
           action: "store_page_summary",
           page_url,

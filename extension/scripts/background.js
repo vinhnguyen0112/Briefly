@@ -688,11 +688,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
       .then((response) => {
         console.log("store_page_metadata response: ", response);
-        sendResponse({ success: response.success });
+        sendResponse({ success: response.success, data: response.data });
       })
       .catch((err) => {
         console.error("Failed to store page:", err);
-        sendResponse({ success: false });
+        sendResponse({ success: false, data: null });
       });
 
     return true;
