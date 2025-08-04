@@ -58,22 +58,21 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
     role: "user",
     event: metadata.event,
   });
-  const typingIndicator = addTypingIndicator();
 
+  const typingIndicator = addTypingIndicator();
   state.isProcessingQuery = true;
 
   try {
     // Decide if should use live page content or chat history
-    if (state.isViewChatHistory && state.chatHistoryPageContent) {
-      // Use chat history page content
-      state.pageContent.content = state.chatHistoryPageContent;
-    }
+    const pageContext = state.isViewingChatHistory
+      ? state.chatContext
+      : state.pageContent;
 
     // Build prompt
-    console.log("Current pageContent: ", state.pageContent);
+    console.log("Current context: ", pageContext);
     const messages = constructPromptWithPageContent({
       query,
-      pageContent: state.pageContent,
+      pageContent: pageContext,
       history: state.currentChat.history,
       config: state.currentConfig,
       language: state.language,
@@ -118,9 +117,9 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
       persistPageMetadataAndSummary({
         state: {
           pageContent: {
-            url: state.pageContent.url,
-            title: state.pageContent.title,
-            content: state.pageContent.content,
+            url: pageContext.url,
+            title: pageContext.title,
+            content: pageContext.content,
           },
           language: state.language,
         },
@@ -170,7 +169,6 @@ async function persistChatAndMessages(
   tempMessageId
 ) {
   const userSession = await getUserSession();
-  // Increase anonymous session's query count
   if (!userSession || !userSession.id) {
     await increaseAnonQueryCount();
     return;
@@ -181,21 +179,24 @@ async function persistChatAndMessages(
 
   const currentChatId = state.currentChat.id;
   const isNewChat = !currentChatId;
+
+  let chat;
   try {
     let chatId = currentChatId;
 
-    // Create a new chat if needed
     if (isNewChat) {
       const result = await chatHandler.createChat({
         page_url: pageUrl,
         title: pageTitle,
       });
-      if (!result?.success || !result?.data.id)
-        throw new Error("Failed to create chat");
 
-      chatId = result.data.id;
+      if (!result.success || !result.data) {
+        return;
+      }
 
-      // Update current chat state to new chat
+      chat = result.data.chat;
+      chatId = chat.id;
+
       if (!state.currentChat.id) {
         state.currentChat.id = chatId;
         state.currentChat.title = pageTitle;
@@ -210,7 +211,6 @@ async function persistChatAndMessages(
       }
     }
 
-    // Store messages and get their IDs back
     const userMessageResult = await chatHandler.addMessage(chatId, {
       role: "user",
       content: userQuery,
@@ -222,12 +222,10 @@ async function persistChatAndMessages(
       model,
     });
 
-    // Update the message element with real message ID
     if (assistantMessageResult?.success && assistantMessageResult?.data?.id) {
       updateMessageWithId(tempMessageId, assistantMessageResult.data.id);
     }
 
-    // Cache locally
     await idbHandler.addMessageToChat(chatId, {
       role: "user",
       content: userQuery,
@@ -237,18 +235,11 @@ async function persistChatAndMessages(
       content: assistantMessage,
     });
 
-    // Insert new chat into local chat history list after messages are processed successfuly
-    if (isNewChat) {
-      state.chatHistory.unshift({
-        id: chatId,
-        title: pageTitle,
-        page_url: pageUrl,
-        created_at: Date.now(),
-      });
+    if (isNewChat && chat) {
+      state.chatHistory.unshift(chat);
     }
   } catch (error) {
     console.error("Failed to persist messages:", error);
-    // Handle error - maybe show a retry option or remove feedback icon
   }
 }
 
@@ -280,10 +271,14 @@ async function persistPageMetadataAndSummary({
   const authSession = await getUserSession();
   if (!authSession || !authSession.id) return; // Auth only
 
-  // Fall back
-  const page_url = state.pageContent?.url || window.location.href;
-  const title = state.pageContent?.title || document.title;
-  const page_content = state.pageContent?.content;
+  // Decide if should use live page content or chat history
+  const pageContent = state.isViewingChatHistory
+    ? state.chatContext
+    : state.pageContent;
+
+  const page_url = pageContent.url;
+  const title = pageContent.title;
+  const page_content = pageContent.content;
   const language = state.language;
 
   chrome.runtime.sendMessage(
@@ -318,7 +313,9 @@ export async function callOpenAI(messages, metadata) {
     ? Math.ceil(config.maxWordCount * 1.3)
     : 1500;
   metadata.max_tokens = maxTokens;
-  metadata.page_url = state.pageContent?.url || window.location.href;
+  metadata.page_url = state.isViewingChatHistory
+    ? state.chatContext.url
+    : state.pageContent?.url || window.location.href;
   metadata.language = state.language || "en";
 
   const res = await sendRequest(`${SERVER_URL}/api/query/ask`, {
@@ -472,17 +469,16 @@ function generateContextMessage(pageContent) {
 }
 
 /**
- *
- * @param {string} pageContent Page content
+ * Generate questions based on current context (live page or chat)
+ * @param {Object} [contentOverride] Optional manual override of content
  * @returns {Promise<{success: boolean, questions: string[]}>}
  */
-export async function generateQuestionsFromContent(pageContent) {
-  if (state.isViewChatHistory && state.chatHistoryPageContent) {
-    // Use chat history page content
-    pageContent.content = state.chatHistoryPageContent;
-  }
+export async function generateQuestionsFromContent(contentOverride = null) {
+  const contentSource =
+    contentOverride ||
+    (state.isViewingChatHistory ? state.chatContext : state.pageContent);
 
-  if (!pageContent || !pageContent.content) {
+  if (!contentSource || !contentSource.content) {
     return { success: false, error: "No content available" };
   }
 
@@ -491,13 +487,12 @@ export async function generateQuestionsFromContent(pageContent) {
   try {
     const language = state.language || "en";
 
-    // Call backend API
     const res = await sendRequest(
       `${SERVER_URL}/api/query/suggested-questions`,
       {
         method: "POST",
         body: {
-          pageContent,
+          pageContent: contentSource,
           language,
         },
       }

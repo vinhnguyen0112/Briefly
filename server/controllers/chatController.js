@@ -33,14 +33,16 @@ const createChat = async (req, res, next) => {
 
     const chatId = uuidv4();
 
-    await Chat.create({
+    const chat = {
       id: chatId,
       user_id: req.session.user_id,
       page_url: normalizedPageUrl,
       page_id: pageId,
       title,
-    });
-    res.json({ success: true, data: { id: chatId } });
+    };
+
+    await Chat.create(chat);
+    res.json({ success: true, data: { chat } });
   } catch (err) {
     next(err);
   }

@@ -207,6 +207,8 @@ export function setupEventListeners() {
     resetCurrentChatState();
     closeAllScreensAndPanels();
     clearMessagesFromMessageContainer();
+    resetSuggestedQuestionsContainer();
+    updateContentStatus();
     switchToChat();
   });
 
@@ -504,7 +506,7 @@ function clearChatHistoryEventHandler() {
       state.chatHistory = [];
       renderAllChatHistory();
 
-      // Reset current chat for now
+      // Reset current chat
       clearMessagesFromMessageContainer();
       resetCurrentChatState();
 
@@ -745,6 +747,8 @@ function createChatHistoryItem(chat) {
  */
 async function handleChatHistoryItemClick(e, chat, item) {
   console.log("Chat history item clicked:", chat);
+
+  // Prevent clicks on action buttons/input fields
   if (
     e.target.closest(".chat-history-actions-menu") ||
     e.target.classList.contains("chat-history-actions-button") ||
@@ -752,44 +756,67 @@ async function handleChatHistoryItemClick(e, chat, item) {
   ) {
     return;
   }
-  // UI tasks
+
+  const toastId = showToast({
+    message: "Loading chat history...",
+    type: "loading",
+    duration: null,
+  });
+
+  let messages = [];
+  let chatContext = null;
+
+  if (navigator.onLine) {
+    // Fetch messages and original context if online
+    try {
+      const fetchMessageResponse = await new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+          { action: "fetch_chat_messages", chatId: chat.id },
+          (res) => resolve(res || {})
+        );
+      });
+      messages = fetchMessageResponse.messages || [];
+
+      // Cache in IndexedDB
+      const found = await idbHandler.getChatById(chat.id);
+      if (!found) await idbHandler.upsertChat(chat);
+      await idbHandler.overwriteChatMessages(chat.id, messages);
+
+      // Get original page content
+      const getPageResponse = await new Promise((resolve) => {
+        chrome.runtime.sendMessage(
+          { action: "get_page", page_id: chat.page_id },
+          (res) => resolve(res || {})
+        );
+      });
+
+      // Update chatContext state
+      if (getPageResponse.success) {
+        const { page } = getPageResponse;
+        chatContext = {
+          title: page.title,
+          url: page.page_url,
+          content: page.page_content,
+          captions: [],
+          extractionSuccess: true,
+        };
+      }
+    } catch (err) {
+      console.warn("Failed to fetch chat or context:", err);
+    }
+
+    state.isViewingChatHistory = true;
+    state.chatContext = chatContext;
+  } else {
+    messages = await idbHandler.getMessagesForChat(chat.id);
+  }
+
+  // Update UI only after data is fetched
   clearMessagesFromMessageContainer();
   closeAllScreensAndPanels();
   switchToChat();
   resetSuggestedQuestionsContainer();
-
-  let messages = [];
-  if (navigator.onLine) {
-    // Fetch and display messages
-    const fetchMessageResponse = await new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { action: "fetch_chat_messages", chatId: chat.id },
-        (res) => resolve(res || {})
-      );
-    });
-    messages = fetchMessageResponse.messages || [];
-    const found = await idbHandler.getChatById(chat.id);
-    if (!found) await idbHandler.upsertChat(chat);
-    await idbHandler.overwriteChatMessages(chat.id, messages);
-
-    // Fetch original page content
-    const getPageResponse = await new Promise((resolve) => {
-      chrome.runtime.sendMessage(
-        { action: "get_page", page_id: chat.page_id },
-        (res) => resolve(res || {})
-      );
-    });
-
-    // Set original page content
-    if (getPageResponse.success) {
-      console.log("Page fetched, content: ", getPageResponse.page);
-      state.chatHistoryPageContent = getPageResponse.page.page_content;
-    }
-
-    state.isViewChatHistory = true;
-  } else {
-    messages = await idbHandler.getMessagesForChat(chat.id);
-  }
+  updateContentStatus(); // this will now pull from the correct context
 
   const history = [];
   for (const message of messages) {
@@ -800,7 +827,14 @@ async function handleChatHistoryItemClick(e, chat, item) {
     });
     history.push({ role: message.role, content: message.content });
   }
+
   setCurrentChatState({ ...chat, history });
+
+  updateToast(toastId, {
+    message: "Chat loaded successfully",
+    type: "success",
+    duration: 2000,
+  });
 }
 
 /**

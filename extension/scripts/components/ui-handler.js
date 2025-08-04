@@ -185,9 +185,6 @@ export async function addMessageToChat({
 
 /**
  * Clear all messages from chat container.
- *
- * Inject welcome section and quick actions & suggested questions
- * and context indicator into chat container
  */
 export async function clearMessagesFromMessageContainer() {
   if (!elements.messageContainer) return;
@@ -356,14 +353,15 @@ function injectSuggestedQuestions(container) {
     // Use generated questions if have
     if (
       state.generatedQuestions[state.language] &&
-      state.generatedQuestions[state.language].length > 0
+      state.generatedQuestions[state.language].length > 0 &&
+      !state.isViewingChatHistory
     ) {
       result = {
         success: true,
         questions: state.generatedQuestions[state.language],
       };
     } else {
-      result = await generateQuestionsFromContent(state.pageContent);
+      result = await generateQuestionsFromContent();
     }
 
     loadingDiv.style.display = "none";

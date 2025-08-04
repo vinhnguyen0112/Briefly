@@ -3,10 +3,10 @@
 
 export const state = {
   pageContent: {},
-  chatHistoryPageContent: null,
+  chatContext: {},
   isAnimating: false,
   isProcessingQuery: false,
-  isViewChatHistory: false,
+  isViewingChatHistory: false,
   history: [],
   currentConfig: null,
   isResizing: false,
@@ -281,6 +281,9 @@ export async function saveStoredPageUrl(url) {
 
 // Chat state management
 
+/**
+ * Reset current chat state and set isViewingChatHistory to false
+ */
 export function resetCurrentChatState() {
   state.currentChat = {
     id: null,
@@ -290,7 +293,7 @@ export function resetCurrentChatState() {
     pageContent: null,
   };
 
-  state.isViewChatHistory = false;
+  state.isViewingChatHistory = false;
 }
 
 /**
