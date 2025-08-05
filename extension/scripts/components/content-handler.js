@@ -152,7 +152,7 @@ function buildContextIndicator() {
   const indicator = document.createElement("div");
   indicator.className = "chat-context-indicator";
 
-  const context = state.isViewingChatHistory
+  const context = state.isUsingChatContext
     ? state.chatContext
     : state.pageContent;
 
@@ -197,7 +197,7 @@ function buildContextIndicator() {
   indicator.appendChild(favicon);
   indicator.appendChild(title);
 
-  if (!state.isViewingChatHistory) {
+  if (!state.isUsingChatContext) {
     const refreshBtn = document.createElement("button");
     refreshBtn.className = "chat-context-refresh-btn";
     refreshBtn.dataset.i18nTitle = "refreshPageContext";

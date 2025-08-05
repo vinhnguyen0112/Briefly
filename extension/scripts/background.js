@@ -722,6 +722,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     sendRequest(`${SERVER_URL}/api/pages/${message.page_id}`, {
       method: "GET",
     }).then((response) => {
+      console.log("get_page response: ", response);
       sendResponse({
         success: response.success,
         page: response.data.page,

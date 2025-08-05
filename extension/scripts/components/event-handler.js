@@ -708,7 +708,11 @@ function createChatHistoryItem(chat) {
       <button class="chat-history-actions-button" title="More actions">⋯</button>
     </div>
     <div class="chat-history-meta">
-      <span class="chat-history-url">${chat.page_url}</span>
+      <a class="chat-history-url" href="${
+        chat.page_url
+      }" target="_blank" rel="noopener noreferrer">
+        ${chat.page_url}
+      </a>
       <span class="chat-history-date">${
         chat.created_at ? new Date(chat.created_at).toLocaleTimeString() : ""
       }</span>
@@ -731,9 +735,15 @@ function createChatHistoryItem(chat) {
 
   translateElement(item);
 
-  item.addEventListener("click", (e) =>
-    handleChatHistoryItemClick(e, chat, item)
-  );
+  // Prevent opening chat history when clicking on url
+  item.querySelector(".chat-history-url").addEventListener("click", (e) => {
+    e.stopPropagation();
+  });
+
+  item.addEventListener("click", (e) => {
+    e.stopPropagation();
+    handleChatHistoryItemClick(e, chat, item);
+  });
   setupChatHistoryActions(item, chat);
 
   return item;
@@ -756,12 +766,6 @@ async function handleChatHistoryItemClick(e, chat, item) {
   ) {
     return;
   }
-
-  const toastId = showToast({
-    message: "Loading chat history...",
-    type: "loading",
-    duration: null,
-  });
 
   let messages = [];
   let chatContext = null;
@@ -791,7 +795,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
       });
 
       // Update chatContext state
-      if (getPageResponse.success) {
+      if (getPageResponse.success && getPageResponse.page) {
         const { page } = getPageResponse;
         chatContext = {
           title: page.title,
@@ -800,13 +804,28 @@ async function handleChatHistoryItemClick(e, chat, item) {
           captions: [],
           extractionSuccess: true,
         };
+
+        // Handle states
+        state.chatContext = chatContext;
+        state.isUsingChatContext = true;
+      }
+      // If cant find page metadata, use current page context instead
+      else {
+        console.warn("Failed to fetch page context:", getPageResponse.error);
+        console.warn("Using default chat context");
+        state.isUsingChatContext = false;
+
+        // Let user know that the chat will be continue using current page context
+        showPopupAlert({
+          title: "Information",
+          message:
+            "We couldn't find the original page context. This chat will be continue using the current page context.",
+          type: "info",
+        });
       }
     } catch (err) {
       console.warn("Failed to fetch chat or context:", err);
     }
-
-    state.isViewingChatHistory = true;
-    state.chatContext = chatContext;
   } else {
     messages = await idbHandler.getMessagesForChat(chat.id);
   }
@@ -829,8 +848,6 @@ async function handleChatHistoryItemClick(e, chat, item) {
   }
 
   setCurrentChatState({ ...chat, history });
-
-  removeToast(toastId);
 }
 
 /**

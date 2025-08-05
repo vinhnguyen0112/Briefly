@@ -72,7 +72,7 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
 
   try {
     // Decide if should use live page content or chat history
-    const pageContext = state.isViewingChatHistory
+    const pageContext = state.isUsingChatContext
       ? state.chatContext
       : state.pageContent;
 
@@ -280,7 +280,7 @@ async function persistPageMetadataAndSummary({
   if (!authSession || !authSession.id) return; // Auth only
 
   // Decide if should use live page content or chat history
-  const pageContent = state.isViewingChatHistory
+  const pageContent = state.isUsingChatContext
     ? state.chatContext
     : state.pageContent;
 
@@ -325,7 +325,7 @@ export async function callOpenAI(messages, metadata) {
     ? Math.ceil(config.maxWordCount * 1.3)
     : 1500;
   metadata.max_tokens = maxTokens;
-  metadata.page_url = state.isViewingChatHistory
+  metadata.page_url = state.isUsingChatContext
     ? state.chatContext.url
     : state.pageContent?.url || window.location.href;
   metadata.language = state.language || "en";
@@ -488,7 +488,7 @@ function generateContextMessage(pageContent) {
 export async function generateQuestionsFromContent(contentOverride = null) {
   const contentSource =
     contentOverride ||
-    (state.isViewingChatHistory ? state.chatContext : state.pageContent);
+    (state.isUsingChatContext ? state.chatContext : state.pageContent);
 
   if (!contentSource || !contentSource.content) {
     return { success: false, error: "No content available" };

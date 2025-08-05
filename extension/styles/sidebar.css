@@ -1568,6 +1568,14 @@ input:checked + .slider:before {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-decoration: none;
+  color: #3498db;
+  opacity: 0.8;
+}
+
+.chat-history-url:hover {
+  opacity: 1;
+  text-decoration: underline;
 }
 
 .chat-history-date {

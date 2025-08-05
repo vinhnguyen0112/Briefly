@@ -62,13 +62,6 @@ const createPage = async (req, res, next) => {
       page = await Page.create(insertBody);
     }
 
-    if (!page) {
-      throw new AppError(
-        ERROR_CODES.INTERNAL_ERROR,
-        "Failed to create or retrieve page"
-      );
-    }
-
     // Update cache
     await redisHelper.setPage(id, {
       page_url: page.page_url,

@@ -353,7 +353,7 @@ function injectSuggestedQuestions(container) {
     if (
       state.generatedQuestions[state.language] &&
       state.generatedQuestions[state.language].length > 0 &&
-      !state.isViewingChatHistory
+      !state.isUsingChatContext
     ) {
       result = {
         success: true,

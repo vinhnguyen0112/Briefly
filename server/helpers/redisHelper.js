@@ -277,27 +277,109 @@ async function setPageSummary(pageSummary) {
  * @param {string} pageId
  * @returns {Promise<number>} Number of deleted keys
  */
+/**
+ * Delete all summaries under a given pageId
+ * @param {string} pageId
+ * @returns {Promise<number>} Number of deleted keys
+ */
 async function deletePageSummaries(pageId) {
   const pattern = applyPrefix(`page_summary:${pageId}:*`);
-  let cursor = 0;
   let totalDeleted = 0;
 
-  do {
-    const result = await client.scan(cursor, {
-      MATCH: pattern,
-      COUNT: 100,
-    });
+  try {
+    // Check if this is a Redis Cluster
+    if (client.masters && Array.isArray(client.masters)) {
+      // Redis Cluster - scan each master node
+      for (const master of client.masters) {
+        const nodeClient = master.client;
 
-    cursor = result.cursor;
-    const keys = result.keys;
+        if (nodeClient.scanIterator) {
+          // Use scanIterator if available
+          const iterator = nodeClient.scanIterator({
+            MATCH: pattern,
+            COUNT: 100,
+          });
 
-    console.log("Scanning... cursor:", cursor, "keys found:", keys.length);
+          const keysToDelete = [];
+          for await (const key of iterator) {
+            keysToDelete.push(key);
 
-    if (keys.length > 0) {
-      await client.del(keys);
-      totalDeleted += keys.length;
+            // Delete in batches to avoid memory issues
+            if (keysToDelete.length >= 100) {
+              await nodeClient.DEL(keysToDelete);
+              totalDeleted += keysToDelete.length;
+              keysToDelete.length = 0;
+            }
+          }
+
+          // Delete remaining keys
+          if (keysToDelete.length > 0) {
+            await nodeClient.DEL(keysToDelete);
+            totalDeleted += keysToDelete.length;
+          }
+        } else {
+          // Fallback to SCAN for this node
+          let cursor = 0;
+          do {
+            const result = await nodeClient.SCAN(cursor, {
+              MATCH: pattern,
+              COUNT: 100,
+            });
+            cursor = result.cursor;
+            const keys = result.keys;
+
+            if (keys.length > 0) {
+              await nodeClient.DEL(keys);
+              totalDeleted += keys.length;
+            }
+          } while (cursor !== 0);
+        }
+      }
+    } else {
+      // Single Redis instance
+      if (client.scanIterator) {
+        const iterator = client.scanIterator({
+          MATCH: pattern,
+          COUNT: 100,
+        });
+
+        const keysToDelete = [];
+        for await (const key of iterator) {
+          keysToDelete.push(key);
+
+          if (keysToDelete.length >= 100) {
+            await client.DEL(keysToDelete);
+            totalDeleted += keysToDelete.length;
+            keysToDelete.length = 0;
+          }
+        }
+
+        if (keysToDelete.length > 0) {
+          await client.DEL(keysToDelete);
+          totalDeleted += keysToDelete.length;
+        }
+      } else {
+        // Fallback to regular SCAN
+        let cursor = 0;
+        do {
+          const result = await client.SCAN(cursor, {
+            MATCH: pattern,
+            COUNT: 100,
+          });
+          cursor = result.cursor;
+          const keys = result.keys;
+
+          if (keys.length > 0) {
+            await client.DEL(keys);
+            totalDeleted += keys.length;
+          }
+        } while (cursor !== 0);
+      }
     }
-  } while (cursor !== 0);
+  } catch (error) {
+    console.error("Error deleting page summaries:", error);
+    throw error;
+  }
 
   console.log(`Deleted ${totalDeleted} keys for pageId: ${pageId}`);
   return totalDeleted;
