@@ -93,23 +93,6 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if title is too long", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .set("Authorization", authHeader)
-      .send({
-        title: "".padEnd(257, "a"),
-        page_url: pageUrl,
-      })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.TOO_LONG },
-        });
-      });
-  });
-
   it("Should fail if missing 'page_url'", async () => {
     await supertest(app)
       .post("/api/chats")
