@@ -16,10 +16,4 @@ router
   .route("/")
   .post(validateAndSanitizeBody(createPageSchema), pageController.createPage);
 
-// router.put(
-//   "/:id",
-//   validateAndSanitizeBody(updatePageSchema),
-//   pageController.updatePage
-// );
-
 module.exports = router;

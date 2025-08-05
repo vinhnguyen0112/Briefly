@@ -34,6 +34,38 @@ describe("POST /api/pages", () => {
       });
   });
 
+  it("Should return cached page if already exists and not expired", async () => {
+    const pageUrl = "https://www.example.com/cached-page";
+    const page_content = "This is cached content.";
+
+    // First request - creates the page
+    const firstResponse = await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send({
+        page_url: pageUrl,
+        title: "Cached Page",
+        page_content,
+      })
+      .expect(200);
+
+    expect(firstResponse.body.data.cached).toBe(false);
+
+    // Second request - should return cached version
+    const secondResponse = await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send({
+        page_url: pageUrl,
+        title: "Different Title", // This should be ignored
+        page_content: "Different content", // This should be ignored
+      })
+      .expect(200);
+
+    expect(secondResponse.body.data.cached).toBe(true);
+    expect(secondResponse.body.message).toBe("Page found in cache");
+  });
+
   it("Should fail if page_url is missing", async () => {
     await supertest(app)
       .post("/api/pages")
@@ -256,6 +288,177 @@ describe("POST /api/pages", () => {
           success: false,
           error: { code: ERROR_CODES.INVALID_INPUT },
         });
+      });
+  });
+
+  it("Should handle very long page content", async () => {
+    const longContent = "A".repeat(10000); // 10KB content
+    await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send({
+        page_url: "https://www.example.com/long-content",
+        title: "Long Content Page",
+        page_content: longContent,
+      })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.data).toHaveProperty("id");
+      });
+  });
+
+  it("Should fail without authentication", async () => {
+    await supertest(app)
+      .post("/api/pages")
+      .send({
+        page_url: "https://www.example.com/no-auth",
+        title: "No Auth Page",
+        page_content: "Content without auth",
+      })
+      .expect(401);
+  });
+});
+
+describe("GET /api/pages/:page_id", () => {
+  let testPageId;
+
+  beforeAll(async () => {
+    // Create a test page for GET tests
+    const response = await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send({
+        page_url: "https://www.example.com/get-test-page",
+        title: "Get Test Page",
+        page_content: "Content for GET testing",
+      });
+    testPageId = response.body.data.id;
+  });
+
+  it("Should get a page by ID from database", async () => {
+    // Clear cache first to ensure we hit the database
+    await redisHelper.deletePage(testPageId);
+
+    await supertest(app)
+      .get(`/api/pages/${testPageId}`)
+      .set("Authorization", authHeader)
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.message).toBe("Page fetched from database");
+        expect(response.body.data.cached).toBe(false);
+        expect(response.body.data.page).toHaveProperty("id", testPageId);
+        expect(response.body.data.page).toHaveProperty(
+          "title",
+          "Get Test Page"
+        );
+        expect(response.body.data.page).toHaveProperty(
+          "page_content",
+          "Content for GET testing"
+        );
+        expect(response.body.data.page).toHaveProperty("page_url");
+      });
+  });
+
+  it("Should get a page by ID from cache", async () => {
+    // First request caches the page
+    await supertest(app)
+      .get(`/api/pages/${testPageId}`)
+      .set("Authorization", authHeader)
+      .expect(200);
+
+    // Second request should return from cache
+    await supertest(app)
+      .get(`/api/pages/${testPageId}`)
+      .set("Authorization", authHeader)
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.message).toBe("Page found in cache");
+        expect(response.body.data.cached).toBe(true);
+        expect(response.body.data.page).toHaveProperty(
+          "title",
+          "Get Test Page"
+        );
+        expect(response.body.data.page).toHaveProperty(
+          "page_content",
+          "Content for GET testing"
+        );
+      });
+  });
+
+  it("Should return page not found for non-existent ID", async () => {
+    const nonExistentId = "non-existent-page-id-12345";
+
+    await supertest(app)
+      .get(`/api/pages/${nonExistentId}`)
+      .set("Authorization", authHeader)
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.message).toBe("Page not found");
+        expect(response.body.data.cached).toBe(false);
+        expect(response.body.data.page).toBeNull();
+      });
+  });
+
+  it("Should fail with empty page_id", async () => {
+    await supertest(app)
+      .get("/api/pages/")
+      .set("Authorization", authHeader)
+      .expect(404); // Should hit 404 route not found
+  });
+
+  it("Should handle page_id with special characters", async () => {
+    const specialId = "page-id-with-special-chars-!@#$%";
+
+    await supertest(app)
+      .get(`/api/pages/${encodeURIComponent(specialId)}`)
+      .set("Authorization", authHeader)
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.message).toBe("Page not found");
+        expect(response.body.data.page).toBeNull();
+      });
+  });
+
+  it("Should handle very long page_id", async () => {
+    const longId = "a".repeat(1000);
+
+    await supertest(app)
+      .get(`/api/pages/${longId}`)
+      .set("Authorization", authHeader)
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.message).toBe("Page not found");
+        expect(response.body.data.page).toBeNull();
+      });
+  });
+
+  it("Should trim whitespace from page_id", async () => {
+    // Create a page first
+    const response = await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send({
+        page_url: "https://www.example.com/trim-test",
+        title: "Trim Test Page",
+        page_content: "Content for trim testing",
+      });
+
+    const pageId = response.body.data.id;
+
+    // Test with whitespace around the ID
+    await supertest(app)
+      .get(`/api/pages/  ${pageId}  `)
+      .set("Authorization", authHeader)
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.data.page).toBeTruthy();
       });
   });
 });

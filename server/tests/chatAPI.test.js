@@ -292,8 +292,8 @@ describe("GET /chats/:id", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
   });
 
@@ -337,8 +337,8 @@ describe("PUT /chats/:id", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
   });
 
@@ -454,8 +454,8 @@ describe("DELETE /chats/:id", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
   });
 
@@ -537,8 +537,8 @@ describe("POST /chats/:chat_id/messages", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
   });
 
@@ -720,8 +720,8 @@ describe("GET /chats/:chat_id/messages", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
     // Add messages to chat
     const messages = [
