@@ -83,25 +83,6 @@ class Note {
   }
 
   /**
-   * Get note count by user
-   * @param {String} userId
-   * @param {String} [pageUrl] - optional page URL filter
-   * @returns {Promise<number>}
-   */
-  async getCount(userId, pageUrl = null) {
-    let query = "SELECT COUNT(*) as count FROM notes WHERE user_id = ?";
-    const values = [userId];
-
-    if (pageUrl) {
-      query += " AND page_url = ?";
-      values.push(pageUrl);
-    }
-
-    const rows = await dbHelper.executeQuery(query, values);
-    return rows[0].count;
-  }
-
-  /**
    * Get a note by ID
    * @param {String} id
    * @returns {Promise<Object|null>}

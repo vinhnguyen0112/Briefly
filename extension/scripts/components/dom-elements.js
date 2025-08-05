@@ -51,8 +51,6 @@ export const elements = {
   // Tab controls
   notesTabCurrent: document.getElementById("notes-tab-current"),
   notesTabAll: document.getElementById("notes-tab-all"),
-  currentPageCount: document.getElementById("current-page-count"),
-  allNotesCount: document.getElementById("all-notes-count"),
 
   // Tab content areas
   notesTabCurrentContent: document.getElementById("notes-tab-current-content"),

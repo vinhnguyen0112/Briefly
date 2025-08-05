@@ -2139,25 +2139,6 @@ input:checked+.slider:before {
   background-color: var(--background);
 }
 
-.tab-count {
-  background-color: var(--muted);
-  color: var(--muted-foreground);
-  font-size: 12px;
-  padding: 2px 6px;
-  border-radius: 10px;
-  min-width: 18px;
-  height: 18px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  line-height: 1;
-}
-
-.notes-tab.active .tab-count {
-  background-color: var(--primary);
-  color: var(--primary-foreground);
-}
-
 /* Tab content */
 .notes-tab-content {
   display: none;

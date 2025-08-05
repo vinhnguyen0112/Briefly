@@ -258,22 +258,6 @@ export async function deleteNote(id) {
   }
 }
 
-export async function getNotesCount(pageUrl = null) {
-  try {
-    const url = pageUrl
-      ? `http://localhost:3000/api/notes/count?page_url=${encodeURIComponent(
-          pageUrl
-        )}`
-      : "http://localhost:3000/api/notes/count";
-
-    const response = await sendRequest(url);
-    return response.data;
-  } catch (error) {
-    console.error("Error fetching notes count:", error);
-    return { total: 0, page: 0 };
-  }
-}
-
 export async function getCurrentTabUrl() {
   return new Promise((resolve) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

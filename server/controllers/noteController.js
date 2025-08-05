@@ -156,43 +156,10 @@ const deleteNote = async (req, res, next) => {
   }
 };
 
-/**
- * Get notes count
- * @param {Object} req
- * @param {Object} res
- * @param {Function} next
- */
-const getNotesCount = async (req, res, next) => {
-  try {
-    const { page_url } = req.query;
-
-    const totalCount = await Note.getCount(req.session.user_id);
-
-    let pageCount = 0;
-    if (page_url) {
-      const normalizedPageUrl = commonHelper.processUrl(page_url);
-      if (normalizedPageUrl) {
-        pageCount = await Note.getCount(req.session.user_id, normalizedPageUrl);
-      }
-    }
-
-    res.json({
-      success: true,
-      data: {
-        total: totalCount,
-        page: pageCount,
-      },
-    });
-  } catch (err) {
-    next(err);
-  }
-};
-
 module.exports = {
   createNote,
   getNotesForPage,
   getAllNotes,
   updateNote,
   deleteNote,
-  getNotesCount,
 };

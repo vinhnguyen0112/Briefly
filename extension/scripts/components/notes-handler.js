@@ -7,7 +7,6 @@ import {
   saveNote,
   updateNote,
   deleteNote,
-  getNotesCount,
 } from "./state.js";
 import { translate, translateElement } from "./i18n.js";
 import { escapeHtml, showToast, updateToast } from "./ui-handler.js";
@@ -39,7 +38,6 @@ export async function openNotesPanel() {
 
   // Load initial content and update counters
   loadTabContent();
-  updateNotesCount();
 }
 
 /**
@@ -49,7 +47,6 @@ export async function openNotesPanel() {
 export function reloadNotes() {
   console.log("Reloading notes...");
   loadTabContent();
-  updateNotesCount();
 }
 
 /**
@@ -72,7 +69,6 @@ export function switchNotesTab(tabName) {
   // Update global state and reload content
   state.currentNotesTab = tabName;
   loadTabContent();
-  updateNotesCount();
 }
 
 /**
@@ -233,7 +229,6 @@ export async function handleSaveNote() {
     // Clean up and refresh UI
     closeNoteEditor();
     loadTabContent();
-    updateNotesCount();
   } catch (error) {
     console.error("Error saving note:", error);
     updateToast(toastId, {
@@ -340,7 +335,6 @@ async function confirmDeleteNote(noteId) {
     // Clean up modal and refresh UI
     closeDeleteNoteModal();
     loadTabContent();
-    updateNotesCount();
   } catch (error) {
     console.error("Error deleting note:", error);
     updateToast(toastId, {
@@ -478,36 +472,6 @@ function createNoteItem(note, showUrl = false) {
   });
 
   return noteItem;
-}
-
-/**
- * Updates the note count displays for both current page and all notes tabs
- * Handles errors gracefully by showing zero counts as fallback
- */
-async function updateNotesCount() {
-  try {
-    const currentUrl = await getCurrentTabUrl();
-    state.currentPageUrl = currentUrl;
-
-    const counts = await getNotesCount(currentUrl);
-
-    // Update count displays in UI
-    if (elements.currentPageCount) {
-      elements.currentPageCount.textContent = counts.page;
-    }
-    if (elements.allNotesCount) {
-      elements.allNotesCount.textContent = counts.total;
-    }
-  } catch (error) {
-    console.error("Error updating notes count:", error);
-    // Fallback to zero counts on error
-    if (elements.currentPageCount) {
-      elements.currentPageCount.textContent = "0";
-    }
-    if (elements.allNotesCount) {
-      elements.allNotesCount.textContent = "0";
-    }
-  }
 }
 
 /**

@@ -16,7 +16,6 @@ router
   .post(validateAndSanitizeBody(createNoteSchema), notesController.createNote);
 
 router.get("/all", notesController.getAllNotes);
-router.get("/count", notesController.getNotesCount);
 
 router
   .route("/:id")
