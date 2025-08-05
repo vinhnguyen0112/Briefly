@@ -386,7 +386,7 @@ function sendToSidebar(content) {
       },
       "*"
     );
-    console.log("✅ Sent updated page content to sidebar");
+    console.log("Sent updated page content to sidebar");
   } else {
     console.error("CocBot: Sidebar iframe not found");
   }

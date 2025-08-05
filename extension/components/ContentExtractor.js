@@ -230,7 +230,7 @@ function extractAllImageSources() {
   }
 
   if (containers.length === 0) {
-    console.log("⚠️ No visible main content containers found, using <body>");
+    console.log("No visible main content containers found, using <body>");
     containers.push(document.body);
   }
 
@@ -285,7 +285,7 @@ async function autoSendImagesLoop(interval = 3000) {
   while (emptyCount < maxEmptyRounds) {
     const newImages = extractAllImageSources();
     if (newImages.length > 0) {
-      console.log(`🚀 [Loop] Sending ${newImages.length} new images to API`);
+      console.log(`[Loop] Sending ${newImages.length} new images to API`);
       chrome.runtime.sendMessage({
         action: "process_images",
         images: newImages,
@@ -300,7 +300,7 @@ async function autoSendImagesLoop(interval = 3000) {
     }
     await new Promise((resolve) => setTimeout(resolve, interval));
   }
-  console.log("⏹️ [Loop] Stopping image loop after max empty rounds");
+  console.log("[Loop] Stopping image loop after max empty rounds");
   startMutationObserver();
 }
 
@@ -326,7 +326,7 @@ function startMutationObserver() {
     attributeFilter: ["src", "data-src", "srcset"],
   });
 
-  console.log("🔍 [Observer] MutationObserver is now watching for new images");
+  console.log("MutationObserver is now watching for new images");
 }
 
 function waitForDomReady(callback) {

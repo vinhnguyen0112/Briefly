@@ -94,12 +94,12 @@ export function setupEventListeners() {
   });
 
   elements.createFirstNoteButtonCurrent?.addEventListener("click", async () => {
-    console.log("🚀 Create first note (current) clicked");
+    console.log("Create first note (current) clicked");
     await openNoteEditor();
   });
 
   elements.createFirstNoteButtonAll?.addEventListener("click", async () => {
-    console.log("🚀 Create first note (all) clicked");
+    console.log("Create first note (all) clicked");
     await openNoteEditor();
   });
 
