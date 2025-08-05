@@ -152,20 +152,30 @@ function buildContextIndicator() {
   const indicator = document.createElement("div");
   indicator.className = "chat-context-indicator";
 
-  if (!state.pageContent) {
-    indicator.textContent = "Loading page context...";
+  const context = state.isUsingChatContext
+    ? state.chatContext
+    : state.pageContent;
+
+  console.log("Context in buildContextIndicator:", context);
+
+  if (!context || context.extractionSuccess === false) {
+    indicator.innerHTML = `
+      <span class="loading-dots">
+        Reading page context <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+      </span>
+    `;
+
     return indicator;
   }
 
-  if (state.pageContent.extractionSuccess === false) {
+  if (context.error) {
     indicator.innerHTML = `⚠️ Limited page context available`;
     return indicator;
   }
 
-  const pageTitle = state.pageContent.title || "Untitled Page";
-  const rawUrl = state.pageContent.url || window.location.href;
+  const pageTitle = context.title;
+  const rawUrl = context.url;
 
-  // Extract domain from URL
   let domain = "";
   try {
     domain = new URL(rawUrl).hostname;
@@ -175,111 +185,42 @@ function buildContextIndicator() {
 
   const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
 
-  // Favicon
   const favicon = document.createElement("img");
   favicon.src = faviconUrl;
   favicon.alt = "Page icon";
   favicon.className = "chat-context-favicon";
 
-  // Title
   const title = document.createElement("span");
   title.className = "chat-context-title";
   title.textContent = pageTitle;
 
-  // Refresh button
-  const refreshBtn = document.createElement("button");
-  refreshBtn.className = "chat-context-refresh-btn";
-  refreshBtn.dataset.i18nTitle = "refreshPageContext";
-  refreshBtn.title = "Refresh Page Context";
-  refreshBtn.innerHTML = `
-    <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
-      <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
-    </svg>
-  `;
-  refreshBtn.addEventListener("click", () => {
-    requestPageContent().then(() => {
-      // reset questions
-      resetSuggestedQuestionsContainer();
-      state.generatedQuestions = {};
-    });
-  });
-
-  translateElement(refreshBtn);
-
   indicator.appendChild(favicon);
   indicator.appendChild(title);
-  indicator.appendChild(refreshBtn);
+
+  if (!state.isUsingChatContext) {
+    const refreshBtn = document.createElement("button");
+    refreshBtn.className = "chat-context-refresh-btn";
+    refreshBtn.dataset.i18nTitle = "refreshPageContext";
+    refreshBtn.title = "Refresh Page Context";
+    refreshBtn.innerHTML = `
+      <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
+      </svg>
+    `;
+    refreshBtn.addEventListener("click", () => {
+      requestPageContent().then(() => {
+        resetSuggestedQuestionsContainer();
+        state.generatedQuestions = {};
+      });
+    });
+    translateElement(refreshBtn);
+    indicator.appendChild(refreshBtn);
+  }
 
   return indicator;
 }
 
-// generate and display questions about the content
-// export async function generateAndDisplayQuestions() {
-//   // check if we already have questions
-//   if (
-//     state.generatedQuestions ||
-//     state.isGeneratingQuestions ||
-//     !state.pageContent
-//   ) {
-//     return;
-//   }
-
-//   // get reference to questions container
-//   const questionsContainer = document.querySelector(".generated-questions");
-//   const buttonContainer = document.querySelector(".question-buttons-container");
-
-//   // check if we have the elements
-//   if (!questionsContainer || !buttonContainer) {
-//     console.error("CocBot: Missing question container elements");
-//     return;
-//   }
-
-//   // show the container with loading state
-//   questionsContainer.style.display = "block";
-
-//   // set flag to prevent multiple calls
-//   state.isGeneratingQuestions = true;
-
-//   try {
-//     // generate questions
-//     const result = await generateQuestionsFromContent(state.pageContent);
-
-//     console.log("Generated questions result: ", result);
-
-//     // clear the loading indicator
-//     buttonContainer.innerHTML = "";
-
-//     if (result.success && result.questions && result.questions.length > 0) {
-//       console.log("CocBot: Successfully generated questions", result.questions);
-
-//       // save the questions
-//       state.generatedQuestions = result.questions;
-
-//       // add each question as a button
-//       result.questions.forEach((question) => {
-//         const questionButton = document.createElement("button");
-//         questionButton.className = "question-button";
-//         questionButton.textContent = question;
-//         questionButton.onclick = () => {
-//           processUserQuery(question);
-//         };
-
-//         buttonContainer.appendChild(questionButton);
-//       });
-//     } else {
-//       console.error("CocBot: Failed to generate questions", result.error);
-//       questionsContainer.style.display = "none";
-//     }
-//   } catch (error) {
-//     console.error("CocBot: Error in generating questions", error);
-//     questionsContainer.style.display = "none";
-//   } finally {
-//     state.isGeneratingQuestions = false;
-//   }
-// }
-
 // setup improved content extraction reliability
-
 export function setupContentExtractionReliability() {
   // listen for page changes and refresh content accordingly
   setInterval(() => {
