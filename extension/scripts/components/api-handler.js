@@ -182,8 +182,8 @@ async function persistChatAndMessages(
     return;
   }
 
-  const pageUrl = state.pageContent?.url || window.location.href;
-  const pageTitle = state.pageContent?.title || document.title;
+  const pageUrl = state.pageContent.url;
+  const pageTitle = state.pageContent.title;
 
   const currentChatId = state.currentChat.id;
   const isNewChat = !currentChatId;
@@ -192,31 +192,34 @@ async function persistChatAndMessages(
   try {
     let chatId = currentChatId;
 
+    // If is a new chat, send request to create a new chat
     if (isNewChat) {
       const result = await chatHandler.createChat({
         page_url: pageUrl,
         title: pageTitle,
       });
 
+      console.log("Create chat result:", result);
+
       if (!result.success || !result.data) {
         return;
       }
 
+      // Assign values to chatId
       chat = result.data.chat;
       chatId = chat.id;
 
-      if (!state.currentChat.id) {
-        state.currentChat.id = chatId;
-        state.currentChat.title = pageTitle;
-        state.currentChat.pageUrl = pageUrl;
-        state.currentChat.history = [];
+      // Update current chat state
+      state.currentChat.id = chatId;
+      state.currentChat.title = pageTitle;
+      state.currentChat.pageUrl = pageUrl;
+      state.currentChat.history = [];
 
-        await idbHandler.upsertChat({
-          id: chatId,
-          title: pageTitle,
-          page_url: pageUrl,
-        });
-      }
+      await idbHandler.upsertChat({
+        id: chatId,
+        title: pageTitle,
+        page_url: pageUrl,
+      });
     }
 
     const userMessageResult = await chatHandler.addMessage(chatId, {

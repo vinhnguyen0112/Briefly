@@ -741,7 +741,6 @@ function createChatHistoryItem(chat) {
   });
 
   item.addEventListener("click", (e) => {
-    e.stopPropagation();
     handleChatHistoryItemClick(e, chat, item);
   });
   setupChatHistoryActions(item, chat);
