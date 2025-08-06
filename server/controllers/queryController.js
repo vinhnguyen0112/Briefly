@@ -190,9 +190,36 @@ Do not include anything else, not even a JSON wrapper object.`;
       content: systemPromptContent,
     };
 
-    let contentPromptText = `Here is the web page content:
-Title: ${pageContent.title}
-${pageContent.content.substring(0, 3000)}`;
+    // Build the content prompt
+    let contentPromptText = `
+      Here is the web page content:
+      Title: ${pageContent.title}
+      URL: ${pageContent.url || "Unknown"}
+
+      ${pageContent.content.substring(0, 3000)}
+      `;
+
+    // Handle pdf content
+    if (pageContent.pdfContent) {
+      const { content = "", numPages, metadata } = pageContent.pdfContent;
+
+      contentPromptText += `
+        --- Embedded PDF detected on this page ---
+        PDF Metadata:
+        - Title: ${metadata?.title || "Unknown"}
+        - Author: ${metadata?.author || "Unknown"}
+        - Number of Pages: ${numPages || "Unknown"}
+
+        Here's an excerpt of the PDF content:
+        ${content.substring(0, 3000)}
+        `;
+    }
+
+    if (language === "vi") {
+      contentPromptText += `\n\nHãy tạo 3 câu hỏi bằng TIẾNG VIỆT về nội dung này.`;
+    } else {
+      contentPromptText += `\n\nGenerate 3 questions in ENGLISH about this content.`;
+    }
 
     if (language === "vi") {
       contentPromptText += `\n\nHãy tạo 3 câu hỏi bằng TIẾNG VIỆT về nội dung này.`;

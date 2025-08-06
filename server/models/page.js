@@ -19,6 +19,7 @@ class Page {
    * @param {String} pageData.title
    * @param {String} pageData.page_url
    * @param {String} pageData.page_content
+   * @param {String} [pageData.pdf_content]
    * @returns {Promise<PageObject|null>} The inserted page object or null if ignored
    */
   async create(pageData) {

@@ -16,7 +16,7 @@ import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -128,6 +128,7 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
             url: pageContext.url,
             title: pageContext.title,
             content: pageContext.content,
+            pdfContent: pageContext.pdfContent,
           },
           language: state.language,
         },
@@ -259,6 +260,7 @@ async function persistChatAndMessages(
  * @property {string} url The URL of the page.
  * @property {string} title The title of the page.
  * @property {string} content The main extracted content of the page.
+ * @property {string} [pdfContent] The pdf content of the page.
  * @property {string} language Language code
  */
 
@@ -280,40 +282,55 @@ async function persistPageMetadataAndSummary({
   metadata,
 }) {
   const authSession = await getUserSession();
-  if (!authSession || !authSession.id) return; // Auth only
+  if (!authSession?.id) return; // Auth only
 
-  // Decide if should use live page content or chat history
-  const pageContent = state.isUsingChatContext
-    ? state.chatContext
-    : state.pageContent;
+  const isChatContext = state.isUsingChatContext;
+  const contentSource = isChatContext ? state.chatContext : state.pageContent;
 
-  const page_url = pageContent.url;
-  const title = pageContent.title;
-  const page_content = pageContent.content;
+  if (!contentSource) return;
+
+  const {
+    url: page_url,
+    title,
+    content: page_content,
+    pdfContent,
+  } = contentSource;
   const language = state.language;
 
-  chrome.runtime.sendMessage(
-    {
-      action: "store_page_metadata",
-      page_url,
-      title,
-      page_content,
-    },
-    (result) => {
-      if (
-        result?.success &&
-        metadata?.event === "summarize" &&
-        !result.data?.expired
-      ) {
-        chrome.runtime.sendMessage({
-          action: "store_page_summary",
-          page_url,
-          summary: assistantMessage,
-          language,
-        });
+  // Store page metadata only if it's a live page context (not chat history)
+  if (!isChatContext) {
+    chrome.runtime.sendMessage(
+      {
+        action: "store_page_metadata",
+        page_url,
+        title,
+        page_content,
+        pdf_content: pdfContent?.content || null,
+      },
+      (result) => {
+        if (
+          result?.success &&
+          metadata?.event === "summarize" &&
+          !result.data?.expired
+        ) {
+          chrome.runtime.sendMessage({
+            action: "store_page_summary",
+            page_url,
+            summary: assistantMessage,
+            language,
+          });
+        }
       }
-    }
-  );
+    );
+  } else if (metadata?.event === "summarize") {
+    // Optionally store summary even in chat mode if needed
+    chrome.runtime.sendMessage({
+      action: "store_page_summary",
+      page_url,
+      summary: assistantMessage,
+      language,
+    });
+  }
 }
 
 /**
@@ -390,7 +407,8 @@ export function constructPromptWithPageContent(options) {
     ].join("\n\n"),
   };
 
-  console.log("pageContent in constructPrompt: ", pageContent);
+  // Attach pdf content if available
+  if (state.pdfContent) state.pageContent.pdfContent = state.pdfContent;
   const contextMessage = generateContextMessage(pageContent);
 
   return [
@@ -438,11 +456,10 @@ function getLanguageInstructions(lang) {
 
 /**
  * Generate a context message for the AI based on the page content.
- * @param {String} pageContent
- * @returns
+ * @param {Object} pageContent
+ * @returns {Object} OpenAI chat message object
  */
 function generateContextMessage(pageContent) {
-  console.log("pageContent in generateContextMessage: ", pageContent);
   const message = {
     role: "system",
     content: "PAGE CONTENT:\n",
@@ -460,6 +477,7 @@ function generateContextMessage(pageContent) {
     content = "",
     captions = [],
     extractionSuccess = true,
+    pdfContent = null,
   } = pageContent;
 
   if (!extractionSuccess) {
@@ -480,6 +498,43 @@ function generateContextMessage(pageContent) {
     });
   }
 
+  // Handle pdf content
+  if (pdfContent?.content) {
+    message.content += `\n\n--- Extracted PDF Document ---\n`;
+
+    if (pdfContent.numPages != null) {
+      message.content += `Total Pages: ${pdfContent.numPages}\n`;
+    }
+
+    if (pdfContent.metadata) {
+      const {
+        title,
+        author,
+        subject,
+        keywords,
+        language,
+        creator,
+        producer,
+        creationDate,
+        modificationDate,
+      } = pdfContent.metadata;
+
+      message.content += "Metadata:\n";
+      if (title) message.content += `• Title: ${title}\n`;
+      if (author) message.content += `• Author: ${author}\n`;
+      if (subject) message.content += `• Subject: ${subject}\n`;
+      if (keywords) message.content += `• Keywords: ${keywords}\n`;
+      if (language) message.content += `• Language: ${language}\n`;
+      if (creator) message.content += `• Creator: ${creator}\n`;
+      if (producer) message.content += `• Producer: ${producer}\n`;
+      if (creationDate) message.content += `• Created: ${creationDate}\n`;
+      if (modificationDate)
+        message.content += `• Modified: ${modificationDate}\n`;
+    }
+
+    message.content += `\nContent Preview:\n${pdfContent.content}`;
+  }
+
   return message;
 }
 
@@ -489,12 +544,40 @@ function generateContextMessage(pageContent) {
  * @returns {Promise<{success: boolean, questions: string[]}>}
  */
 export async function generateQuestionsFromContent(contentOverride = null) {
+  // Check if user is online
+  if (navigator.onLine === false) {
+    showToast({
+      message: "You are offline. Please check your internet connection.",
+      type: "error",
+      duration: 2000,
+    });
+
+    return;
+  }
+
+  // Check if we have page content ready
+  if (!state.pageContent || !state.pageContent.extractionSuccess) {
+    return addMessageToChat({
+      message: "Page content is still being extracted. Please wait a moment.",
+      role: "assistant",
+    });
+  }
+
   const contentSource =
     contentOverride ||
     (state.isUsingChatContext ? state.chatContext : state.pageContent);
 
   if (!contentSource || !contentSource.content) {
     return { success: false, error: "No content available" };
+  }
+
+  // Attach PDF content if available and user is not continuing on a chat history
+  if (
+    !state.isUsingChatContext &&
+    state.pdfContent &&
+    state.pdfContent.content
+  ) {
+    contentSource.pdfContent = state.pdfContent;
   }
 
   state.isGeneratingQuestions = true;

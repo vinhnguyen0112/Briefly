@@ -73,11 +73,13 @@ const createPageSchema = object({
   page_url: string().strict().trim().required(),
   title: string().strict().trim().default("Untitled Page"),
   page_content: string().strict().trim().required(),
+  pdf_content: string().strict().trim().nullable(),
 });
 
 const updatePageSchema = object({
   title: string().strict().trim().nullable(),
   page_content: string().strict().trim().nullable(),
+  pdf_content: string().strict().trim().nullable(),
 });
 
 const createPageSummarySchema = object({

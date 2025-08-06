@@ -30,34 +30,6 @@ import {
 import { elements } from "./components/dom-elements.js";
 import { extractTextFromPDF } from "./components/pdf-handler.js";
 
-// Listen for messages from the background script to extract PDF content
-chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
-  if (message.type === "extract_pdf") {
-    const result = await extractTextFromPDF(message.url);
-    if (result?.content) {
-      // Trim content
-      const trimmedContent = result.content
-        .split(/\s+/)
-        .slice(0, 90000)
-        .join(" ")
-        .trim();
-      // Store the extracted PDF content in the state
-      state.pageContent = state.pageContent || {};
-      state.pageContent.pdfContent = {
-        url: message.url,
-        title: "PDF Document",
-        content: trimmedContent,
-        extractionSuccess: true,
-      };
-
-      console.log("PDF content extracted successfully:", result.content);
-      console.log("PDF content stored in state.pageContent");
-    } else {
-      console.warn("PDF extraction returned empty content");
-    }
-  }
-});
-
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
   console.log("CocBot: Ready to rock");
@@ -191,3 +163,35 @@ function initializeStartupUI() {
     elements.chatContainer.appendChild(chatActionsContainer);
   }
 }
+
+// Listen for messages from the background script to extract PDF content
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  if (message.action === "extract_pdf") {
+    console.log(
+      "Sidebar received PDF extraction request for URL:",
+      message.url
+    );
+
+    const result = await extractTextFromPDF(message.url);
+    console.log("PDF extraction result:", result);
+
+    if (result?.content) {
+      // Trim content (for performance or model limits)
+      const trimmedContent = result.content
+        .split(/\s+/)
+        .slice(0, 90000)
+        .join(" ")
+        .trim();
+
+      // Store all PDF-related info in a structured object
+      state.pdfContent = {
+        content: trimmedContent,
+        numPages: result.numPages ?? null,
+        metadata: result.metadata ?? null,
+      };
+    } else {
+      console.warn("PDF extraction returned empty content");
+      state.pdfContent = null;
+    }
+  }
+});

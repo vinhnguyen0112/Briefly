@@ -25,7 +25,7 @@ function isPageExpired(updatedAt) {
 const createPage = async (req, res, next) => {
   try {
     let expired = false;
-    const { page_url, title, page_content } = req.body;
+    const { page_url, title, page_content, pdf_content } = req.body;
 
     // Normalize and validate page_url
     const normalizedPageUrl = commonHelper.processUrl(page_url);
@@ -45,12 +45,15 @@ const createPage = async (req, res, next) => {
       });
     }
 
+    // Construct insertion body
     const insertBody = {
       id,
       page_url: normalizedPageUrl,
-      ...(title ? { title } : {}),
-      page_content,
     };
+
+    if (title) insertBody.title = title;
+    if (page_content) insertBody.page_content = page_content;
+    if (pdf_content) insertBody.pdf_content = pdf_content;
 
     let page = await Page.getById(id);
 
@@ -68,6 +71,7 @@ const createPage = async (req, res, next) => {
       normalized_page_url: normalizedPageUrl,
       title: page.title,
       page_content: page.page_content,
+      pdf_content: page.pdf_content,
     });
 
     res.json({

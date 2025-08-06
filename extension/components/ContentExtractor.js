@@ -11,7 +11,7 @@ window.isContentExtractorReady = function () {
 const sendDetected = (url) => {
   // Send a message to the background script
   chrome.runtime.sendMessage({
-    action: "read_pdf",
+    action: "pdf_detected",
     url,
   });
 };
@@ -21,6 +21,7 @@ const sendDetected = (url) => {
  * @returns {Promise<void>}
  */
 async function detectPDF() {
+  console.log("Detecting PDF content...");
   // Detect if this is a PDF document
   const url = window.location.href;
 
@@ -100,6 +101,7 @@ function extractPageContent() {
       url: window.location.href,
       selection: window.getSelection().toString(),
       timestamp: new Date().toISOString(),
+      language: document.documentElement.lang,
     };
 
     console.log("CocBot: Metadata collected", pageMetadata);
@@ -415,7 +417,6 @@ function waitForDomReady(callback) {
   }
 }
 
-// 🚀 Start auto image extraction loop, then fallback to MutationObserver
 waitForDomReady(() => {
   detectPDF(); // detect if this is a PDF when DOM is ready
   sentImages.clear();
@@ -424,8 +425,6 @@ waitForDomReady(() => {
   contentContext = extracted.content || "(no content)";
   // autoSendImagesLoop(3000);
 });
-
-// ===================================== // ================================
 
 // Can we see this element?
 function isVisible(element) {

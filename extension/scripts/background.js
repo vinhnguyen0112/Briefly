@@ -16,7 +16,7 @@ import {
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 const CHAT_QUERY_LIMIT = 20;
 //  first install
@@ -69,37 +69,38 @@ chrome.action.onClicked.addListener(async (tab) => {
     return;
   }
 
-  // Inject script to check document's language
-  try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => {
-        const lang = document.documentElement.lang;
-        console.log("Current document lang:", lang);
-        return lang;
-      },
-    });
-    const lang = results && results[0] && results[0].result;
-    if (!lang || (!lang.startsWith("en") && !lang.startsWith("vi"))) {
-      chrome.storage.local.set({ popupReason: "unsupported_lang" }, () => {
-        chrome.action.setPopup({
-          popup: "popup-unsupported-lang.html",
-          tabId: tab.id,
-        });
-        chrome.action.openPopup();
-        isProcessingClick = false;
-      });
-      return;
-    }
-  } catch (e) {
-    chrome.action.setPopup({
-      popup: "popup.html",
-      tabId: tab.id,
-    });
-    chrome.action.openPopup();
-    isProcessingClick = false;
-    return;
-  }
+  // // Inject script to check document's language
+  // try {
+  //   const results = await chrome.scripting.executeScript({
+  //     target: { tabId: tab.id },
+  //     func: () => {
+  //       document.documentElement.lang;
+  //       const lang = document.documentElement.lang;
+  //       console.log("Current document lang:", lang);
+  //       return lang;
+  //     },
+  //   });
+  //   const lang = results && results[0] && results[0].result;
+  //   if (!lang || (!lang.startsWith("en") && !lang.startsWith("vi"))) {
+  //     chrome.storage.local.set({ popupReason: "unsupported_lang" }, () => {
+  //       chrome.action.setPopup({
+  //         popup: "popup-unsupported-lang.html",
+  //         tabId: tab.id,
+  //       });
+  //       chrome.action.openPopup();
+  //       isProcessingClick = false;
+  //     });
+  //     return;
+  //   }
+  // } catch (e) {
+  //   chrome.action.setPopup({
+  //     popup: "popup.html",
+  //     tabId: tab.id,
+  //   });
+  //   chrome.action.openPopup();
+  //   isProcessingClick = false;
+  //   return;
+  // }
 
   console.log("Toggling sidebar");
   chrome.tabs.sendMessage(tab.id, { action: "toggle_sidebar" }, (response) => {
@@ -398,7 +399,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length > 0) {
         chrome.tabs.sendMessage(tabs[0].id, {
-          type: "extract_pdf",
+          action: "extract_pdf",
           url: message.url,
         });
       }
@@ -699,6 +700,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         page_url: message.page_url,
         title: message.title,
         page_content: message.page_content,
+        pdf_content: message.pdf_content || null,
       },
       withVisitorId: false,
     })
