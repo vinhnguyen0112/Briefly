@@ -8,6 +8,14 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
+const sendDetected = (url) => {
+  // Send a message to the background script
+  chrome.runtime.sendMessage({
+    action: "read_pdf",
+    url,
+  });
+};
+
 /**
  * Detect for PDF contents on the page.
  * @returns {Promise<void>}
@@ -16,18 +24,11 @@ async function detectPDF() {
   // Detect if this is a PDF document
   const url = window.location.href;
 
-  const sendDetected = (pdfUrl = url) => {
-    // Send a message to the background script
-    chrome.runtime.sendMessage({
-      action: "pdf_detected",
-      url: pdfUrl,
-    });
-  };
   // Check if the URL ends with .pdf or has a PDF content type
-  if (url.toLowerCase().endsWith(".pdf")) return sendDetected();
+  if (url.toLowerCase().endsWith(".pdf")) return sendDetected(url);
 
   // Check if the content type is PDF
-  if (document.contentType === "application/pdf") return sendDetected();
+  if (document.contentType === "application/pdf") return sendDetected(url);
 
   // Check for <embed> or <object> tags with PDF content
   const embeds = [...document.getElementsByTagName("embed")];
@@ -38,7 +39,7 @@ async function detectPDF() {
     embeds.find((e) => e.type?.includes("pdf")) ||
     objects.find((o) => o.type?.includes("pdf"))
   ) {
-    return sendDetected();
+    return sendDetected(url);
   }
 
   // Check for <iframe> tags with PDF content
@@ -55,7 +56,7 @@ async function detectPDF() {
       }
     } catch (e) {
       console.warn("Failed to extract PDF from viewer URL:", e);
-      return sendDetected(); // fallback if error
+      return sendDetected(url);
     }
   }
 
