@@ -156,12 +156,19 @@ function buildContextIndicator() {
     ? state.chatContext
     : state.pageContent;
 
-  if (!context) {
-    indicator.textContent = "Loading page context...";
+  console.log("Context in buildContextIndicator:", context);
+
+  if (!context || context.extractionSuccess === false) {
+    indicator.innerHTML = `
+      <span class="loading-dots">
+        Reading page context <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+      </span>
+    `;
+
     return indicator;
   }
 
-  if (context.extractionSuccess === false) {
+  if (context.error) {
     indicator.innerHTML = `⚠️ Limited page context available`;
     return indicator;
   }

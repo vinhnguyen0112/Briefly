@@ -830,11 +830,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
 
   setCurrentChatState({ ...chat, history });
 
-  updateToast(toastId, {
-    message: "Chat loaded successfully",
-    type: "success",
-    duration: 2000,
-  });
+  removeToast(toastId);
 }
 
 /**

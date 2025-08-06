@@ -119,7 +119,6 @@ export function stopResize() {
 export function switchToChat() {
   // show chat
   elements.chatScreen.style.display = "flex";
-
   // focus input
   elements.userInput.focus();
 }

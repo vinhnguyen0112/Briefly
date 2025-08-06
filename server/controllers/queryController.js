@@ -133,6 +133,10 @@ async function getStoredPageSummary(pageId, language) {
   if (stored?.summary) {
     const createdAt = new Date(stored.created_at);
     const now = Date.now();
+    console.log("Current date:", new Date(now));
+    const timeDiff = now - createdAt.getTime();
+    console.log("Time difference:", timeDiff, "ms");
+    console.log("Under freshness threshold:", timeDiff <= FRESHNESS_THRESHOLD);
 
     // If not expired
     if (now - createdAt.getTime() <= FRESHNESS_THRESHOLD) {
@@ -151,7 +155,7 @@ async function getStoredPageSummary(pageId, language) {
     }
 
     // Otherwise, delete expired summary
-    await PageSummary.deleteByPageIdAndLanguage(pageId, language);
+    await PageSummary.deleteById(stored.id);
   }
 
   return null;

@@ -2,8 +2,8 @@
 // Only persist in IDB when user click to view a chat
 
 export const state = {
-  pageContent: {},
-  chatContext: {},
+  pageContent: null,
+  chatContext: null,
   isAnimating: false,
   isProcessingQuery: false,
   isViewingChatHistory: false,

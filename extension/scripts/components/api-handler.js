@@ -40,6 +40,14 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
     return;
   }
 
+  // Check if we have page content ready
+  if (!state.pageContent || !state.pageContent.extractionSuccess) {
+    return addMessageToChat({
+      message: "Page content is still being extracted. Please wait a moment.",
+      role: "assistant",
+    });
+  }
+
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
