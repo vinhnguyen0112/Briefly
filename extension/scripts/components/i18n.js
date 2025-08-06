@@ -89,6 +89,7 @@ const translations = {
       "Are you sure you want to delete this note? This action cannot be undone.",
     confirmDelete: "Delete",
     cancel: "Cancel",
+    noChangesDetected: "Please make some changes to update the note.",
   },
 
   vi: {
@@ -179,6 +180,7 @@ const translations = {
       "Bạn có chắc chắn muốn xóa ghi chú này không? Hành động này không thể hoàn tác.",
     confirmDelete: "Xóa",
     cancel: "Hủy",
+    noChangesDetected: "Vui lòng thực hiện thay đổi để cập nhật ghi chú.",
   },
 };
 

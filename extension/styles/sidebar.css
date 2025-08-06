@@ -1178,6 +1178,13 @@ body.sidebar-resizing * {
 
 .notes-empty p {
   margin-bottom: 16px;
+  margin-top: 32px;
+}
+
+.notes-empty button {
+  display: inline-block;
+  align-self: center !important;
+  margin: 0 auto !important;
 }
 
 #notes-list {
@@ -2130,11 +2137,12 @@ input:checked+.slider:before {
   max-width: 250px;
   cursor: pointer;
   text-decoration: underline;
-  transition: opacity 0.2s ease;
+  transition: opacity 0.2s ease, color 0.2s ease;
 }
 
 .note-editor-url:hover {
-  opacity: 0.8;
+  opacity: 1;
+  color: var(--primary);
   text-decoration: none;
 }
 
@@ -2309,12 +2317,57 @@ input:checked+.slider:before {
   padding: 12px;
   position: relative;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.2s ease;
+  transition: all 0.2s ease, background-color 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.note-item.note-updating {
+  border-color: var(--primary) !important;
+  transform: scale(1.01) translateY(-2px) !important;
+}
+
+@keyframes noteUpdatePulse {
+  0% {
+    transform: scale(1) translateY(0);
+  }
+
+  100% {
+    transform: scale(1.01) translateY(-2px);
+  }
 }
 
 .note-item:hover {
   background-color: var(--border);
 }
+
+.note-item.adding {
+  animation: slideInFromTop 0.3s ease-out;
+}
+
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.note-item.removing {
+  animation: slideOutToLeft 0.3s ease-out forwards;
+}
+
+@keyframes slideOutToLeft {
+  to {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.95);
+  }
+}
+
 
 .sidebar-content-wrapper {
   position: relative;
@@ -2327,4 +2380,64 @@ input:checked+.slider:before {
 #notes-screen:has(#note-editor[style*="display: flex"]) .notes-header,
 #notes-screen:has(#note-editor[style*="display: flex"]) .notes-tabs {
   display: none;
+}
+
+.notes-load-more-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px 0;
+  margin: 8px 0;
+  border-top: 1px solid var(--border);
+}
+
+.load-more-spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #3498db;
+  border-radius: 50%;
+  width: 20px;
+  height: 20px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 6px;
+}
+
+.load-more-text {
+  font-size: 12px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.notes-loading-spinner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 16px 0;
+}
+
+.notes-loading-spinner .spinner {
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 8px;
+}
+
+.notes-loading-text {
+  text-align: center;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+
+  100% {
+    transform: rotate(360deg);
+  }
 }
