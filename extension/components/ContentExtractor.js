@@ -8,17 +8,22 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
-// Wait for the DOM to be ready before initializing the content extractor
-async function detectPDF() {   // Detect if this is a PDF document
+/**
+ * Detect for PDF contents on the page.
+ * @returns {Promise<void>}
+ */
+async function detectPDF() {
+  // Detect if this is a PDF document
   const url = window.location.href;
 
-  const sendDetected = (pdfUrl = url) => { // Send a message to the background script
+  const sendDetected = (pdfUrl = url) => {
+    // Send a message to the background script
     chrome.runtime.sendMessage({
       action: "pdf_detected",
-      url: pdfUrl
+      url: pdfUrl,
     });
   };
-// Check if the URL ends with .pdf or has a PDF content type
+  // Check if the URL ends with .pdf or has a PDF content type
   if (url.toLowerCase().endsWith(".pdf")) return sendDetected();
 
   // Check if the content type is PDF
@@ -29,7 +34,10 @@ async function detectPDF() {   // Detect if this is a PDF document
   const objects = [...document.getElementsByTagName("object")];
 
   // Check if any embed or object has a PDF type
-  if (embeds.find(e => e.type?.includes("pdf")) || objects.find(o => o.type?.includes("pdf"))) {
+  if (
+    embeds.find((e) => e.type?.includes("pdf")) ||
+    objects.find((o) => o.type?.includes("pdf"))
+  ) {
     return sendDetected();
   }
 
@@ -39,7 +47,10 @@ async function detectPDF() {   // Detect if this is a PDF document
       const params = new URLSearchParams(url.split("?")[1]);
       const file = params.get("file");
       if (file) {
-        const absoluteUrl = new URL(decodeURIComponent(file), window.location.origin).href;
+        const absoluteUrl = new URL(
+          decodeURIComponent(file),
+          window.location.origin
+        ).href;
         return sendDetected(absoluteUrl);
       }
     } catch (e) {
@@ -57,7 +68,10 @@ async function detectPDF() {   // Detect if this is a PDF document
         const params = new URLSearchParams(src.split("?")[1]);
         const file = params.get("file");
         if (file) {
-          const absoluteUrl = new URL(decodeURIComponent(file), window.location.origin).href;
+          const absoluteUrl = new URL(
+            decodeURIComponent(file),
+            window.location.origin
+          ).href;
           return sendDetected(absoluteUrl);
         }
       } catch (e) {
@@ -401,7 +415,7 @@ function waitForDomReady(callback) {
 }
 
 // 🚀 Start auto image extraction loop, then fallback to MutationObserver
-waitForDomReady(() => { 
+waitForDomReady(() => {
   detectPDF(); // detect if this is a PDF when DOM is ready
   sentImages.clear();
   totalImagesSent = 0;
