@@ -42,14 +42,14 @@ const createNote = async (req, res, next) => {
 };
 
 /**
- * Get notes for a page
+ * Get notes for a page with pagination
  * @param {Object} req
  * @param {Object} res
  * @param {Function} next
  */
 const getNotesForPage = async (req, res, next) => {
   try {
-    const { page_url } = req.query;
+    const { page_url, offset = 0, limit = 20 } = req.query;
 
     if (!page_url) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Page URL is required");
@@ -60,14 +60,32 @@ const getNotesForPage = async (req, res, next) => {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
     }
 
-    const notes = await Note.getByUserAndPage(
+    // Parse pagination parameters
+    const offsetNum = parseInt(offset, 10) || 0;
+    const limitNum = parseInt(limit, 10) || 20;
+
+    if (limitNum <= 0 || offsetNum < 0) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid offset or limit");
+    }
+
+    // Get notes with one extra to check if there are more
+    const notes = await Note.getByUserAndPagePaginated(
       req.session.user_id,
-      normalizedPageUrl
+      normalizedPageUrl,
+      offsetNum.toString(),
+      (limitNum + 1).toString()
     );
+
+    // Check if there are more notes
+    let hasMore = false;
+    if (notes.length > limitNum) {
+      hasMore = true;
+      notes.pop(); // Remove the extra note
+    }
 
     res.json({
       success: true,
-      data: { notes },
+      data: { notes, hasMore },
     });
   } catch (err) {
     next(err);
@@ -75,18 +93,40 @@ const getNotesForPage = async (req, res, next) => {
 };
 
 /**
- * Get all notes for user
+ * Get all notes for user with pagination
  * @param {Object} req
  * @param {Object} res
  * @param {Function} next
  */
 const getAllNotes = async (req, res, next) => {
   try {
-    const notes = await Note.getByUser(req.session.user_id);
+    const { offset = 0, limit = 20 } = req.query;
+
+    // Parse pagination parameters
+    const offsetNum = parseInt(offset, 10) || 0;
+    const limitNum = parseInt(limit, 10) || 20;
+
+    if (limitNum <= 0 || offsetNum < 0) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid offset or limit");
+    }
+
+    // Get notes with one extra to check if there are more
+    const notes = await Note.getByUserPaginated(
+      req.session.user_id,
+      offsetNum.toString(),
+      (limitNum + 1).toString()
+    );
+
+    // Check if there are more notes
+    let hasMore = false;
+    if (notes.length > limitNum) {
+      hasMore = true;
+      notes.pop(); // Remove the extra note
+    }
 
     res.json({
       success: true,
-      data: { notes },
+      data: { notes, hasMore },
     });
   } catch (err) {
     next(err);

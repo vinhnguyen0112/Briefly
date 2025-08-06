@@ -1154,13 +1154,6 @@ body.sidebar-resizing * {
   overflow: hidden;
 }
 
-.notes-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
 
 .notes-header h3 {
   font-size: 16px;
@@ -1171,12 +1164,6 @@ body.sidebar-resizing * {
 .notes-actions {
   display: flex;
   gap: 8px;
-}
-
-.notes-content {
-  flex: 1;
-  overflow-y: auto;
-  padding: 16px;
 }
 
 .notes-empty {
@@ -1197,20 +1184,6 @@ body.sidebar-resizing * {
   display: flex;
   flex-direction: column;
   gap: 12px;
-}
-
-.note-item {
-  background-color: var(--muted);
-  border-radius: var(--radius);
-  padding: 12px;
-  position: relative;
-  cursor: pointer;
-  transition: background-color 0.2s;
-  margin-bottom: 12px;
-}
-
-.note-item:hover {
-  background-color: var(--border);
 }
 
 .note-content {
@@ -2105,12 +2078,6 @@ input:checked+.slider:before {
 
 
 /* NOTE TAB */
-.notes-tabs {
-  display: flex;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 0;
-}
-
 .notes-tab {
   flex: 1;
   background: none;
@@ -2137,18 +2104,6 @@ input:checked+.slider:before {
   color: var(--primary);
   border-bottom-color: var(--primary);
   background-color: var(--background);
-}
-
-/* Tab content */
-.notes-tab-content {
-  display: none;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.notes-tab-content.active {
-  display: flex;
-  flex-direction: column;
 }
 
 /* Note editor header */
@@ -2286,8 +2241,90 @@ input:checked+.slider:before {
   background-color: var(--border);
 }
 
-/* Blur effect for sidebar when modal is open */
 .sidebar.delete-note-blur {
   filter: blur(2px);
   pointer-events: none;
+}
+
+#notes-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto !important;
+  max-height: calc(100vh - 120px);
+  overflow: hidden;
+}
+
+.notes-header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  padding: 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background-color: var(--background);
+}
+
+.notes-tabs {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 0;
+  background-color: var(--background);
+}
+
+
+.notes-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+}
+
+.notes-tab-content {
+  display: none;
+  flex: 1;
+  overflow: visible !important;
+}
+
+.notes-tab-content.active {
+  display: flex;
+  flex-direction: column;
+}
+
+#notes-list-current,
+#notes-list-all {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  overflow: visible !important;
+}
+
+.note-item {
+  background-color: var(--muted);
+  border-radius: var(--radius);
+  padding: 12px;
+  position: relative;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.note-item:hover {
+  background-color: var(--border);
+}
+
+.sidebar-content-wrapper {
+  position: relative;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden !important;
+}
+
+#notes-screen:has(#note-editor[style*="display: flex"]) .notes-header,
+#notes-screen:has(#note-editor[style*="display: flex"]) .notes-tabs {
+  display: none;
 }

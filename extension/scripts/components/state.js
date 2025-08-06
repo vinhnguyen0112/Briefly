@@ -37,7 +37,52 @@ export const state = {
   chatHistory: [],
   isChatHistoryEventsInitialized: false,
   toastIdCounter: 0,
+  notesPagination: {
+    current: {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    },
+    all: {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    },
+  },
+  notesData: {
+    current: [],
+    all: [],
+  },
 };
+
+/**
+ * Reset notes pagination state
+ * @param {string} tab - "current" or "all"
+ */
+export function resetNotesPaginationState(tab = null) {
+  if (tab) {
+    state.notesPagination[tab] = {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    };
+    state.notesData[tab] = [];
+  } else {
+    // Reset both tabs
+    state.notesPagination.current = {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    };
+    state.notesPagination.all = {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    };
+    state.notesData.current = [];
+    state.notesData.all = [];
+  }
+}
 
 // Load sidebar width from storage
 export function loadSidebarWidth() {
@@ -176,36 +221,67 @@ export async function saveConfig(config) {
   });
 }
 
-// Notes management
-export async function getNotesForUrl(url) {
+export async function getNotesForUrl(url, offset = 0, limit = 20) {
   try {
-    const response = await sendRequest(
-      `http://localhost:3000/api/notes?page_url=${encodeURIComponent(url)}`
+    // Add timestamp để tránh cache
+    const timestamp = Date.now();
+    const apiUrl = `http://localhost:3000/api/notes?page_url=${encodeURIComponent(
+      url
+    )}&offset=${offset}&limit=${limit}&_t=${timestamp}`;
+
+    console.log(`API Call: ${apiUrl}`);
+
+    const response = await sendRequest(apiUrl);
+
+    const result = {
+      notes: response.data.notes.map((note) => ({
+        content: note.note,
+        timestamp: new Date(note.created_at).getTime(),
+        url: note.page_url,
+        id: note.id,
+      })),
+      hasMore: response.data.hasMore,
+    };
+
+    console.log(
+      `API Response: ${result.notes.length} notes, hasMore: ${result.hasMore}`
     );
-    return response.data.notes.map((note) => ({
-      content: note.note,
-      timestamp: new Date(note.created_at).getTime(),
-      url: note.page_url,
-      id: note.id,
-    }));
+
+    return result;
   } catch (error) {
     console.error("Error fetching notes:", error);
-    return [];
+    return { notes: [], hasMore: false };
   }
 }
 
-export async function getAllNotes() {
+export async function getAllNotes(offset = 0, limit = 20) {
   try {
-    const response = await sendRequest("http://localhost:3000/api/notes/all");
-    return response.data.notes.map((note) => ({
-      content: note.note,
-      timestamp: new Date(note.created_at).getTime(),
-      url: note.page_url,
-      id: note.id,
-    }));
+    // Add timestamp để tránh cache
+    const timestamp = Date.now();
+    const apiUrl = `http://localhost:3000/api/notes/all?offset=${offset}&limit=${limit}&_t=${timestamp}`;
+
+    console.log(`API Call: ${apiUrl}`);
+
+    const response = await sendRequest(apiUrl);
+
+    const result = {
+      notes: response.data.notes.map((note) => ({
+        content: note.note,
+        timestamp: new Date(note.created_at).getTime(),
+        url: note.page_url,
+        id: note.id,
+      })),
+      hasMore: response.data.hasMore,
+    };
+
+    console.log(
+      `API Response: ${result.notes.length} notes, hasMore: ${result.hasMore}`
+    );
+
+    return result;
   } catch (error) {
     console.error("Error fetching all notes:", error);
-    return [];
+    return { notes: [], hasMore: false };
   }
 }
 

@@ -23,7 +23,53 @@ class Note {
   }
 
   /**
-   * Get notes by user ID and page URL
+   * Get notes by user ID and page URL with pagination
+   * @param {String} userId
+   * @param {String} pageUrl
+   * @param {Number} offset
+   * @param {Number} limit
+   * @returns {Promise<Array>}
+   */
+  async getByUserAndPagePaginated(userId, pageUrl, offset = 0, limit = 20) {
+    const query = `
+      SELECT * FROM notes 
+      WHERE user_id = ? AND page_url = ? 
+      ORDER BY created_at DESC 
+      LIMIT ? OFFSET ?
+    `;
+    const rows = await dbHelper.executeQuery(query, [
+      userId, // WHERE user_id = ?
+      pageUrl, // AND page_url = ?
+      limit, // LIMIT ?
+      offset, // OFFSET ?
+    ]);
+    return rows;
+  }
+
+  /**
+   * Get all notes by user ID with pagination
+   * @param {String} userId
+   * @param {Number} offset
+   * @param {Number} limit
+   * @returns {Promise<Array>}
+   */
+  async getByUserPaginated(userId, offset = 0, limit = 20) {
+    const query = `
+      SELECT * FROM notes 
+      WHERE user_id = ? 
+      ORDER BY created_at DESC 
+      LIMIT ? OFFSET ?
+    `;
+    const rows = await dbHelper.executeQuery(query, [
+      userId, // WHERE user_id = ?
+      limit, // LIMIT ?
+      offset, // OFFSET ?
+    ]);
+    return rows;
+  }
+
+  /**
+   * Get notes by user ID and page URL (deprecated - use paginated version)
    * @param {String} userId
    * @param {String} pageUrl
    * @returns {Promise<Array>}
@@ -36,7 +82,7 @@ class Note {
   }
 
   /**
-   * Get all notes by user ID
+   * Get all notes by user ID (deprecated - use paginated version)
    * @param {String} userId
    * @returns {Promise<Array>}
    */

@@ -7,10 +7,14 @@ import {
   saveNote,
   updateNote,
   deleteNote,
+  resetNotesPaginationState,
 } from "./state.js";
 import { translate, translateElement } from "./i18n.js";
 import { escapeHtml, showToast, updateToast } from "./ui-handler.js";
 import { isSignInNeeded } from "./auth-handler.js";
+
+let notesScrollListenerSetup = false;
+let currentScrollHandler = null;
 
 /**
  * Opens the notes panel and initializes it with current page content
@@ -41,19 +45,11 @@ export async function openNotesPanel() {
 }
 
 /**
- * Reloads notes content for the current active tab
- * Useful for refreshing data after external changes
- */
-export function reloadNotes() {
-  console.log("Reloading notes...");
-  loadTabContent();
-}
-
-/**
  * Switches between "current page" and "all notes" tabs
  * Updates UI state and loads appropriate content
  * @param {string} tabName - Either "current" or "all"
  */
+
 export function switchNotesTab(tabName) {
   // Update tab button active states
   elements.notesTabCurrent.classList.toggle("active", tabName === "current");
@@ -66,8 +62,13 @@ export function switchNotesTab(tabName) {
   );
   elements.notesTabAllContent.classList.toggle("active", tabName === "all");
 
+  cleanupScrollListeners();
+
   // Update global state and reload content
   state.currentNotesTab = tabName;
+
+  // Reset pagination and load fresh content
+  resetNotesPaginationState(tabName);
   loadTabContent();
 }
 
@@ -76,21 +77,23 @@ export function switchNotesTab(tabName) {
  * Handles errors by showing empty states as fallback
  */
 async function loadTabContent() {
-  try {
-    const currentUrl = await getCurrentTabUrl();
-    state.currentPageUrl = currentUrl;
+  const tab = state.currentNotesTab;
 
-    if (state.currentNotesTab === "current") {
-      const notes = await getNotesForUrl(currentUrl);
-      renderCurrentPageNotes(notes);
+  // If already fetching, don't fetch again
+  if (state.notesPagination[tab].isFetching) {
+    return;
+  }
+
+  try {
+    if (tab === "current") {
+      await loadCurrentPageNotes(false); // false = not loading more
     } else {
-      const allNotes = await getAllNotes();
-      renderAllNotes(allNotes);
+      await loadAllNotes(false); // false = not loading more
     }
   } catch (error) {
-    console.error("CocBot: Error loading notes", error);
-    // Show empty states on error as graceful fallback
-    if (state.currentNotesTab === "current") {
+    console.error(`Error loading ${tab} notes:`, error);
+    // Show empty state on error
+    if (tab === "current") {
       renderCurrentPageNotes([]);
     } else {
       renderAllNotes([]);
@@ -104,16 +107,21 @@ async function loadTabContent() {
  * @param {Array} notes - Array of note objects for current page
  */
 function renderCurrentPageNotes(notes) {
-  const container = elements.notesListCurrent;
-  const emptyState = elements.notesEmptyStateCurrent;
+  const container = document.querySelector("#notes-list-current");
+  const emptyState = document.querySelector("#notes-empty-state-current");
 
-  if (!notes || notes.length === 0) {
-    emptyState.style.display = "flex";
-    container.innerHTML = "";
+  if (!container) {
+    console.error("Notes container not found");
     return;
   }
 
-  emptyState.style.display = "none";
+  if (!notes || notes.length === 0) {
+    container.innerHTML = "";
+    if (emptyState) emptyState.style.display = "block";
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = "none";
   container.innerHTML = "";
 
   // Sort notes by timestamp (newest first)
@@ -123,6 +131,8 @@ function renderCurrentPageNotes(notes) {
     const noteItem = createNoteItem(note, false);
     container.appendChild(noteItem);
   });
+
+  setupNotesInfiniteScroll();
 }
 
 /**
@@ -131,22 +141,29 @@ function renderCurrentPageNotes(notes) {
  * @param {Array} notes - Array of all note objects
  */
 function renderAllNotes(notes) {
-  const container = elements.notesListAll;
-  const emptyState = elements.notesEmptyStateAll;
+  const container = document.querySelector("#notes-list-all");
+  const emptyState = document.querySelector("#notes-empty-state-all");
 
-  if (!notes || notes.length === 0) {
-    emptyState.style.display = "flex";
-    container.innerHTML = "";
+  if (!container) {
+    console.error("Notes container not found");
     return;
   }
 
-  emptyState.style.display = "none";
+  if (!notes || notes.length === 0) {
+    container.innerHTML = "";
+    if (emptyState) emptyState.style.display = "block";
+    return;
+  }
+
+  if (emptyState) emptyState.style.display = "none";
   container.innerHTML = "";
 
   notes.forEach((note) => {
     const noteItem = createNoteItem(note, true);
     container.appendChild(noteItem);
   });
+
+  setupNotesInfiniteScroll();
 }
 
 /**
@@ -157,13 +174,7 @@ export async function handleSaveNote() {
   // Check if user authentication is required
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: "sign_in_required",
-        });
-      }
-    });
+    showSignInAlertPopup();
     return;
   }
 
@@ -174,8 +185,8 @@ export async function handleSaveNote() {
       message:
         state.language === "en"
           ? "Please enter some content for your note"
-          : "Vui lòng nhập nội dung ghi chú",
-      type: "info",
+          : "Vui lòng nhập nội dung cho ghi chú",
+      type: "error",
     });
     return;
   }
@@ -194,40 +205,36 @@ export async function handleSaveNote() {
   });
 
   try {
-    const currentUrl = await getCurrentTabUrl();
-
-    if (state.isEditingNote && state.currentEditingNoteId) {
-      // Update existing note
+    if (state.isEditingNote) {
       await updateNote(state.currentEditingNoteId, content);
       updateToast(toastId, {
         message:
           state.language === "en"
             ? "Note updated successfully!"
-            : "Cập nhật ghi chú thành công!",
+            : "Đã cập nhật ghi chú thành công!",
         type: "success",
         duration: 2000,
       });
     } else {
-      // Create new note
-      const noteData = {
+      await saveNote({
         content,
-        url: currentUrl,
-        timestamp: Date.now(),
-      };
-
-      await saveNote(noteData);
+        url: state.currentEditingNoteUrl || state.currentPageUrl,
+      });
       updateToast(toastId, {
         message:
           state.language === "en"
             ? "Note created successfully!"
-            : "Tạo ghi chú thành công!",
+            : "Đã tạo ghi chú thành công!",
         type: "success",
         duration: 2000,
       });
     }
-
-    // Clean up and refresh UI
+    // Close editor and refresh the appropriate tab
     closeNoteEditor();
+
+    // Reset and reload current tab to show updated notes
+    const tab = state.currentNotesTab;
+    resetNotesPaginationState(tab);
     loadTabContent();
   } catch (error) {
     console.error("Error saving note:", error);
@@ -235,7 +242,7 @@ export async function handleSaveNote() {
       message:
         state.language === "en"
           ? "Failed to save note. Please try again."
-          : "Lưu ghi chú thất bại. Vui lòng thử lại.",
+          : "Không thể lưu ghi chú. Vui lòng thử lại.",
       type: "error",
       duration: 3000,
     });
@@ -314,6 +321,9 @@ function showDeleteNoteModal(noteId) {
  * @param {string} noteId - Unique identifier of the note to delete
  */
 async function confirmDeleteNote(noteId) {
+  // Close modal first
+  closeDeleteNoteModal();
+
   const toastId = showToast({
     message:
       state.language === "en" ? "Deleting note..." : "Đang xóa ghi chú...",
@@ -323,25 +333,35 @@ async function confirmDeleteNote(noteId) {
 
   try {
     await deleteNote(noteId);
+
     updateToast(toastId, {
       message:
         state.language === "en"
           ? "Note deleted successfully!"
-          : "Xóa ghi chú thành công!",
+          : "Đã xóa ghi chú thành công!",
       type: "success",
       duration: 2000,
     });
 
-    // Clean up modal and refresh UI
-    closeDeleteNoteModal();
-    loadTabContent();
+    // Remove from current state and re-render
+    const tab = state.currentNotesTab;
+    state.notesData[tab] = state.notesData[tab].filter(
+      (note) => note.id !== noteId
+    );
+
+    // Re-render current notes
+    if (tab === "current") {
+      renderCurrentPageNotes(state.notesData[tab]);
+    } else {
+      renderAllNotes(state.notesData[tab]);
+    }
   } catch (error) {
     console.error("Error deleting note:", error);
     updateToast(toastId, {
       message:
         state.language === "en"
           ? "Failed to delete note. Please try again."
-          : "Xóa ghi chú thất bại. Vui lòng thử lại.",
+          : "Không thể xóa ghi chú. Vui lòng thử lại.",
       type: "error",
       duration: 3000,
     });
@@ -524,5 +544,221 @@ export function closeNoteEditor() {
   elements.noteEditor.style.display = "none";
   elements.noteContent.value = "";
   state.currentEditingNoteUrl = null;
+  state.currentEditingNoteId = null;
   state.isEditingNote = false;
+}
+
+/**
+ * Load notes for current page with pagination
+ * @param {boolean} isLoadingMore - Whether this is loading more or initial load
+ */
+async function loadCurrentPageNotes(isLoadingMore = false) {
+  const tab = "current";
+  const pagination = state.notesPagination[tab];
+
+  if (pagination.isFetching || (!pagination.hasMore && isLoadingMore)) {
+    return;
+  }
+
+  pagination.isFetching = true;
+
+  if (isLoadingMore) {
+    const container = document.querySelector("#notes-list-current");
+    showNotesLoadingSpinner(container);
+  }
+
+  try {
+    const currentUrl = await getCurrentTabUrl();
+    const offset = isLoadingMore ? state.notesData[tab].length : 0;
+    const result = await getNotesForUrl(currentUrl, offset, 20);
+
+    if (isLoadingMore && result.notes.length > 0) {
+      state.notesData[tab] = [...state.notesData[tab], ...result.notes];
+    } else {
+      state.notesData[tab] = result.notes;
+    }
+
+    pagination.hasMore = result.hasMore;
+
+    if (isLoadingMore) {
+      const container = document.querySelector("#notes-list-current");
+      removeNotesLoadingSpinner(container);
+    }
+
+    renderCurrentPageNotes(state.notesData[tab]);
+  } catch (error) {
+    console.error("Error loading current page notes:", error);
+
+    if (isLoadingMore) {
+      const container = document.querySelector("#notes-list-current");
+      removeNotesLoadingSpinner(container);
+    }
+  } finally {
+    pagination.isFetching = false;
+  }
+}
+
+/**
+ * Load all notes with pagination
+ * @param {boolean} isLoadingMore - Whether this is loading more or initial load
+ */
+async function loadAllNotes(isLoadingMore = false) {
+  const tab = "all";
+  const pagination = state.notesPagination[tab];
+
+  if (pagination.isFetching || (!pagination.hasMore && isLoadingMore)) {
+    return;
+  }
+
+  pagination.isFetching = true;
+
+  if (isLoadingMore) {
+    const container = document.querySelector("#notes-list-all");
+    showNotesLoadingSpinner(container);
+  }
+
+  try {
+    const offset = isLoadingMore ? state.notesData[tab].length : 0;
+    const result = await getAllNotes(offset, 20);
+
+    if (isLoadingMore && result.notes.length > 0) {
+      state.notesData[tab] = [...state.notesData[tab], ...result.notes];
+    } else {
+      state.notesData[tab] = result.notes;
+    }
+
+    pagination.hasMore = result.hasMore;
+
+    if (isLoadingMore) {
+      const container = document.querySelector("#notes-list-all");
+      removeNotesLoadingSpinner(container);
+    }
+
+    renderAllNotes(state.notesData[tab]);
+  } catch (error) {
+    console.error("Error loading all notes:", error);
+
+    if (isLoadingMore) {
+      const container = document.querySelector("#notes-list-all");
+      removeNotesLoadingSpinner(container);
+    }
+  } finally {
+    pagination.isFetching = false;
+  }
+}
+
+/**
+ * Set up infinite scroll for notes
+ * @param {HTMLElement} container - The notes container
+ * @param {string} tab - "current" or "all"
+ */
+function setupNotesInfiniteScroll() {
+  if (notesScrollListenerSetup) {
+    return;
+  }
+
+  const scrollableContainer = document.querySelector(".notes-content");
+  if (!scrollableContainer) {
+    console.error("Could not find .notes-content for infinite scroll");
+    return;
+  }
+
+  const scrollHandler = (e) => {
+    const element = e.target;
+    const threshold = 100;
+
+    const currentTab = state.currentNotesTab;
+    const pagination = state.notesPagination[currentTab];
+
+    if (!pagination) {
+      console.error("Pagination state not found for tab:", currentTab);
+      return;
+    }
+
+    if (
+      pagination.isFetching ||
+      !pagination.hasMore ||
+      state.notesData[currentTab].length === 0
+    ) {
+      return;
+    }
+
+    const scrollPercentage =
+      (element.scrollTop + element.clientHeight + threshold) /
+      element.scrollHeight;
+
+    if (scrollPercentage >= 0.9) {
+      console.log("Loading more notes for tab:", currentTab);
+
+      if (currentTab === "current") {
+        loadCurrentPageNotes(true);
+      } else {
+        loadAllNotes(true);
+      }
+    }
+  };
+
+  scrollableContainer.addEventListener("scroll", scrollHandler);
+  currentScrollHandler = scrollHandler;
+  notesScrollListenerSetup = true;
+}
+
+/**
+ * Cleanup scroll listeners khi switch tab
+ */
+function cleanupScrollListeners() {
+  const scrollableContainer = document.querySelector(".notes-content");
+  if (scrollableContainer && currentScrollHandler) {
+    scrollableContainer.removeEventListener("scroll", currentScrollHandler);
+    currentScrollHandler = null;
+    notesScrollListenerSetup = false;
+  }
+}
+
+/**
+ * Show loading spinner - simplified
+ */
+function showNotesLoadingSpinner(container) {
+  if (!container) return;
+
+  if (container.querySelector(".notes-loading-spinner")) {
+    return;
+  }
+
+  const spinner = document.createElement("div");
+  spinner.className = "notes-loading-spinner";
+  spinner.innerHTML = `
+    <div class="spinner-small"></div>
+    <p>Loading more notes...</p>
+  `;
+  container.appendChild(spinner);
+}
+
+/**
+ * Remove loading spinner from notes list
+ * @param {HTMLElement} container - The notes list container
+ */
+function removeNotesLoadingSpinner(container) {
+  const spinner = container.querySelector(".notes-loading-spinner");
+  if (spinner) {
+    spinner.remove();
+  }
+}
+
+/**
+ * Reloads notes content for the current active tab
+ * Useful for refreshing data after external changes
+ */
+export function reloadNotes() {
+  const notesContent = document.querySelector(".notes-content");
+  if (notesContent) {
+    notesContent.scrollTop = 0;
+  }
+
+  // Reset pagination for current tab
+  const tab = state.currentNotesTab;
+  resetNotesPaginationState(tab);
+
+  // Load fresh content
+  loadTabContent();
 }
