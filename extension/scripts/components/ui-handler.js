@@ -119,7 +119,6 @@ export function stopResize() {
 export function switchToChat() {
   // show chat
   elements.chatScreen.style.display = "flex";
-
   // focus input
   elements.userInput.focus();
 }
@@ -353,14 +352,15 @@ function injectSuggestedQuestions(container) {
     // Use generated questions if have
     if (
       state.generatedQuestions[state.language] &&
-      state.generatedQuestions[state.language].length > 0
+      state.generatedQuestions[state.language].length > 0 &&
+      !state.isUsingChatContext
     ) {
       result = {
         success: true,
         questions: state.generatedQuestions[state.language],
       };
     } else {
-      result = await generateQuestionsFromContent(state.pageContent);
+      result = await generateQuestionsFromContent();
     }
 
     loadingDiv.style.display = "none";

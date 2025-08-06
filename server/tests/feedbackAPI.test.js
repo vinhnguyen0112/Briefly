@@ -30,8 +30,9 @@ beforeAll(async () => {
     .then((response) => {
       expect(response.body).toHaveProperty("success", true);
       expect(response.body).toHaveProperty("data");
-      expect(response.body.data).toHaveProperty("id");
-      sampleChatId = response.body.data.id;
+      expect(response.body.data).toHaveProperty("chat");
+      expect(response.body.data.chat).toHaveProperty("id");
+      sampleChatId = response.body.data.chat.id;
     });
 
   await supertest(app)

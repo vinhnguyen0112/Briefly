@@ -1,16 +1,17 @@
 const dbHelper = require("../helpers/dbHelper");
 class Chat {
   /**
-   * Insert a chat into database. Returns nothing
+   * Insert a chat into database. Returns number of affected rows
    * @param {Object} chatData Chat data object to insert
    * @param {String} chatData.id
    * @param {String} chatData.user_id
    * @param {String} chatData.page_url
    * @param {String} chatData.page_id
    * @param {String} chatData.title
+   * @returns {Promise<number>} Number of affected rows
    */
   async create(chatData) {
-    if (!chatData || Object.keys(chatData).length <= 0) return;
+    if (!chatData || Object.keys(chatData).length <= 0) return 0;
 
     const columns = Object.keys(chatData).join(", ");
     const placeholders = Object.keys(chatData)
@@ -18,8 +19,10 @@ class Chat {
       .join(", ");
     const values = Object.values(chatData);
 
-    const query = `INSERT INTO chats (${columns}) VALUES (${placeholders})`;
-    await dbHelper.executeQuery(query, values);
+    const query = `INSERT IGNORE INTO chats (${columns}) VALUES (${placeholders})`;
+    const result = await dbHelper.executeQuery(query, values);
+
+    return result.affectedRows;
   }
 
   /**

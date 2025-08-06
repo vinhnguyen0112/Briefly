@@ -9,6 +9,7 @@ import {
   addMessageToChat,
   addTypingIndicator,
   removeTypingIndicator,
+  showToast,
   updateMessageWithId,
 } from "./ui-handler.js";
 import { isSignInNeeded } from "./auth-handler.js";
@@ -28,6 +29,25 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
   // Prevent spams
   if (state.isProcessingQuery) return;
 
+  // Check if user is online
+  if (navigator.onLine === false) {
+    showToast({
+      message: "You are offline. Please check your internet connection.",
+      type: "error",
+      duration: 2000,
+    });
+
+    return;
+  }
+
+  // Check if we have page content ready
+  if (!state.pageContent || !state.pageContent.extractionSuccess) {
+    return addMessageToChat({
+      message: "Page content is still being extracted. Please wait a moment.",
+      role: "assistant",
+    });
+  }
+
   const notAllowed = await isSignInNeeded();
   if (notAllowed) {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
@@ -46,21 +66,27 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
     role: "user",
     event: metadata.event,
   });
-  const typingIndicator = addTypingIndicator();
 
+  const typingIndicator = addTypingIndicator();
   state.isProcessingQuery = true;
 
   try {
+    // Decide if should use live page content or chat history
+    const pageContext = state.isUsingChatContext
+      ? state.chatContext
+      : state.pageContent;
+
     // Build prompt
-    const messages = await constructPromptWithPageContent(
+    console.log("Current context: ", pageContext);
+    const messages = constructPromptWithPageContent({
       query,
-      state.pageContent,
-      state.currentChat.history,
-      state.currentConfig
-    );
+      pageContent: pageContext,
+      history: state.currentChat.history,
+      config: state.currentConfig,
+      language: state.language,
+    });
 
-    console.log("Constructed messages:", messages);
-
+    // Get response
     const response = await callOpenAI(messages, metadata);
     removeTypingIndicator(typingIndicator);
 
@@ -99,9 +125,9 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
       persistPageMetadataAndSummary({
         state: {
           pageContent: {
-            url: state.pageContent.url,
-            title: state.pageContent.title,
-            content: state.pageContent.content,
+            url: pageContext.url,
+            title: pageContext.title,
+            content: pageContext.content,
           },
           language: state.language,
         },
@@ -151,47 +177,51 @@ async function persistChatAndMessages(
   tempMessageId
 ) {
   const userSession = await getUserSession();
-  // Increase anonymous session's query count
   if (!userSession || !userSession.id) {
     await increaseAnonQueryCount();
     return;
   }
 
-  const pageUrl = state.pageContent?.url || window.location.href;
-  const pageTitle = state.pageContent?.title || document.title;
+  const pageUrl = state.pageContent.url;
+  const pageTitle = state.pageContent.title;
 
   const currentChatId = state.currentChat.id;
   const isNewChat = !currentChatId;
+
+  let chat;
   try {
     let chatId = currentChatId;
 
-    // Create a new chat if needed
+    // If is a new chat, send request to create a new chat
     if (isNewChat) {
       const result = await chatHandler.createChat({
         page_url: pageUrl,
         title: pageTitle,
       });
-      if (!result?.success || !result?.data.id)
-        throw new Error("Failed to create chat");
 
-      chatId = result.data.id;
+      console.log("Create chat result:", result);
 
-      // Update current chat state to new chat
-      if (!state.currentChat.id) {
-        state.currentChat.id = chatId;
-        state.currentChat.title = pageTitle;
-        state.currentChat.pageUrl = pageUrl;
-        state.currentChat.history = [];
-
-        await idbHandler.upsertChat({
-          id: chatId,
-          title: pageTitle,
-          page_url: pageUrl,
-        });
+      if (!result.success || !result.data) {
+        return;
       }
+
+      // Assign values to chatId
+      chat = result.data.chat;
+      chatId = chat.id;
+
+      // Update current chat state
+      state.currentChat.id = chatId;
+      state.currentChat.title = pageTitle;
+      state.currentChat.pageUrl = pageUrl;
+      state.currentChat.history = [];
+
+      await idbHandler.upsertChat({
+        id: chatId,
+        title: pageTitle,
+        page_url: pageUrl,
+      });
     }
 
-    // Store messages and get their IDs back
     const userMessageResult = await chatHandler.addMessage(chatId, {
       role: "user",
       content: userQuery,
@@ -203,12 +233,10 @@ async function persistChatAndMessages(
       model,
     });
 
-    // Update the message element with real message ID
     if (assistantMessageResult?.success && assistantMessageResult?.data?.id) {
       updateMessageWithId(tempMessageId, assistantMessageResult.data.id);
     }
 
-    // Cache locally
     await idbHandler.addMessageToChat(chatId, {
       role: "user",
       content: userQuery,
@@ -218,18 +246,11 @@ async function persistChatAndMessages(
       content: assistantMessage,
     });
 
-    // Insert new chat into local chat history list after messages are processed successfuly
-    if (isNewChat) {
-      state.chatHistory.unshift({
-        id: chatId,
-        title: pageTitle,
-        page_url: pageUrl,
-        created_at: Date.now(),
-      });
+    if (isNewChat && chat) {
+      state.chatHistory.unshift(chat);
     }
   } catch (error) {
     console.error("Failed to persist messages:", error);
-    // Handle error - maybe show a retry option or remove feedback icon
   }
 }
 
@@ -261,10 +282,14 @@ async function persistPageMetadataAndSummary({
   const authSession = await getUserSession();
   if (!authSession || !authSession.id) return; // Auth only
 
-  // Fall back
-  const page_url = state.pageContent?.url || window.location.href;
-  const title = state.pageContent?.title || document.title;
-  const page_content = state.pageContent?.content;
+  // Decide if should use live page content or chat history
+  const pageContent = state.isUsingChatContext
+    ? state.chatContext
+    : state.pageContent;
+
+  const page_url = pageContent.url;
+  const title = pageContent.title;
+  const page_content = pageContent.content;
   const language = state.language;
 
   chrome.runtime.sendMessage(
@@ -275,7 +300,11 @@ async function persistPageMetadataAndSummary({
       page_content,
     },
     (result) => {
-      if (result?.success && metadata?.event === "summarize") {
+      if (
+        result?.success &&
+        metadata?.event === "summarize" &&
+        !result.data?.expired
+      ) {
         chrome.runtime.sendMessage({
           action: "store_page_summary",
           page_url,
@@ -299,7 +328,9 @@ export async function callOpenAI(messages, metadata) {
     ? Math.ceil(config.maxWordCount * 1.3)
     : 1500;
   metadata.max_tokens = maxTokens;
-  metadata.page_url = state.pageContent?.url || window.location.href;
+  metadata.page_url = state.isUsingChatContext
+    ? state.chatContext.url
+    : state.pageContent?.url || window.location.href;
   metadata.language = state.language || "en";
 
   const res = await sendRequest(`${SERVER_URL}/api/query/ask`, {
@@ -319,119 +350,150 @@ export async function callOpenAI(messages, metadata) {
   };
 }
 
-export async function constructPromptWithPageContent(
-  query,
-  pageContent,
-  history,
-  config
-) {
-  // Set default values if config is missing
-  const maxWordCount = config?.maxWordCount || 150;
-  const responseStyle = config?.responseStyle || "conversational";
-  const language = state.language || "en";
+/**
+ * Constructs a prompt for AI response based on query, page content, and history.
+ * @param {Object} options
+ * @param {string} options.query User input/question.
+ * @param {Object} options.pageContent Page content context
+ * @param {Array} options.history
+ * @param {Object} options.config
+ * @param {string} [options.language]
+ * @returns {Array} Array of messages to send to AI.
+ */
+export function constructPromptWithPageContent(options) {
+  const {
+    query,
+    pageContent,
+    history = [],
+    config = {},
+    language = "en",
+  } = options;
 
-  // Customize instructions based on response style
-  let styleInstructions = "";
-  switch (responseStyle) {
-    case "conversational":
-      styleInstructions = `Use a friendly, conversational tone with everyday language.
-Explain concepts in simple terms that are easy to understand.
-Keep your response around ${maxWordCount} words.`;
-      break;
-    case "educational":
-      styleInstructions = `Present information in a structured, educational format.
-Include clear explanations with examples where helpful.
-Organize your response with logical flow and keep it around ${maxWordCount} words.`;
-      break;
-    case "technical":
-      styleInstructions = `Use precise terminology and provide thorough analysis.
-Include technical details appropriate for someone with domain knowledge.
-Maintain accuracy and depth while keeping your response around ${maxWordCount} words.`;
-      break;
-    default:
-      styleInstructions = `Keep your response around ${maxWordCount} words.`;
-  }
+  const maxWordCount = config.maxWordCount || 150;
+  const responseStyle = config.responseStyle || "conversational";
 
-  // language instructions
-  let languageInstructions = "";
-  if (language === "vi") {
-    languageInstructions = `Respond entirely in Vietnamese. Use natural, fluent Vietnamese expressions and terminology.`;
-  } else {
-    languageInstructions = `Respond in English.`;
-  }
+  const styleInstructions = getStyleInstructions(responseStyle, maxWordCount);
+  const languageInstructions = getLanguageInstructions(language);
+  const personalityInstructions =
+    config.personality ||
+    "Be helpful and informative, focusing on the content.";
 
   const systemPrompt = {
     role: "system",
-    content: `You are a helpful assistant that helps users understand web page content.
-You have access to the content of the page the user is currently viewing, which is provided below.
-Answer the user's questions based on this content. If the answer is not in the content, say so.
-${languageInstructions}
-${config?.personality || "Be helpful and informative, focusing on the content."}
-${styleInstructions}`,
+    content: [
+      "You are a helpful assistant that helps users understand web page content.",
+      "You have access to the content of the page the user is currently viewing, which is provided below.",
+      "Answer the user's questions based on this content. If the answer is not in the content, say so.",
+      languageInstructions,
+      personalityInstructions,
+      styleInstructions,
+    ].join("\n\n"),
   };
 
-  let contextMessage = {
+  console.log("pageContent in constructPrompt: ", pageContent);
+  const contextMessage = generateContextMessage(pageContent);
+
+  return [
+    systemPrompt,
+    contextMessage,
+    ...history,
+    {
+      role: "user",
+      content: query,
+    },
+  ];
+}
+
+/**
+ * Helper function to get style instructions based on selected style and max words.
+ * @param {String} style
+ * @param {number} maxWords
+ * @returns Style instructions based on the selected style and max words
+ */
+function getStyleInstructions(style, maxWords) {
+  const styles = {
+    conversational: `Use a friendly, conversational tone with everyday language.
+Explain concepts in simple terms that are easy to understand.
+Keep your response around ${maxWords} words.`,
+    educational: `Present information in a structured, educational format.
+Include clear explanations with examples where helpful.
+Organize your response with logical flow and keep it around ${maxWords} words.`,
+    technical: `Use precise terminology and provide thorough analysis.
+Include technical details appropriate for someone with domain knowledge.
+Maintain accuracy and depth while keeping your response around ${maxWords} words.`,
+  };
+  return styles[style] || `Keep your response around ${maxWords} words.`;
+}
+
+/**
+ * Get language-specific instructions for AI responses.
+ * @param {String} lang The language code
+ * @returns {String} Language instructions for the AI.
+ */
+function getLanguageInstructions(lang) {
+  return lang === "vi"
+    ? "Respond entirely in Vietnamese. Use natural, fluent Vietnamese expressions and terminology."
+    : "Respond in English.";
+}
+
+/**
+ * Generate a context message for the AI based on the page content.
+ * @param {String} pageContent
+ * @returns
+ */
+function generateContextMessage(pageContent) {
+  console.log("pageContent in generateContextMessage: ", pageContent);
+  const message = {
     role: "system",
     content: "PAGE CONTENT:\n",
   };
 
-  if (pageContent) {
-    if (pageContent.extractionSuccess === false) {
-      contextMessage.content +=
-        "Note: Limited page content extracted. I'll work with what's available.\n\n";
-    }
-
-    contextMessage.content += `Title: ${pageContent.title || "Unknown"}\n`;
-    contextMessage.content += `URL: ${pageContent.url || "Unknown"}\n\n`;
-
-    if (pageContent.content) {
-      contextMessage.content += pageContent.content;
-    }
-
-    // If PDF content is available, append it
-    if (pageContent.pdfContent?.content) {
-      contextMessage.content += `\n\n--- Embedded PDF Content ---\n${pageContent.pdfContent.content}`;
-    }
-
-    else {
-      contextMessage.content +=
-        "The page content extraction failed. I have limited context about this page.";
-    }
-
-    if (pageContent.captions && pageContent.captions.length > 0) {
-      contextMessage.content +=
-        "\n\nNote: Some image captions were extracted to help explain the visuals on this page. These are supplementary and not part of the page's actual content structure.\n";
-
-      pageContent.captions.forEach((caption, index) => {
-        contextMessage.content += `• Image ${index + 1}: ${caption}\n`;
-      });
-    }
-  } else {
-    contextMessage.content +=
+  if (!pageContent) {
+    message.content +=
       "No page content was provided. I don't have specific context about what you're viewing.";
+    return message;
   }
 
-  let messages = [systemPrompt, contextMessage];
+  const {
+    title = "Unknown",
+    url = "Unknown",
+    content = "",
+    captions = [],
+    extractionSuccess = true,
+  } = pageContent;
 
-  if (history && history.length > 0) {
-    messages = messages.concat(history);
+  if (!extractionSuccess) {
+    message.content +=
+      "Note: Limited page content extracted. I'll work with what's available.\n\n";
   }
 
-  messages.push({
-    role: "user",
-    content: query,
-  });
+  message.content += `Title: ${title}\nURL: ${url}\n\n`;
+  message.content +=
+    content ||
+    "The page content extraction failed. I have limited context about this page.";
 
-  return messages;
+  if (captions.length > 0) {
+    message.content +=
+      "\n\nNote: Some image captions were extracted to help explain the visuals on this page.\n";
+    captions.forEach((caption, index) => {
+      message.content += `• Image ${index + 1}: ${caption}\n`;
+    });
+  }
+
+  return message;
 }
 
 /**
- *
- * @param {string} pageContent Page content
+ * Generate questions based on current context (live page or chat)
+ * @param {Object} [contentOverride] Optional manual override of content
  * @returns {Promise<{success: boolean, questions: string[]}>}
  */
-export async function generateQuestionsFromContent(pageContent) {
-  if (!pageContent || !pageContent.content) {
+export async function generateQuestionsFromContent(contentOverride = null) {
+  const contentSource =
+    contentOverride ||
+    (state.isUsingChatContext ? state.chatContext : state.pageContent);
+
+  if (!contentSource || !contentSource.content) {
     return { success: false, error: "No content available" };
   }
 
@@ -440,13 +502,12 @@ export async function generateQuestionsFromContent(pageContent) {
   try {
     const language = state.language || "en";
 
-    // Call backend API instead of OpenAI directly
     const res = await sendRequest(
       `${SERVER_URL}/api/query/suggested-questions`,
       {
         method: "POST",
         body: {
-          pageContent,
+          pageContent: contentSource,
           language,
         },
       }

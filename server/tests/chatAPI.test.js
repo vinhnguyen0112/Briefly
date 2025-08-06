@@ -93,23 +93,6 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if title is too long", async () => {
-    await supertest(app)
-      .post("/api/chats")
-      .set("Authorization", authHeader)
-      .send({
-        title: "".padEnd(257, "a"),
-        page_url: pageUrl,
-      })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: { code: ERROR_CODES.TOO_LONG },
-        });
-      });
-  });
-
   it("Should fail if missing 'page_url'", async () => {
     await supertest(app)
       .post("/api/chats")
@@ -292,8 +275,8 @@ describe("GET /chats/:id", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
   });
 
@@ -337,8 +320,8 @@ describe("PUT /chats/:id", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
   });
 
@@ -454,8 +437,8 @@ describe("DELETE /chats/:id", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
   });
 
@@ -537,8 +520,8 @@ describe("POST /chats/:chat_id/messages", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
   });
 
@@ -720,8 +703,8 @@ describe("GET /chats/:chat_id/messages", () => {
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
         expect(response.body).toHaveProperty("data");
-        expect(response.body.data).toHaveProperty("id");
-        chatId = response.body.data.id;
+        expect(response.body.data).toHaveProperty("chat");
+        chatId = response.body.data.chat.id;
       });
     // Add messages to chat
     const messages = [

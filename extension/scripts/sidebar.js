@@ -135,23 +135,23 @@ document.addEventListener("DOMContentLoaded", () => {
   getConfig()
     .then((config) => {
       if (config) {
-        window.currentConfig = config;
+        state.currentConfig = config;
         console.log("CocBot: Got the settings", config);
       } else {
         // Set default config if none exists
-        window.currentConfig = {
+        state.currentConfig = {
           personality:
             "Be friendly and concise, and stick to the facts in the content.",
           maxWordCount: 150,
           detailLevel: "medium",
         };
-        console.log("CocBot: Using default settings", window.currentConfig);
+        console.log("CocBot: Using default settings", state.currentConfig);
       }
     })
     .catch((error) => {
       console.error("CocBot: Error loading config", error);
       // Set default config on error
-      window.currentConfig = {
+      state.currentConfig = {
         personality:
           "Be friendly and concise, and stick to the facts in the content.",
         maxWordCount: 150,

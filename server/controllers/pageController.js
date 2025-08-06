@@ -24,6 +24,7 @@ function isPageExpired(updatedAt) {
  */
 const createPage = async (req, res, next) => {
   try {
+    let expired = false;
     const { page_url, title, page_content } = req.body;
 
     // Normalize and validate page_url
@@ -40,11 +41,10 @@ const createPage = async (req, res, next) => {
       return res.json({
         success: true,
         message: "Page found in cache",
-        data: { id, cached: true },
+        data: { id, cached: true, expired },
       });
     }
 
-    // Construct insert body (omit undefined/null/empty)
     const insertBody = {
       id,
       page_url: normalizedPageUrl,
@@ -54,20 +54,15 @@ const createPage = async (req, res, next) => {
 
     let page = await Page.getById(id);
 
-    // Insert or re-insert if expired
+    // If not found or expired, create a new page
     if (!page || isPageExpired(page.updated_at)) {
-      if (page) await Page.deleteById(id);
+      expired = !!page; // only true if it existed and is expired
+      if (expired) await Page.deleteById(id); // Invalidate old page
+      await redisHelper.deletePageSummaries(id); // Invalidate cached summaries
       page = await Page.create(insertBody);
     }
 
-    if (!page) {
-      throw new AppError(
-        ERROR_CODES.INTERNAL_ERROR,
-        "Failed to create or retrieve page"
-      );
-    }
-
-    // Update Redis
+    // Update cache
     await redisHelper.setPage(id, {
       page_url: page.page_url,
       normalized_page_url: normalizedPageUrl,
@@ -78,7 +73,108 @@ const createPage = async (req, res, next) => {
     res.json({
       success: true,
       message: "Page record is fresh and available",
-      data: { id, cached: false },
+      data: { id, cached: false, expired },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Get a page by URL
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const getPageByUrl = async (req, res, next) => {
+  try {
+    const { page_url } = req.query;
+    if (!page_url) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing page_url");
+    }
+
+    // Normalize and hash
+    const normalizedPageUrl = commonHelper.processUrl(page_url);
+    if (!normalizedPageUrl) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+
+    const id = commonHelper.generateHash(normalizedPageUrl);
+
+    // Check Redis cache
+    const cached = await redisHelper.getPage(id);
+    if (cached) {
+      return res.json({
+        success: true,
+        message: "Page found in cache",
+        data: { cached: true, page: { ...cached } },
+      });
+    }
+
+    // Fallback to DB
+    const page = await Page.getById(id);
+
+    // Update Redis
+    if (page) {
+      await redisHelper.setPage(id, {
+        page_url: page.page_url,
+        normalized_page_url: normalizedPageUrl,
+        title: page.title,
+        page_content: page.page_content,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: "Page fetched from database",
+      data: { cached: false, page },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Get a page by ID
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const getPageById = async (req, res, next) => {
+  try {
+    const { page_id } = req.params;
+    if (!page_id) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing page_id");
+    }
+
+    const id = page_id.trim();
+
+    // Check Redis cache
+    const cached = await redisHelper.getPage(id);
+    if (cached) {
+      return res.json({
+        success: true,
+        message: "Page found in cache",
+        data: { cached: true, page: { ...cached } },
+      });
+    }
+
+    // Fallback to DB
+    const page = await Page.getById(id);
+
+    if (page) {
+      await redisHelper.setPage(id, {
+        page_url: page.page_url,
+        normalized_page_url: page.normalized_page_url,
+        title: page.title,
+        page_content: page.page_content,
+      });
+    }
+
+    res.json({
+      success: true,
+      message: page ? "Page fetched from database" : "Page not found",
+      data: { cached: false, page },
     });
   } catch (err) {
     next(err);
@@ -124,5 +220,7 @@ const updatePage = async (req, res, next) => {
 
 module.exports = {
   createPage,
+  getPageByUrl,
+  getPageById,
   updatePage,
 };
