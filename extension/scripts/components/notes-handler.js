@@ -16,6 +16,53 @@ import { isSignInNeeded } from "./auth-handler.js";
 let notesScrollListenerSetup = false;
 let currentScrollHandler = null;
 
+const notesCacheState = {
+  isInitialized: {
+    current: false,
+    all: false,
+  },
+  lastFetchTime: {
+    current: null,
+    all: null,
+  },
+  needsRefresh: {
+    current: false,
+    all: false,
+  },
+};
+
+const notesScrollState = {
+  current: 0,
+  all: 0,
+};
+
+function saveScrollPosition() {
+  const scrollableContainer = document.querySelector(".notes-content");
+  if (scrollableContainer) {
+    const currentTab = state.currentNotesTab;
+    notesScrollState[currentTab] = scrollableContainer.scrollTop;
+    console.log(
+      `💾 Saved scroll position for ${currentTab}: ${notesScrollState[currentTab]}`
+    );
+  }
+}
+
+function restoreScrollPosition() {
+  const scrollableContainer = document.querySelector(".notes-content");
+  if (scrollableContainer) {
+    const currentTab = state.currentNotesTab;
+    const savedPosition = notesScrollState[currentTab] || 0;
+
+    // Use requestAnimationFrame để đảm bảo DOM đã render
+    requestAnimationFrame(() => {
+      scrollableContainer.scrollTop = savedPosition;
+      console.log(
+        `🔄 Restored scroll position for ${currentTab}: ${savedPosition}`
+      );
+    });
+  }
+}
+
 /**
  * Opens the notes panel and initializes it with current page content
  * Handles sign-in modal dismissal and screen switching
@@ -40,8 +87,8 @@ export async function openNotesPanel() {
     elements.notesScreen.style.display = "flex";
   }
 
-  // Load initial content and update counters
-  loadTabContent();
+  // ✅ Load with caching (not forced)
+  loadTabContent(false);
 }
 
 /**
@@ -51,6 +98,9 @@ export async function openNotesPanel() {
  */
 
 export function switchNotesTab(tabName) {
+  // ✅ Save current scroll position BEFORE switching
+  saveScrollPosition();
+
   // Update tab button active states
   elements.notesTabCurrent.classList.toggle("active", tabName === "current");
   elements.notesTabAll.classList.toggle("active", tabName === "all");
@@ -62,34 +112,62 @@ export function switchNotesTab(tabName) {
   );
   elements.notesTabAllContent.classList.toggle("active", tabName === "all");
 
+  // ✅ Cleanup listeners trước khi switch
   cleanupScrollListeners();
 
-  // Update global state and reload content
+  // Update global state
   state.currentNotesTab = tabName;
 
-  // Reset pagination and load fresh content
-  resetNotesPaginationState(tabName);
-  loadTabContent();
+  // ✅ Load with caching - no forced refresh
+  loadTabContent(false).then(() => {
+    // ✅ Restore scroll position AFTER content loads
+    restoreScrollPosition();
+  });
 }
 
 /**
  * Loads and renders content for the currently active notes tab
  * Handles errors by showing empty states as fallback
  */
-async function loadTabContent() {
+async function loadTabContent(forceRefresh = false) {
   const tab = state.currentNotesTab;
 
-  // If already fetching, don't fetch again
+  // ✅ Check if already fetching
   if (state.notesPagination[tab].isFetching) {
+    console.log(`Notes for ${tab} already fetching, skipping...`);
     return;
   }
 
+  // ✅ Check if we need to fetch
+  const shouldFetch =
+    forceRefresh ||
+    !notesCacheState.isInitialized[tab] ||
+    notesCacheState.needsRefresh[tab] ||
+    state.notesData[tab].length === 0;
+
+  if (!shouldFetch) {
+    console.log(`✅ Using cached notes for ${tab} tab`);
+    if (tab === "current") {
+      renderCurrentPageNotes(state.notesData.current);
+    } else {
+      renderAllNotes(state.notesData.all);
+    }
+    return Promise.resolve(); // ✅ Return resolved promise
+  }
+
+  console.log(`🔄 Fetching fresh notes for ${tab} tab`);
+
   try {
     if (tab === "current") {
-      await loadCurrentPageNotes(false); // false = not loading more
+      await loadCurrentPageNotes(false);
     } else {
-      await loadAllNotes(false); // false = not loading more
+      await loadAllNotes(false);
     }
+
+    // ✅ Mark as initialized and cached
+    notesCacheState.isInitialized[tab] = true;
+    notesCacheState.lastFetchTime[tab] = Date.now();
+    notesCacheState.needsRefresh[tab] = false;
   } catch (error) {
     console.error(`Error loading ${tab} notes:`, error);
     // Show empty state on error
@@ -99,6 +177,29 @@ async function loadTabContent() {
       renderAllNotes([]);
     }
   }
+}
+
+/**
+ * ✅ Explicit refresh function for user-triggered refresh
+ */
+export function refreshNotes() {
+  const tab = state.currentNotesTab;
+
+  // ✅ Reset pagination but keep cache flags
+  resetNotesPaginationState(tab);
+
+  // ✅ Force refresh to bypass cache
+  loadTabContent(true);
+}
+
+/**
+ * ✅ Mark cache as needing refresh after data changes
+ */
+function markCacheAsStale(affectedTabs = ["current", "all"]) {
+  affectedTabs.forEach((tab) => {
+    notesCacheState.needsRefresh[tab] = true;
+    notesCacheState.isInitialized[tab] = false;
+  });
 }
 
 /**
@@ -132,7 +233,10 @@ function renderCurrentPageNotes(notes) {
     container.appendChild(noteItem);
   });
 
+  // ✅ Setup scroll listener ĐÚNG
   setupNotesInfiniteScroll();
+
+  // ✅ Don't restore scroll here - let switchNotesTab handle it
 }
 
 /**
@@ -163,7 +267,10 @@ function renderAllNotes(notes) {
     container.appendChild(noteItem);
   });
 
+  // ✅ Setup scroll listener ĐÚNG
   setupNotesInfiniteScroll();
+
+  // ✅ Don't restore scroll here - let switchNotesTab handle it
 }
 
 /**
@@ -206,7 +313,10 @@ export async function handleSaveNote() {
 
   try {
     if (state.isEditingNote) {
+      // ✅ FIX: Use currentEditingNoteId instead of currentEditingNoteTimestamp
       await updateNote(state.currentEditingNoteId, content);
+      // ✅ Mark both tabs as needing refresh
+      markCacheAsStale(["current", "all"]);
       updateToast(toastId, {
         message:
           state.language === "en"
@@ -220,6 +330,11 @@ export async function handleSaveNote() {
         content,
         url: state.currentEditingNoteUrl || state.currentPageUrl,
       });
+      // ✅ Only mark affected tabs as needing refresh
+      const affectedTabs = state.currentEditingNoteUrl
+        ? ["all"]
+        : ["current", "all"];
+      markCacheAsStale(affectedTabs);
       updateToast(toastId, {
         message:
           state.language === "en"
@@ -229,13 +344,9 @@ export async function handleSaveNote() {
         duration: 2000,
       });
     }
-    // Close editor and refresh the appropriate tab
     closeNoteEditor();
-
-    // Reset and reload current tab to show updated notes
-    const tab = state.currentNotesTab;
-    resetNotesPaginationState(tab);
-    loadTabContent();
+    // ✅ Reload with fresh data
+    loadTabContent(true);
   } catch (error) {
     console.error("Error saving note:", error);
     updateToast(toastId, {
@@ -343,18 +454,11 @@ async function confirmDeleteNote(noteId) {
       duration: 2000,
     });
 
-    // Remove from current state and re-render
-    const tab = state.currentNotesTab;
-    state.notesData[tab] = state.notesData[tab].filter(
-      (note) => note.id !== noteId
-    );
+    // ✅ Mark cache as stale
+    markCacheAsStale(["current", "all"]);
 
-    // Re-render current notes
-    if (tab === "current") {
-      renderCurrentPageNotes(state.notesData[tab]);
-    } else {
-      renderAllNotes(state.notesData[tab]);
-    }
+    // ✅ Refresh current tab
+    loadTabContent(true);
   } catch (error) {
     console.error("Error deleting note:", error);
     updateToast(toastId, {
@@ -367,7 +471,6 @@ async function confirmDeleteNote(noteId) {
     });
   }
 }
-
 /**
  * Closes the delete confirmation modal and cleans up associated resources
  * Removes blur effects and event listeners
@@ -544,7 +647,7 @@ export function closeNoteEditor() {
   elements.noteEditor.style.display = "none";
   elements.noteContent.value = "";
   state.currentEditingNoteUrl = null;
-  state.currentEditingNoteId = null;
+  state.currentEditingNoteId = null; // ✅ Also reset this
   state.isEditingNote = false;
 }
 
@@ -573,11 +676,14 @@ async function loadCurrentPageNotes(isLoadingMore = false) {
     const result = await getNotesForUrl(currentUrl, offset, 20);
 
     if (isLoadingMore && result.notes.length > 0) {
+      // ✅ Append to existing notes
       state.notesData[tab] = [...state.notesData[tab], ...result.notes];
     } else {
+      // ✅ Replace existing notes
       state.notesData[tab] = result.notes;
     }
 
+    // ✅ ĐÚNG: chỉ cập nhật hasMore, không cần currentPage
     pagination.hasMore = result.hasMore;
 
     if (isLoadingMore) {
@@ -622,8 +728,10 @@ async function loadAllNotes(isLoadingMore = false) {
     const result = await getAllNotes(offset, 20);
 
     if (isLoadingMore && result.notes.length > 0) {
+      // ✅ Append to existing notes
       state.notesData[tab] = [...state.notesData[tab], ...result.notes];
     } else {
+      // ✅ Replace existing notes
       state.notesData[tab] = result.notes;
     }
 
@@ -675,6 +783,7 @@ function setupNotesInfiniteScroll() {
       return;
     }
 
+    // ✅ Check conditions for loading more
     if (
       pagination.isFetching ||
       !pagination.hasMore ||
@@ -683,6 +792,7 @@ function setupNotesInfiniteScroll() {
       return;
     }
 
+    // ✅ Tính toán scroll position chính xác
     const scrollPercentage =
       (element.scrollTop + element.clientHeight + threshold) /
       element.scrollHeight;
@@ -761,4 +871,20 @@ export function reloadNotes() {
 
   // Load fresh content
   loadTabContent();
+}
+
+export function resetNotesCache() {
+  notesCacheState.isInitialized.current = false;
+  notesCacheState.isInitialized.all = false;
+  notesCacheState.lastFetchTime.current = null;
+  notesCacheState.lastFetchTime.all = null;
+  notesCacheState.needsRefresh.current = false;
+  notesCacheState.needsRefresh.all = false;
+
+  // ✅ Also reset scroll positions
+  notesScrollState.current = 0;
+  notesScrollState.all = 0;
+
+  // Also reset data
+  resetNotesPaginationState();
 }
