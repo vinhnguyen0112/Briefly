@@ -72,6 +72,7 @@ export async function extractTextFromPDF(pdfUrl, onProgress) {
         page: pageNum,
         totalPages,
         content: fullText,
+        metadata,
       });
     }
 
