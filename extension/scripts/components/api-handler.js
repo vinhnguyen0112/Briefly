@@ -77,7 +77,7 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
       : state.pageContent;
 
     // Attach PDF content if available
-    if (state.pdfContent) {
+    if (!state.isUsingChatContext && state.pdfContent) {
       pageContext.pdfContent = state.pdfContent;
     }
 
