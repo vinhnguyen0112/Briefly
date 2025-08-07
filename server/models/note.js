@@ -136,7 +136,7 @@ class Note {
   async getById(id) {
     const query = "SELECT * FROM notes WHERE id = ?";
     const rows = await dbHelper.executeQuery(query, [id]);
-    return rows[0] || null;
+    return rows.length > 0 ? rows[0] : null;
   }
 }
 

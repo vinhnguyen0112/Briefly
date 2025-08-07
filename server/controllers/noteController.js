@@ -61,11 +61,14 @@ const getNotesForPage = async (req, res, next) => {
     }
 
     // Parse pagination parameters
-    const offsetNum = parseInt(offset, 10) || 0;
-    const limitNum = parseInt(limit, 10) || 20;
+    const offsetNum = parseInt(offset, 10);
+    const limitNum = parseInt(limit, 10);
 
-    if (limitNum <= 0 || offsetNum < 0) {
-      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid offset or limit");
+    if (isNaN(offsetNum) || offsetNum < 0) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid offset");
+    }
+    if (isNaN(limitNum) || limitNum <= 0) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid limit");
     }
 
     // Get notes with one extra to check if there are more
@@ -103,8 +106,15 @@ const getAllNotes = async (req, res, next) => {
     const { offset = 0, limit = 20 } = req.query;
 
     // Parse pagination parameters
-    const offsetNum = parseInt(offset, 10) || 0;
-    const limitNum = parseInt(limit, 10) || 20;
+    const offsetNum = parseInt(offset, 10);
+    const limitNum = parseInt(limit, 10);
+
+    if (isNaN(offsetNum) || offsetNum < 0) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid offset");
+    }
+    if (isNaN(limitNum) || limitNum <= 0) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid limit");
+    }
 
     if (limitNum <= 0 || offsetNum < 0) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid offset or limit");
@@ -144,15 +154,24 @@ const updateNote = async (req, res, next) => {
     const { id } = req.params;
     const { note } = req.body;
 
+    // Add input validation
+    if (!note || typeof note !== "string" || !note.trim()) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Note content is required");
+    }
+
     // Check if note exists and belongs to the user
     const existingNote = await Note.getById(id);
-    if (!existingNote || existingNote.user_id !== req.session.user_id) {
+
+    if (
+      !existingNote ||
+      existingNote.user_id.toString() !== req.session.user_id.toString()
+    ) {
       throw new AppError(ERROR_CODES.NOT_FOUND, "Note not found", 404);
     }
 
     const updatedAt = new Date();
     const affectedRows = await Note.update(id, {
-      note,
+      note: note.trim(),
       updated_at: updatedAt,
     });
 
@@ -177,15 +196,15 @@ const deleteNote = async (req, res, next) => {
 
     // Check if note exists and belongs to the user
     const existingNote = await Note.getById(id);
-    if (!existingNote || existingNote.user_id !== req.session.user_id) {
+
+    if (
+      !existingNote ||
+      existingNote.user_id.toString() !== req.session.user_id.toString()
+    ) {
       throw new AppError(ERROR_CODES.NOT_FOUND, "Note not found", 404);
     }
 
     const affectedRows = await Note.delete(id);
-
-    if (affectedRows === 0) {
-      throw new AppError(ERROR_CODES.NOT_FOUND, "Note not found", 404);
-    }
 
     res.json({
       success: true,
