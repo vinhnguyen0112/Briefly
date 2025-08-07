@@ -701,7 +701,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         page_url: message.page_url,
         title: message.title,
         page_content: message.page_content,
-        pdf_content: message.pdf_content || null,
+        pdf_content: message.pdf_content.trim() || null,
       },
       withVisitorId: false,
     })
