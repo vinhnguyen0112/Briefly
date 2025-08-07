@@ -30,49 +30,17 @@ function generateName() {
  * @returns {String} The normalized URL.
  * @throws if provided invalid url
  */
-// function processUrl(url) {
-//   try {
-//     const normalizedUrl = normalizeUrl(url, {
-//       removeQueryParameters: true,
-//     });
-//     return normalizedUrl;
-//   } catch (err) {
-//     if (err.code === "ERR_INVALID_URL") {
-//       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid URL");
-//     }
-//     throw new AppError(ERROR_CODES.INTERNAL_ERROR, err.message, 500);
-//   }
-// }
-
 function processUrl(url) {
-  // Basic validation first
-  if (!url || typeof url !== "string" || url.trim() === "") {
-    throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid URL");
-  }
-
-  // Check if it's a valid URL format using native URL constructor
-  try {
-    const urlObj = new URL(url.trim());
-
-    // Only allow http and https protocols
-    if (!["http:", "https:"].includes(urlObj.protocol)) {
-      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid URL protocol");
-    }
-  } catch (error) {
-    // URL constructor failed - invalid URL format
-    throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid URL format");
-  }
-
-  // If validation passes, normalize the URL
   try {
     const normalizedUrl = normalizeUrl(url, {
       removeQueryParameters: true,
-      removeHash: true,
-      stripWWW: false, // Keep www for consistency
     });
     return normalizedUrl;
   } catch (err) {
-    throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid URL");
+    if (err.code === "ERR_INVALID_URL") {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid URL");
+    }
+    throw new AppError(ERROR_CODES.INTERNAL_ERROR, err.message, 500);
   }
 }
 

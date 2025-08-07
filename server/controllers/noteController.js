@@ -14,6 +14,14 @@ const createNote = async (req, res, next) => {
   try {
     const { page_url, note } = req.body;
 
+    if (!page_url || typeof page_url !== "string" || !page_url.trim()) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Page URL is required");
+    }
+
+    if (!page_url.includes(".") || page_url.length < 4) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL format");
+    }
+
     // Normalize URL before saving
     const normalizedPageUrl = commonHelper.processUrl(page_url);
     if (!normalizedPageUrl) {
@@ -53,6 +61,10 @@ const getNotesForPage = async (req, res, next) => {
 
     if (!page_url) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Page URL is required");
+    }
+
+    if (!page_url.includes(".") || page_url.length < 4) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL format");
     }
 
     const normalizedPageUrl = commonHelper.processUrl(page_url);
