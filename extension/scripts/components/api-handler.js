@@ -76,6 +76,11 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
       ? state.chatContext
       : state.pageContent;
 
+    // Attach PDF content if available
+    if (state.pdfContent) {
+      pageContext.pdfContent = state.pdfContent;
+    }
+
     // Build prompt
     console.log("Current context: ", pageContext);
     const messages = constructPromptWithPageContent({
@@ -293,7 +298,7 @@ async function persistPageMetadataAndSummary({
     url: page_url,
     title,
     content: page_content,
-    pdfContent,
+    pdfContent = null,
   } = contentSource;
   const language = state.language;
 
@@ -407,8 +412,6 @@ export function constructPromptWithPageContent(options) {
     ].join("\n\n"),
   };
 
-  // Attach pdf content if available
-  if (state.pdfContent) state.pageContent.pdfContent = state.pdfContent;
   const contextMessage = generateContextMessage(pageContent);
 
   return [

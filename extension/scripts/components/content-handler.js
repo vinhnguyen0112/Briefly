@@ -126,7 +126,6 @@ export function updateContentStatus() {
   const chatContainer = document.getElementById("chat-container");
   if (!chatContainer) return;
 
-  // Remove any existing indicator
   const existingIndicator = chatContainer.querySelector(
     ".chat-context-indicator"
   );
@@ -134,7 +133,6 @@ export function updateContentStatus() {
 
   const indicator = buildContextIndicator();
 
-  // Insert after welcome section
   const welcomeSection = chatContainer.querySelector(".welcome-container");
   if (welcomeSection) {
     welcomeSection.after(indicator);
@@ -144,80 +142,179 @@ export function updateContentStatus() {
 }
 
 /**
- * Creates the context indicator element based on the current page content.
+ * Creates the context indicator element based on the current page content and PDF status.
  * Includes a favicon, page title, and a refresh button to reload context.
+ * Shows PDF loading progress if applicable.
  * @returns {HTMLDivElement} The DOM element representing the context indicator.
  */
 function buildContextIndicator() {
-  const indicator = document.createElement("div");
-  indicator.className = "chat-context-indicator";
+  const wrapper = document.createElement("div");
+  wrapper.className = "chat-context-indicator";
+  wrapper.style.display = "flex";
+  wrapper.style.flexDirection = "column";
 
+  // --- Main: Page Content Context Section ---
+  const pageSection = document.createElement("div");
+  pageSection.className = "chat-context-item";
+  pageSection.id = "chat-context-page";
   const context = state.isUsingChatContext
     ? state.chatContext
     : state.pageContent;
 
-  console.log("Context in buildContextIndicator:", context);
-
   if (!context || context.extractionSuccess === false) {
-    indicator.innerHTML = `
+    pageSection.innerHTML = `
       <span class="loading-dots">
         Reading page context <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
       </span>
     `;
+  } else if (context.error) {
+    pageSection.innerHTML = `⚠️ Limited page context available`;
+  } else {
+    const pageTitle = context.title;
+    const rawUrl = context.url;
 
-    return indicator;
-  }
+    let domain = "";
+    try {
+      domain = new URL(rawUrl).hostname;
+    } catch {
+      domain = "";
+    }
 
-  if (context.error) {
-    indicator.innerHTML = `⚠️ Limited page context available`;
-    return indicator;
-  }
+    const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+    const favicon = document.createElement("img");
+    favicon.src = faviconUrl;
+    favicon.alt = "Page icon";
+    favicon.className = "chat-context-favicon";
 
-  const pageTitle = context.title;
-  const rawUrl = context.url;
+    const title = document.createElement("span");
+    title.className = "chat-context-title";
+    title.textContent = pageTitle;
 
-  let domain = "";
-  try {
-    domain = new URL(rawUrl).hostname;
-  } catch {
-    domain = "";
-  }
+    pageSection.appendChild(favicon);
+    pageSection.appendChild(title);
 
-  const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
-
-  const favicon = document.createElement("img");
-  favicon.src = faviconUrl;
-  favicon.alt = "Page icon";
-  favicon.className = "chat-context-favicon";
-
-  const title = document.createElement("span");
-  title.className = "chat-context-title";
-  title.textContent = pageTitle;
-
-  indicator.appendChild(favicon);
-  indicator.appendChild(title);
-
-  if (!state.isUsingChatContext) {
-    const refreshBtn = document.createElement("button");
-    refreshBtn.className = "chat-context-refresh-btn";
-    refreshBtn.dataset.i18nTitle = "refreshPageContext";
-    refreshBtn.title = "Refresh Page Context";
-    refreshBtn.innerHTML = `
-      <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
-        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
-      </svg>
-    `;
-    refreshBtn.addEventListener("click", () => {
-      requestPageContent().then(() => {
-        resetSuggestedQuestionsContainer();
-        state.generatedQuestions = {};
+    if (!state.isUsingChatContext) {
+      const refreshBtn = document.createElement("button");
+      refreshBtn.className = "chat-context-refresh-btn";
+      refreshBtn.dataset.i18nTitle = "refreshPageContext";
+      refreshBtn.title = "Refresh Page Context";
+      refreshBtn.innerHTML = `
+        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+            d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4" />
+        </svg>
+      `;
+      refreshBtn.addEventListener("click", () => {
+        requestPageContent().then(() => {
+          resetSuggestedQuestionsContainer();
+          state.generatedQuestions = {};
+        });
       });
-    });
-    translateElement(refreshBtn);
-    indicator.appendChild(refreshBtn);
+      translateElement(refreshBtn);
+      pageSection.appendChild(refreshBtn);
+    }
   }
 
-  return indicator;
+  wrapper.appendChild(pageSection);
+
+  return wrapper;
+}
+
+/**
+ * Creates or updates the PDF status indicator under the page content indicator.
+ * @param {Object} status
+ * @param {'loading' | 'reading' | 'done' | 'error'} status.status - Current extraction status.
+ * @param {number} [status.page] - Current page processed.
+ * @param {number} [status.totalPages] - Total pages.
+ * @param {object} [status.metadata] - Optional PDF metadata to show when done.
+ */
+export function updatePdfStatus({ status, page, totalPages, metadata = {} }) {
+  let indicator = document.getElementById("chat-context-pdf");
+
+  if (!indicator) {
+    const wrapper = document.querySelector(".chat-context-indicator");
+    if (!wrapper) return;
+
+    indicator = document.createElement("div");
+    indicator.className = "chat-context-item";
+    indicator.id = "chat-context-pdf";
+    wrapper.appendChild(indicator);
+  }
+
+  switch (status) {
+    case "loading":
+      indicator.innerHTML = `
+        <div style="display: flex; justify-content: space-between; gap: 10px;">
+          <span class="loading-dots">Loading PDF<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>
+        </div>
+      `;
+      break;
+
+    case "reading":
+      indicator.innerHTML = `
+        <div style="display: flex; justify-content: space-between; gap: 10px;">
+          <span class="loading-dots">Reading PDF<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>
+          <span style="white-space: nowrap;">Page ${page} of ${totalPages}</span>
+        </div>
+      `;
+      break;
+
+    case "success":
+      const title = metadata.title || "Unknown Title";
+      const author = metadata.author || "Unknown Author";
+      const date =
+        metadata.creationDate || metadata.modificationDate || "Unknown Date";
+
+      indicator.innerHTML = `
+        <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 0.9em; overflow-x: auto;">
+          <span><strong>${author}</strong></span>
+          <span>${title}</span>
+          <span>${date}</span>
+        </div>
+      `;
+      break;
+
+    case "error":
+      indicator.innerHTML = `
+        <div style="color: red; font-size: 0.9em;">
+          Failed to extract PDF content.
+        </div>
+      `;
+      break;
+
+    default:
+      indicator.innerHTML = `
+        <div style="color: gray; font-size: 0.9em;">
+          Unknown PDF status.
+        </div>
+      `;
+      console.log("PDF status unknown:", status);
+      break;
+  }
+}
+
+/**
+ * Watches pdfContent and triggers `updateContentStatus()` on progress.
+ * You only need to call this ONCE after PDF extraction starts.
+ */
+export function observePdfContentState() {
+  let lastPage = -1;
+  const interval = setInterval(() => {
+    const pdf = state.pdfContent;
+    if (!pdf || pdf.page === lastPage) return;
+
+    lastPage = pdf.page;
+    updatePdfStatus({
+      status: pdf.status,
+      page: pdf.page,
+      totalPages: pdf.totalPages,
+      metadata: pdf.metadata,
+    });
+
+    // Stop observing once done
+    if (pdf.page >= pdf.totalPages || pdf.extractionSuccess)
+      clearInterval(interval);
+  }, 500); // check every 0.5 seconds
 }
 
 // setup improved content extraction reliability

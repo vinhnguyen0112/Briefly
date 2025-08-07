@@ -14,6 +14,7 @@ import {
   showPopupDialog,
 } from "./components/event-handler.js";
 import {
+  observePdfContentState,
   requestPageContent,
   setupContentExtractionReliability,
 } from "./components/content-handler.js";
@@ -172,26 +173,24 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
       message.url
     );
 
-    const result = await extractTextFromPDF(message.url);
-    console.log("PDF extraction result:", result);
+    // Initialize PDF content state
+    state.pdfContent = {
+      status: "loading",
+    };
 
-    if (result?.content) {
-      // Trim content (for performance or model limits)
-      const trimmedContent = result.content
-        .split(/\s+/)
-        .slice(0, 90000)
-        .join(" ")
-        .trim();
+    observePdfContentState();
 
-      // Store all PDF-related info in a structured object
+    const result = await extractTextFromPDF(message.url, (partial) => {
+      // Continously update pdf status
       state.pdfContent = {
-        content: trimmedContent,
-        numPages: result.numPages ?? null,
-        metadata: result.metadata ?? null,
+        status: "reading",
+        page: partial.page,
+        totalPages: partial.totalPages,
+        content: partial.content,
+        metadata: partial.metadata,
       };
-    } else {
-      console.warn("PDF extraction returned empty content");
-      state.pdfContent = null;
-    }
+    });
+
+    state.pdfContent.status = result.status;
   }
 });
