@@ -2,9 +2,11 @@
 // Only persist in IDB when user click to view a chat
 
 export const state = {
-  pageContent: {},
+  pageContent: null,
+  chatContext: null,
   isAnimating: false,
   isProcessingQuery: false,
+  isUsingChatContext: false,
   history: [],
   currentConfig: null,
   isResizing: false,
@@ -383,24 +385,21 @@ export async function saveStoredPageUrl(url) {
   });
 }
 
+// Chat state management
+
+/**
+ * Reset current chat state and set isUsingChatContext to false
+ */
 export function resetCurrentChatState() {
   state.currentChat = {
     id: null,
     title: "",
     pageUrl: "",
     history: [],
+    pageContent: null,
   };
-}
 
-/**
- * Reset pagination state to default
- */
-export function resetPaginationState() {
-  state.pagination = {
-    currentPage: 0,
-    hasMore: true,
-    isFetching: false,
-  };
+  state.isUsingChatContext = false;
 }
 
 /**
@@ -417,6 +416,17 @@ export function setCurrentChatState(chat = {}) {
     title: chat.title || "",
     pageUrl: chat.pageUrl || "",
     history: chat.history || [],
+  };
+}
+
+/**
+ * Reset pagination state to default
+ */
+export function resetPaginationState() {
+  state.pagination = {
+    currentPage: 0,
+    hasMore: true,
+    isFetching: false,
   };
 }
 

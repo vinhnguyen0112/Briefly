@@ -44,6 +44,7 @@ class Page {
 
   /**
    * Get a page by ID
+   * Returns null if not found
    * @param {string} id
    * @returns {Promise<PageObject|null>}
    */

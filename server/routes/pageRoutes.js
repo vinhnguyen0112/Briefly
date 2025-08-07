@@ -10,16 +10,10 @@ const {
 // Protected
 router.use(requireAuthenticatedSession);
 
-router.post(
-  "/",
-  validateAndSanitizeBody(createPageSchema),
-  pageController.createPage
-);
+router.route("/:page_id").get(pageController.getPageById);
 
-// router.put(
-//   "/:id",
-//   validateAndSanitizeBody(updatePageSchema),
-//   pageController.updatePage
-// );
+router
+  .route("/")
+  .post(validateAndSanitizeBody(createPageSchema), pageController.createPage);
 
 module.exports = router;

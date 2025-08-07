@@ -151,7 +151,7 @@ async function getStoredPageSummary(pageId, language) {
     }
 
     // Otherwise, delete expired summary
-    await PageSummary.deleteByPageIdAndLanguage(pageId, language);
+    await PageSummary.deleteById(stored.id);
   }
 
   return null;

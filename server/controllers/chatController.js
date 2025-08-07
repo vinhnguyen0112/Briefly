@@ -29,18 +29,29 @@ const createChat = async (req, res, next) => {
     if (!normalizedPageUrl) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
     }
-    const pageId = commonHelper.generateHash(normalizedPageUrl);
 
+    const pageId = commonHelper.generateHash(normalizedPageUrl);
     const chatId = uuidv4();
 
-    await Chat.create({
+    const chat = {
       id: chatId,
       user_id: req.session.user_id,
       page_url: normalizedPageUrl,
       page_id: pageId,
       title,
+    };
+
+    const affectedRows = await Chat.create(chat);
+
+    res.json({
+      success: true,
+      message:
+        affectedRows > 0 ? "Chat created" : "Chat already exists (ignored)",
+      data: {
+        chat,
+        affectedRows,
+      },
     });
-    res.json({ success: true, data: { id: chatId } });
   } catch (err) {
     next(err);
   }
