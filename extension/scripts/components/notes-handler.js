@@ -569,13 +569,13 @@ export async function handleSaveNote() {
         duration: 2000,
       });
     } else {
-      const savedNote = await saveNote({
+      const savedNoteId = await saveNote({
         content,
         url: state.currentEditingNoteUrl || state.currentPageUrl,
       });
 
       addNoteInPlace({
-        id: savedNote.id,
+        id: savedNoteId,
         content: content,
         url: state.currentEditingNoteUrl || state.currentPageUrl,
         timestamp: Date.now(),
