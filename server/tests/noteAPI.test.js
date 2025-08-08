@@ -77,7 +77,7 @@ describe("POST /api/notes", () => {
       .post("/api/notes")
       .set("Authorization", authHeader)
       .send({
-        page_url: "not-a-valid-url",
+        page_url: "not a valid url",
         note: validNoteContent,
       })
       .expect(400)
@@ -343,7 +343,7 @@ describe("GET /api/notes", () => {
     await supertest(app)
       .get("/api/notes")
       .query({
-        page_url: "invalid-url",
+        page_url: "invalid url",
         offset: 0,
         limit: 10,
       })
