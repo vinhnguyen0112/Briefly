@@ -14,14 +14,6 @@ const createNote = async (req, res, next) => {
   try {
     const { page_url, note } = req.body;
 
-    if (!page_url || typeof page_url !== "string" || !page_url.trim()) {
-      throw new AppError(ERROR_CODES.INVALID_INPUT, "Page URL is required");
-    }
-
-    if (!page_url.includes(".") || page_url.length < 4) {
-      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL format");
-    }
-
     // Normalize URL before saving
     const normalizedPageUrl = commonHelper.processUrl(page_url);
     if (!normalizedPageUrl) {
@@ -36,8 +28,6 @@ const createNote = async (req, res, next) => {
       user_id: req.session.user_id,
       page_url: normalizedPageUrl,
       note,
-      created_at: createdAt,
-      updated_at: createdAt,
     });
 
     res.json({
@@ -61,10 +51,6 @@ const getNotesForPage = async (req, res, next) => {
 
     if (!page_url) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Page URL is required");
-    }
-
-    if (!page_url.includes(".") || page_url.length < 4) {
-      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL format");
     }
 
     const normalizedPageUrl = commonHelper.processUrl(page_url);
@@ -165,11 +151,6 @@ const updateNote = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { note } = req.body;
-
-    // Add input validation
-    if (!note || typeof note !== "string" || !note.trim()) {
-      throw new AppError(ERROR_CODES.INVALID_INPUT, "Note content is required");
-    }
 
     // Check if note exists and belongs to the user
     const existingNote = await Note.getById(id);

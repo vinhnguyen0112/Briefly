@@ -597,14 +597,18 @@ function fetchChatHistory() {
       action: "fetch_chat_history",
       currentPage: state.pagination.currentPage,
     },
-    async (response) => {
-      mergeFetchedChats(response.chats);
-      state.pagination.isFetching = false;
-      state.pagination.hasMore = response.hasMore;
+    (response) => {
+      if (!response || !response.success) {
+        console.error("Failed to fetch chat history:", response.error);
+      } else {
+        mergeFetchedChats(response.chats);
+        state.pagination.hasMore = response.hasMore;
 
+        renderCurrentPageChatHistory();
+        state.pagination.currentPage += 1;
+      }
+      state.pagination.isFetching = false;
       removeChatHistorySpinner(chatHistoryList);
-      renderCurrentPageChatHistory();
-      state.pagination.currentPage += 1;
     }
   );
 }

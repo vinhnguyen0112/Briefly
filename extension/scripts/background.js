@@ -649,11 +649,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         offset: message.currentPage * CHAT_QUERY_LIMIT,
       })
       .then((response) => {
-        sendResponse({
-          success: response.success,
-          chats: response.data.chats,
-          hasMore: response.data.hasMore,
-        });
+        if (response.success) {
+          sendResponse({
+            success: true,
+            chats: response.data.chats,
+            hasMore: response.data.hasMore,
+          });
+        } else {
+          sendResponse({
+            success: false,
+          });
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to fetch chat history:", err);
+        sendResponse({ success: false, error: err.message });
       });
 
     return true;
