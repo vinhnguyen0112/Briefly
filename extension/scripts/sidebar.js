@@ -139,7 +139,23 @@ document.addEventListener("DOMContentLoaded", () => {
   setupEventListeners();
 
   // get page content
-  requestPageContent();
+  requestPageContent().then(() => {
+    // Store page metadata if extraction was success
+    if (state.pageContent && state.pageContent.extractionSuccess) {
+      console.log("Storing page metadata");
+
+      chrome.runtime.sendMessage({
+        action: "store_page_metadata",
+        page_url: state.pageContent.url,
+        title: state.pageContent.title,
+        page_content: state.pageContent.content,
+        pdf_content:
+          state.pageContent.pdfContent?.status === "success"
+            ? state.pageContent.pdfContent.content.trim()
+            : null,
+      });
+    }
+  });
 
   // make sure content extraction is reliable
   setupContentExtractionReliability();
@@ -192,5 +208,15 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     });
 
     state.pdfContent.status = result.status;
+
+    // Store pdf content
+    if (state.pdfContent.status === "success" && state.pdfContent.content) {
+      chrome.runtime.sendMessage({
+        action: "store_pdf_content",
+        content: state.pdfContent.content,
+        metadata: state.pdfContent.metadata,
+        page_url: state.pageContent.url,
+      });
+    }
   }
 });

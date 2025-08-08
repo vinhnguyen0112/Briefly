@@ -701,7 +701,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         page_url: message.page_url,
         title: message.title,
         page_content: message.page_content,
-        pdf_content: message.pdf_content.trim() || null,
+        pdf_content: message.pdf_content,
       },
       withVisitorId: false,
     })
@@ -732,6 +732,55 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .catch((err) => {
         console.error("Failed to store summary:", err);
+        sendResponse({ success: false });
+      });
+
+    return true;
+  }
+  if (message.action === "store_pdf_content") {
+    let { content, metadata, page_url } = message;
+    if (metadata) {
+      const {
+        title,
+        author,
+        subject,
+        keywords,
+        language,
+        creator,
+        producer,
+        creationDate,
+        modificationDate,
+      } = metadata;
+
+      let metadataBlock = "Metadata:\n";
+      if (title) metadataBlock += `• Title: ${title}\n`;
+      if (author) metadataBlock += `• Author: ${author}\n`;
+      if (subject) metadataBlock += `• Subject: ${subject}\n`;
+      if (keywords) metadataBlock += `• Keywords: ${keywords}\n`;
+      if (language) metadataBlock += `• Language: ${language}\n`;
+      if (creator) metadataBlock += `• Creator: ${creator}\n`;
+      if (producer) metadataBlock += `• Producer: ${producer}\n`;
+      if (creationDate) metadataBlock += `• Created: ${creationDate}\n`;
+      if (modificationDate)
+        metadataBlock += `• Modified: ${modificationDate}\n`;
+
+      // Prepend metadata to content
+      content = `${metadataBlock}\n${content}`;
+    }
+
+    sendRequest(`${SERVER_URL}/api/pages?page_url=${page_url}`, {
+      method: "PUT",
+      body: {
+        pdf_content: content.trim(),
+      },
+      withVisitorId: false,
+    })
+      .then((response) => {
+        console.log("store_pdf_content response: ", response);
+        sendResponse({ success: response.success });
+      })
+      .catch((err) => {
+        console.error("Failed to store PDF content:", err);
         sendResponse({ success: false });
       });
 

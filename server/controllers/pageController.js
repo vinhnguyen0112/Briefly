@@ -191,7 +191,7 @@ const getPageById = async (req, res, next) => {
  * @param {Object} res
  * @param {Function} next
  */
-const updatePage = async (req, res, next) => {
+const updatePageById = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -205,11 +205,55 @@ const updatePage = async (req, res, next) => {
       });
     }
 
-    const { title, summary, suggested_questions } = req.body;
+    const { title, page_content, pdf_content } = req.body;
     const updates = {};
     if (title) updates.title = title;
-    if (summary) updates.summary = summary;
-    if (suggested_questions) updates.suggested_questions = suggested_questions;
+    if (page_content) updates.page_content = page_content;
+    if (pdf_content) updates.pdf_content = pdf_content;
+
+    const affectedRows = await Page.update(id, updates);
+    res.json({
+      success: true,
+      message: "Page updated successfully.",
+      data: { affectedRows },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Update a page record by ID
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const updatePageByUrl = async (req, res, next) => {
+  try {
+    const { page_url } = req.query;
+    if (!page_url) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing page url");
+    }
+
+    const normalizedPageUrl = commonHelper.processUrl(page_url);
+    if (!normalizedPageUrl) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+    const id = commonHelper.generateHash(normalizedPageUrl);
+
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.json({
+        success: true,
+        message: "Nothing to update",
+        data: { affectedRows: 0 },
+      });
+    }
+
+    const { title, page_content, pdf_content } = req.body;
+    const updates = {};
+    if (title) updates.title = title;
+    if (page_content) updates.page_content = page_content;
+    if (pdf_content) updates.pdf_content = pdf_content;
 
     const affectedRows = await Page.update(id, updates);
     res.json({
@@ -226,5 +270,6 @@ module.exports = {
   createPage,
   getPageByUrl,
   getPageById,
-  updatePage,
+  updatePageById,
+  updatePageByUrl,
 };
