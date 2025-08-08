@@ -128,11 +128,11 @@ export function updateContentStatus() {
   if (!chatContainer) return;
 
   const existingIndicator = chatContainer.querySelector(
-    ".chat-context-indicator"
+    ".page-context-indicator"
   );
   if (existingIndicator) existingIndicator.remove();
 
-  const indicator = buildContextIndicator();
+  const indicator = buildPageContextIndicator();
 
   const welcomeSection = chatContainer.querySelector(".welcome-container");
   if (welcomeSection) {
@@ -148,77 +148,74 @@ export function updateContentStatus() {
  * Shows PDF loading progress if applicable.
  * @returns {HTMLDivElement} The DOM element representing the context indicator.
  */
-function buildContextIndicator() {
-  const wrapper = document.createElement("div");
-  wrapper.className = "chat-context-indicator";
-  wrapper.style.display = "flex";
-  wrapper.style.flexDirection = "column";
+function buildPageContextIndicator() {
+  const indicator = document.createElement("div");
+  indicator.className = "page-context-indicator context-indicator-item";
 
-  // --- Main: Page Content Context Section ---
-  const pageSection = document.createElement("div");
-  pageSection.className = "chat-context-item";
-  pageSection.id = "chat-context-page";
   const context = state.isUsingChatContext
     ? state.chatContext
     : state.pageContent;
 
   if (!context || context.extractionSuccess === false) {
-    pageSection.innerHTML = `
+    indicator.innerHTML = `
       <span class="loading-dots">
         Reading page context <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
       </span>
     `;
-  } else if (context.error) {
-    pageSection.innerHTML = `⚠️ Limited page context available`;
-  } else {
-    const pageTitle = context.title;
-    const rawUrl = context.url;
 
-    let domain = "";
-    try {
-      domain = new URL(rawUrl).hostname;
-    } catch {
-      domain = "";
-    }
-
-    const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
-    const favicon = document.createElement("img");
-    favicon.src = faviconUrl;
-    favicon.alt = "Page icon";
-    favicon.className = "chat-context-favicon";
-
-    const title = document.createElement("span");
-    title.className = "chat-context-title";
-    title.textContent = pageTitle;
-
-    pageSection.appendChild(favicon);
-    pageSection.appendChild(title);
-
-    if (!state.isUsingChatContext) {
-      const refreshBtn = document.createElement("button");
-      refreshBtn.className = "chat-context-refresh-btn";
-      refreshBtn.dataset.i18nTitle = "refreshPageContext";
-      refreshBtn.title = "Refresh Page Context";
-      refreshBtn.innerHTML = `
-        <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
-          <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-            d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4" />
-        </svg>
-      `;
-      refreshBtn.addEventListener("click", () => {
-        requestPageContent().then(() => {
-          resetSuggestedQuestionsContainer();
-          state.generatedQuestions = {};
-        });
-      });
-      translateElement(refreshBtn);
-      pageSection.appendChild(refreshBtn);
-    }
+    return indicator;
   }
 
-  wrapper.appendChild(pageSection);
+  if (context.error) {
+    indicator.innerHTML = `⚠️ Limited page context available`;
+    return indicator;
+  }
 
-  return wrapper;
+  const pageTitle = context.title;
+  const rawUrl = context.url;
+
+  let domain = "";
+  try {
+    domain = new URL(rawUrl).hostname;
+  } catch {
+    domain = "";
+  }
+
+  const faviconUrl = `https://www.google.com/s2/favicons?sz=64&domain=${domain}`;
+
+  const favicon = document.createElement("img");
+  favicon.src = faviconUrl;
+  favicon.alt = "Page icon";
+  favicon.className = "page-context-favicon";
+
+  const title = document.createElement("span");
+  title.className = "page-context-title";
+  title.textContent = pageTitle;
+
+  indicator.appendChild(favicon);
+  indicator.appendChild(title);
+
+  if (!state.isUsingChatContext) {
+    const refreshBtn = document.createElement("button");
+    refreshBtn.className = "page-context-refresh-btn";
+    refreshBtn.dataset.i18nTitle = "refreshPageContext";
+    refreshBtn.title = "Refresh Page Context";
+    refreshBtn.innerHTML = `
+      <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
+      </svg>
+    `;
+    refreshBtn.addEventListener("click", () => {
+      requestPageContent().then(() => {
+        resetSuggestedQuestionsContainer();
+        state.generatedQuestions = {};
+      });
+    });
+    translateElement(refreshBtn);
+    indicator.appendChild(refreshBtn);
+  }
+
+  return indicator;
 }
 
 /**
@@ -229,23 +226,42 @@ function buildContextIndicator() {
  * @param {number} [status.totalPages] - Total pages.
  * @param {object} [status.metadata] - Optional PDF metadata to show when done.
  */
-export function updatePdfStatus({ status, page, totalPages, metadata = {} }) {
+export function updatePdfStatus() {
+  const chatContainer = document.getElementById("chat-container");
+  if (!chatContainer) return;
+
+  const existingIndicator = chatContainer.querySelector(
+    ".pdf-context-indicator"
+  );
+  if (existingIndicator) existingIndicator.remove();
+
+  const indicator = buildPdfContextIndicator();
+
+  const pageContextIndicator = chatContainer.querySelector(
+    ".page-context-indicator"
+  );
+  if (pageContextIndicator) {
+    pageContextIndicator.after(indicator);
+  } else {
+    chatContainer.prepend(indicator);
+  }
+}
+
+function buildPdfContextIndicator() {
   const pdfSvg = `
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 576 512" fill="#e2231a" width="16" height="16">
       <path d="M208 48L96 48c-8.8 0-16 7.2-16 16l0 384c0 8.8 7.2 16 16 16l80 0 0 48-80 0c-35.3 0-64-28.7-64-64L32 64C32 28.7 60.7 0 96 0L229.5 0c17 0 33.3 6.7 45.3 18.7L397.3 141.3c12 12 18.7 28.3 18.7 45.3l0 149.5-48 0 0-128-88 0c-39.8 0-72-32.2-72-72l0-88zM348.1 160L256 67.9 256 136c0 13.3 10.7 24 24 24l68.1 0zM240 380l32 0c33.1 0 60 26.9 60 60s-26.9 60-60 60l-12 0 0 28c0 11-9 20-20 20s-20-9-20-20l0-128c0-11 9-20 20-20zm32 80c11 0 20-9 20-20s-9-20-20-20l-12 0 0 40 12 0zm96-80l32 0c28.7 0 52 23.3 52 52l0 64c0 28.7-23.3 52-52 52l-32 0c-11 0-20-9-20-20l0-128c0-11 9-20 20-20zm32 128c6.6 0 12-5.4 12-12l0-64c0-6.6-5.4-12-12-12l-12 0 0 88 12 0zm76-108c0-11 9-20 20-20l48 0c11 0 20 9 20 20s-9 20-20 20l-28 0 0 24 28 0c11 0 20 9 20 20s-9 20-20 20l-28 0 0 44c0 11-9 20-20 20s-20-9-20-20l0-128z"/>
     </svg>`;
 
-  let indicator = document.getElementById("chat-context-pdf");
+  const indicator = document.createElement("div");
+  indicator.className = "pdf-context-indicator context-indicator-item";
 
-  if (!indicator) {
-    const wrapper = document.querySelector(".chat-context-indicator");
-    if (!wrapper) return;
-
-    indicator = document.createElement("div");
-    indicator.className = "chat-context-item";
-    indicator.id = "chat-context-pdf";
-    wrapper.appendChild(indicator);
-  }
+  const {
+    status,
+    page = 0,
+    totalPages = 0,
+    metadata = {},
+  } = state.pdfContent || {};
 
   switch (status) {
     case "loading":
@@ -301,6 +317,8 @@ export function updatePdfStatus({ status, page, totalPages, metadata = {} }) {
       console.log("PDF status unknown:", status);
       break;
   }
+
+  return indicator;
 }
 
 /**
@@ -314,12 +332,7 @@ export function observePdfContentState() {
     if (!pdf || pdf.page === lastPage) return;
 
     lastPage = pdf.page;
-    updatePdfStatus({
-      status: pdf.status,
-      page: pdf.page,
-      totalPages: pdf.totalPages,
-      metadata: pdf.metadata,
-    });
+    updatePdfStatus();
 
     // Stop observing once done
     if (pdf.page >= pdf.totalPages || pdf.extractionSuccess)

@@ -1,8 +1,5 @@
 import * as pdfjs from "../../libs/pdfjs/pdf.mjs";
 
-const MAX_PAGES = 100;
-const MAX_LENGTH = 64000;
-
 /**
  * Stream-extracts PDF content and metadata.
  * Updates state after each page read.
@@ -42,9 +39,8 @@ export async function extractTextFromPDF(pdfUrl, onProgress) {
 
     // Read pages
     let fullText = "";
-    const totalPages = Math.min(pdf.numPages, MAX_PAGES);
 
-    for (let pageNum = 1; pageNum <= totalPages; pageNum++) {
+    for (let pageNum = 1; pageNum <= pdf.numPages; pageNum++) {
       const page = await pdf.getPage(pageNum);
       const textContent = await page.getTextContent();
 
@@ -55,29 +51,17 @@ export async function extractTextFromPDF(pdfUrl, onProgress) {
 
       fullText += `${pageText} `;
 
-      // Truncate early if too long
-      if (fullText.length >= MAX_LENGTH) {
-        fullText = fullText.slice(0, MAX_LENGTH);
-        onProgress?.({
-          page: pageNum,
-          totalPages,
-          content: fullText,
-          metadata,
-        });
-        break;
-      }
-
       // Send partial update after each page
       onProgress?.({
         page: pageNum,
-        totalPages,
+        totalPages: pdf.numPages,
         content: fullText,
         metadata,
       });
     }
 
     return {
-      numPages: pdf.numPages,
+      totalPages: pdf.numPages,
       metadata,
       status: "success",
     };
