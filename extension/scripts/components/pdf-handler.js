@@ -36,8 +36,8 @@ export async function extractTextFromPDF(pdfUrl, onProgress) {
       language: meta.info?.Language ?? null,
       creator: meta.info?.Creator ?? null,
       producer: meta.info?.Producer ?? null,
-      creationDate: formatPdfDate(meta.info?.CreationDate) ?? null,
-      modificationDate: formatPdfDate(meta.info?.ModDate) ?? null,
+      creationDate: meta.info?.CreationDate ?? null,
+      modificationDate: meta.info?.ModDate ?? null,
     };
 
     // Read pages
@@ -94,9 +94,10 @@ export async function extractTextFromPDF(pdfUrl, onProgress) {
 /**
  * Converts a PDF date string (e.g. "D:20180526231518+12'00'") into a readable format.
  * @param {string} pdfDate
+ * @param {boolean} [dateOnly=false] - If true, only returns date without time.
  * @returns {string} Formatted date or original if parsing fails.
  */
-export function formatPdfDate(pdfDate) {
+export function formatPdfDate(pdfDate, dateOnly = false) {
   if (!pdfDate || !pdfDate.startsWith("D:")) return pdfDate;
 
   try {
@@ -125,6 +126,15 @@ export function formatPdfDate(pdfDate) {
       .padStart(2, "0")}${timezoneOffset}`;
 
     const date = new Date(iso);
+
+    if (dateOnly) {
+      return date.toLocaleDateString(undefined, {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+      });
+    }
+
     return date.toLocaleString(undefined, {
       year: "numeric",
       month: "short",
