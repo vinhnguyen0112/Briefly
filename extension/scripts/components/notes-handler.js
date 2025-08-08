@@ -505,6 +505,7 @@ function renderAllNotes(notes) {
   setupNotesInfiniteScroll();
 }
 
+let isSaving = false;
 /**
  * Processes note save requests with comprehensive validation and feedback
  * Handles both new note creation and existing note updates
@@ -517,6 +518,12 @@ export async function handleSaveNote() {
     return;
   }
 
+  if (isSaving) {
+    return;
+  }
+
+  isSaving = true;
+
   const content = elements.noteContent.value.trim();
 
   if (!content) {
@@ -527,6 +534,7 @@ export async function handleSaveNote() {
           : "Vui lòng nhập nội dung cho ghi chú",
       type: "error",
     });
+    isSaving = false;
     return;
   }
 
@@ -539,6 +547,7 @@ export async function handleSaveNote() {
       type: "warning",
       duration: 3000,
     });
+    isSaving = false;
     return;
   }
 
@@ -602,6 +611,8 @@ export async function handleSaveNote() {
       type: "error",
       duration: 3000,
     });
+  } finally {
+    isSaving = false;
   }
 }
 
