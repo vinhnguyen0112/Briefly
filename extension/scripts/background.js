@@ -777,7 +777,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     })
       .then((response) => {
         console.log("store_pdf_content response: ", response);
-        sendResponse({ success: response.success });
+        sendResponse({ success: response.success, data: response.data });
       })
       .catch((err) => {
         console.error("Failed to store PDF content:", err);

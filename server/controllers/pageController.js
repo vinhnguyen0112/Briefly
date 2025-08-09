@@ -223,7 +223,7 @@ const updatePageById = async (req, res, next) => {
 };
 
 /**
- * Update a page record by ID
+ * Update a page record using page URL
  * @param {Object} req
  * @param {Object} res
  * @param {Function} next

@@ -7,6 +7,7 @@ import {
   state,
   getVisitorId,
   setVisitorId,
+  getUserSession,
 } from "./components/state.js";
 import {
   renderToggleAccountPopupUI,
@@ -140,21 +141,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // get page content
   requestPageContent().then(() => {
-    // Store page metadata if extraction was success
-    if (state.pageContent && state.pageContent.extractionSuccess) {
-      console.log("Storing page metadata");
+    getUserSession().then((session) => {
+      if (session && session.id) {
+        // Store page metadata if extraction was success
+        if (state.pageContent && state.pageContent.extractionSuccess) {
+          console.log("Storing page metadata");
 
-      chrome.runtime.sendMessage({
-        action: "store_page_metadata",
-        page_url: state.pageContent.url,
-        title: state.pageContent.title,
-        page_content: state.pageContent.content,
-        pdf_content:
-          state.pageContent.pdfContent?.status === "success"
-            ? state.pageContent.pdfContent.content.trim()
-            : null,
-      });
-    }
+          storePageMetadata();
+        }
+      }
+    });
   });
 
   // make sure content extraction is reliable
@@ -210,13 +206,45 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     state.pdfContent.status = result.status;
 
     // Store pdf content
+    const authSession = await getUserSession();
+    if (!authSession || !authSession.id) return;
     if (state.pdfContent.status === "success" && state.pdfContent.content) {
-      chrome.runtime.sendMessage({
-        action: "store_pdf_content",
-        content: state.pdfContent.content,
-        metadata: state.pdfContent.metadata,
-        page_url: state.pageContent.url,
-      });
+      chrome.runtime.sendMessage(
+        {
+          action: "store_pdf_content",
+          content: state.pdfContent.content,
+          metadata: state.pdfContent.metadata,
+          page_url: state.pageContent.url,
+        },
+        (response) => {
+          // Row not found, re-insert page metadata
+          if (response.success && response.data?.affectedRows === 0) {
+            console.log("Row not found, re-inserting page metadata");
+            storePageMetadata();
+          }
+        }
+      );
     }
   }
 });
+
+/**
+ * Helper function to send message to background for storing page metadata
+ */
+function storePageMetadata() {
+  chrome.runtime.sendMessage(
+    {
+      action: "store_page_metadata",
+      page_url: state.pageContent.url,
+      title: state.pageContent.title,
+      page_content: state.pageContent.content,
+      pdf_content:
+        state.pageContent.pdfContent?.status === "success"
+          ? state.pageContent.pdfContent.content.trim()
+          : null,
+    },
+    (response) => {
+      // Do sth here if needed
+    }
+  );
+}
