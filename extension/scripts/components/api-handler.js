@@ -127,19 +127,9 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
         tempMessageId
       );
 
-      persistPageSummary({
-        state: {
-          pageContent: {
-            url: pageContext.url,
-            title: pageContext.title,
-            content: pageContext.content,
-            pdfContent: pageContext.pdfContent,
-          },
-          language: state.language,
-        },
-        assistantMessage: assistantMessage,
-        metadata: metadata,
-      });
+      if (metadata.event === "summarize") {
+        persistPageSummary(assistantMessage);
+      }
 
       return { success: true, message: assistantMessage };
     } else {
@@ -351,6 +341,7 @@ export function constructPromptWithPageContent(options) {
   };
 
   const contextMessage = generateContextMessage(pageContent);
+  console.log("Context message: ", contextMessage);
 
   return [
     systemPrompt,

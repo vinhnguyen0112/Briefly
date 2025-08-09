@@ -239,8 +239,8 @@ function storePageMetadata() {
       title: state.pageContent.title,
       page_content: state.pageContent.content,
       pdf_content:
-        state.pageContent.pdfContent?.status === "success"
-          ? state.pageContent.pdfContent.content.trim()
+        state.pdfContent?.status === "success"
+          ? state.pdfContent.content
           : null,
     },
     (response) => {
