@@ -5,7 +5,6 @@ const Page = require("../models/page");
 const { redisHelper } = require("../helpers/redisHelper");
 
 const PAGE_FRESHNESS_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-
 /**
  * Check if a timestamp is expired based on max age
  * @param {string|Date} updatedAt
@@ -212,6 +211,12 @@ const updatePageById = async (req, res, next) => {
     if (pdf_content) updates.pdf_content = pdf_content;
 
     const affectedRows = await Page.update(id, updates);
+
+    // Only update cache if there's affected rows
+    if (affectedRows !== 0) {
+      await redisHelper.updateRecord(`page`, id, updates);
+    }
+
     res.json({
       success: true,
       message: "Page updated successfully.",
@@ -249,6 +254,7 @@ const updatePageByUrl = async (req, res, next) => {
       });
     }
 
+    // Build updates
     const { title, page_content, pdf_content } = req.body;
     const updates = {};
     if (title) updates.title = title;
@@ -256,6 +262,12 @@ const updatePageByUrl = async (req, res, next) => {
     if (pdf_content) updates.pdf_content = pdf_content;
 
     const affectedRows = await Page.update(id, updates);
+
+    // Only update cache if there's affected rows
+    if (affectedRows !== 0) {
+      await redisHelper.updateRecord(`page`, id, updates);
+    }
+
     res.json({
       success: true,
       message: "Page updated successfully.",

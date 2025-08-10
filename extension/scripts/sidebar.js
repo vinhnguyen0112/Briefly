@@ -209,11 +209,14 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     const authSession = await getUserSession();
     if (!authSession || !authSession.id) return;
     if (state.pdfContent.status === "success" && state.pdfContent.content) {
+      const formattedPdfContent = formatPdfContent(
+        state.pdfContent.content,
+        state.pdfContent.metadata
+      );
       chrome.runtime.sendMessage(
         {
           action: "store_pdf_content",
-          content: state.pdfContent.content,
-          metadata: state.pdfContent.metadata,
+          pdf_content: formattedPdfContent,
           page_url: state.pageContent.url,
         },
         (response) => {
@@ -229,22 +232,74 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 });
 
 /**
- * Helper function to send message to background for storing page metadata
+ * Helper function to pass store_page_metadata message to background script
  */
 function storePageMetadata() {
+  const pdfContent =
+    state.pdfContent?.status === "success"
+      ? formatPdfContent(state.pdfContent.content, state.pdfContent.metadata)
+      : null;
   chrome.runtime.sendMessage(
     {
       action: "store_page_metadata",
       page_url: state.pageContent.url,
       title: state.pageContent.title,
       page_content: state.pageContent.content,
-      pdf_content:
-        state.pdfContent?.status === "success"
-          ? state.pdfContent.content
-          : null,
+      pdf_content: pdfContent,
     },
     (response) => {
       // Do sth here if needed
     }
   );
+}
+
+if (state.pdfContent.status === "success" && state.pdfContent.content) {
+  const formattedPdfContent = formatPdfContent(
+    state.pdfContent.content,
+    state.pdfContent.metadata
+  );
+  chrome.runtime.sendMessage(
+    {
+      action: "store_pdf_content",
+      content: formattedPdfContent,
+      page_url: state.pageContent.url,
+    },
+    (response) => {
+      // Row not found, re-insert page metadata
+      if (response.success && response.data?.affectedRows === 0) {
+        console.log("Row not found, re-inserting page metadata");
+        storePageMetadata();
+      }
+    }
+  );
+}
+
+/**
+ * Format the pdf content with metadata prepended
+ * @param {String} content - Raw PDF content
+ * @param {Object} metadata - PDF metadata object
+ * @returns {String} Sanitized PDF content with metadata prepended
+ */
+function formatPdfContent(content, metadata) {
+  if (!content) return null;
+
+  if (!metadata) return content;
+
+  let metadataBlock = "Metadata:\\n";
+
+  if (metadata.title) metadataBlock += `• Title: ${metadata.title}\\n`;
+  if (metadata.author) metadataBlock += `• Author: ${metadata.author}\\n`;
+  if (metadata.subject) metadataBlock += `• Subject: ${metadata.subject}\\n`;
+  if (metadata.keywords) metadataBlock += `• Keywords: ${metadata.keywords}\\n`;
+  if (metadata.language) metadataBlock += `• Language: ${metadata.language}\\n`;
+  if (metadata.creator) metadataBlock += `• Creator: ${metadata.creator}\\n`;
+  if (metadata.producer) metadataBlock += `• Producer: ${metadata.producer}\\n`;
+  if (metadata.creationDate)
+    metadataBlock += `• Created: ${metadata.creationDate}\\n`;
+  if (metadata.modificationDate)
+    metadataBlock += `• Modified: ${metadata.modificationDate}\\n`;
+
+  const result = `${metadataBlock}\\n${content}`;
+
+  return result.trim();
 }

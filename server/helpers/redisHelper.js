@@ -385,6 +385,61 @@ async function deletePageSummaries(pageId) {
   return totalDeleted;
 }
 
+/**
+ * Partially update a record in Redis by prefix and id.
+ * Only updates the fields provided in 'updates'.
+ * Preserves the original TTL.
+ * @param {string} prefix
+ * @param {string} id
+ * @param {Object} updates
+ * @returns {Object} The updated record
+ */
+async function updateRecord(prefix, id, updates) {
+  const key = applyPrefix(`${prefix}:${id}`);
+
+  // Get both the value and TTL
+  const [existing, ttl] = await Promise.all([client.get(key), client.ttl(key)]);
+
+  let record = {};
+
+  if (existing) {
+    try {
+      record = JSON.parse(existing);
+      console.log("Existing record:", record); // Debug log
+    } catch (e) {
+      console.error("Failed to parse existing record:", e);
+      record = {};
+    }
+  } else {
+    console.log("No existing record found, creating new one"); // Debug log
+  }
+
+  // Merge updates into existing record
+  const updatedRecord = { ...record, ...updates };
+  console.log("Updated record:", updatedRecord); // Debug log
+
+  // Set with original TTL or default
+  const setOptions = {};
+
+  if (ttl > 0) {
+    // Key has a TTL, preserve it
+    setOptions.EX = ttl;
+    console.log("Preserving TTL:", ttl); // Debug log
+  } else if (ttl === -1) {
+    // Key exists but has no expiration, don't set TTL
+    console.log("Key has no expiration, not setting TTL"); // Debug log
+  } else {
+    // Key doesn't exist (ttl === -2), set default TTL
+    const defaultTtl = parseInt(process.env.SESSION_TTL) || 3600;
+    setOptions.EX = defaultTtl;
+    console.log("New key, setting default TTL:", defaultTtl); // Debug log
+  }
+
+  await client.set(key, JSON.stringify(updatedRecord), setOptions);
+
+  return updatedRecord;
+}
+
 const redisHelper = {
   client,
   createSession,
@@ -399,6 +454,7 @@ const redisHelper = {
   getPageSummary,
   setPageSummary,
   deletePageSummaries,
+  updateRecord,
 };
 
 module.exports = {
