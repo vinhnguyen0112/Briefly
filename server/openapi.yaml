@@ -711,6 +711,118 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+    put:
+      summary: Update a page by URL
+      description: Updates a page record using its URL. Accepts partial updates for title, page_content, and pdf_content. The page_url must be provided as a query parameter.
+      tags:
+        - Page
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page_url
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: The URL of the page to update
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdatePageRequest"
+      responses:
+        "200":
+          description: Page updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      affectedRows:
+                        type: number
+                        description: Number of rows affected (0 if nothing to update)
+        "400":
+          description: Missing or invalid page_url, or nothing to update
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /pages/{page_id}:
+    get:
+      summary: Get a page by ID
+      description: Retrieves a page by its unique ID. Checks Redis cache first, then falls back to the database.
+      tags:
+        - Page
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: page_id
+          required: true
+          schema:
+            type: string
+          description: The unique ID of the page (hash of normalized URL)
+      responses:
+        "200":
+          description: Page found
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+                  data:
+                    type: object
+                    properties:
+                      cached:
+                        type: boolean
+                        description: True if page was found in cache
+                      page:
+                        $ref: "#/components/schemas/Page"
+        "400":
+          description: Missing or invalid page_id
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Page not found
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
   /page-summaries:
     post:
       summary: Create a page summary
@@ -1187,6 +1299,21 @@ components:
           default: Untitled Page
         page_content:
           type: string
+        pdf_content:
+          type: string
+
+    UpdatePageRequest:
+      type: object
+      properties:
+        title:
+          type: string
+          description: New title for the page
+        page_content:
+          type: string
+          description: New page content
+        pdf_content:
+          type: string
+          description: New PDF content (with metadata prepended)
 
     CreatePageSummaryRequest:
       type: object

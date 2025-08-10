@@ -28,7 +28,10 @@ app.use(morgan("dev"));
 app.set("trust proxy", true);
 
 // swagger, only available in development environment
-if (process.env.NODE_ENV === "development") {
+if (
+  process.env.NODE_ENV === "development" ||
+  process.env.NODE_ENV === "development_local"
+) {
   const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
   app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
 }

@@ -462,3 +462,126 @@ describe("GET /api/pages/:page_id", () => {
       });
   });
 });
+
+describe("PUT /api/pages (update by URL)", () => {
+  let pageUrl, pageId;
+
+  beforeAll(async () => {
+    pageUrl = "https://www.example.com/update-test-page";
+    // Create a page to update
+    const response = await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send({
+        page_url: pageUrl,
+        title: "Original Title",
+        page_content: "Original content",
+      });
+    pageId = response.body.data.id;
+  });
+
+  it("Should update the title of an existing page", async () => {
+    await supertest(app)
+      .put(`/api/pages?page_url=${encodeURIComponent(pageUrl)}`)
+      .set("Authorization", authHeader)
+      .send({
+        title: "Updated Title",
+      })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.data).toHaveProperty("affectedRows", 1);
+      });
+
+    const updatedPage = await Page.getById(pageId);
+    expect(updatedPage.title).toBe("Updated Title");
+  });
+
+  it("Should update the page_content of an existing page", async () => {
+    await supertest(app)
+      .put(`/api/pages?page_url=${encodeURIComponent(pageUrl)}`)
+      .set("Authorization", authHeader)
+      .send({
+        page_content: "Updated content",
+      })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.data).toHaveProperty("affectedRows", 1);
+      });
+
+    const updatedPage = await Page.getById(pageId);
+    expect(updatedPage.page_content).toBe("Updated content");
+  });
+
+  it("Should update the pdf_content of an existing page", async () => {
+    await supertest(app)
+      .put(`/api/pages?page_url=${encodeURIComponent(pageUrl)}`)
+      .set("Authorization", authHeader)
+      .send({
+        pdf_content: "PDF content here",
+      })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.data).toHaveProperty("affectedRows", 1);
+      });
+
+    const updatedPage = await Page.getById(pageId);
+    expect(updatedPage.pdf_content).toBe("PDF content here");
+  });
+
+  it("Should return affectedRows 0 if nothing to update", async () => {
+    await supertest(app)
+      .put(`/api/pages?page_url=${encodeURIComponent(pageUrl)}`)
+      .set("Authorization", authHeader)
+      .send({})
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+        expect(response.body.data).toHaveProperty("affectedRows", 0);
+        expect(response.body.message).toBe("Nothing to update");
+      });
+  });
+
+  it("Should fail if page_url is missing", async () => {
+    await supertest(app)
+      .put("/api/pages")
+      .set("Authorization", authHeader)
+      .send({
+        title: "Should Not Work",
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail if page_url is invalid", async () => {
+    await supertest(app)
+      .put("/api/pages?page_url=not a valid url")
+      .set("Authorization", authHeader)
+      .send({
+        title: "Should Not Work",
+      })
+      .expect(400)
+      .then((response) => {
+        expect(response.body).toMatchObject({
+          success: false,
+          error: { code: ERROR_CODES.INVALID_INPUT },
+        });
+      });
+  });
+
+  it("Should fail without authentication", async () => {
+    await supertest(app)
+      .put(`/api/pages?page_url=${encodeURIComponent(pageUrl)}`)
+      .send({
+        title: "No Auth Update",
+      })
+      .expect(401);
+  });
+});
