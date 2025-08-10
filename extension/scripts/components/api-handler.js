@@ -464,10 +464,10 @@ function generateContextMessage(pageContent) {
         message.content += `• Modified: ${modificationDate}\n`;
     }
 
-    // Slice off to 3000 chars
+    // Slice off to 5000 chars
     message.content += `\nContent Preview:\n${pdfContent.content.slice(
       0,
-      3000
+      5000
     )}`;
   }
 

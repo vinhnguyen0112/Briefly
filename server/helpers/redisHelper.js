@@ -405,18 +405,19 @@ async function updateRecord(prefix, id, updates) {
   if (existing) {
     try {
       record = JSON.parse(existing);
-      console.log("Existing record:", record); // Debug log
+      console.log("Existing record:", record);
     } catch (e) {
       console.error("Failed to parse existing record:", e);
       record = {};
     }
   } else {
-    console.log("No existing record found, creating new one"); // Debug log
+    console.log("No existing record found, returning");
+    return;
   }
 
   // Merge updates into existing record
   const updatedRecord = { ...record, ...updates };
-  console.log("Updated record:", updatedRecord); // Debug log
+  console.log("Updated record:", updatedRecord);
 
   // Set with original TTL or default
   const setOptions = {};
@@ -424,15 +425,15 @@ async function updateRecord(prefix, id, updates) {
   if (ttl > 0) {
     // Key has a TTL, preserve it
     setOptions.EX = ttl;
-    console.log("Preserving TTL:", ttl); // Debug log
+    console.log("Preserving TTL:", ttl);
   } else if (ttl === -1) {
     // Key exists but has no expiration, don't set TTL
-    console.log("Key has no expiration, not setting TTL"); // Debug log
+    console.log("Key has no expiration, not setting TTL");
   } else {
     // Key doesn't exist (ttl === -2), set default TTL
     const defaultTtl = parseInt(process.env.SESSION_TTL) || 3600;
     setOptions.EX = defaultTtl;
-    console.log("New key, setting default TTL:", defaultTtl); // Debug log
+    console.log("New key, setting default TTL:", defaultTtl);
   }
 
   await client.set(key, JSON.stringify(updatedRecord), setOptions);
