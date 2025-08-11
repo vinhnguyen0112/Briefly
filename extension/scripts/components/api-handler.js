@@ -87,7 +87,6 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
     }
 
     // Build prompt
-    console.log("Current context: ", pageContext);
     const messages = constructPromptWithPageContent({
       query,
       pageContent: pageContext,
@@ -346,7 +345,6 @@ export function constructPromptWithPageContent(options) {
   };
 
   const contextMessage = generateContextMessage(pageContent);
-  console.log("Context message: ", contextMessage);
 
   // Keep 6 recent messages
   const trimmedHistory = history.slice(-6);
@@ -400,7 +398,6 @@ function getLanguageInstructions(lang) {
  * @returns {Object} OpenAI chat message object
  */
 function generateContextMessage(pageContent) {
-  console.log("pageContent in generateContextMessage: ", pageContent);
   const message = {
     role: "system",
     content: "PAGE CONTENT:\n",
@@ -443,7 +440,7 @@ function generateContextMessage(pageContent) {
   if (pdfContent?.content) {
     message.content += `\n\n--- Extracted PDF Document ---\n`;
 
-    const formattedPdf = formatPdfContent(state.pdfContent);
+    const formattedPdf = formatPdfContent(pdfContent);
 
     if (formattedPdf) {
       // Use first 5000 characters

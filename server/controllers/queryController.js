@@ -226,8 +226,6 @@ Do not include anything else, not even a JSON wrapper object.`;
       content: contentPromptText,
     };
 
-    console.log("Content Prompt: ", contentPrompt); // Debug log
-
     const temperature = language === "vi" ? 0.3 : 0.7;
 
     const completion = await openai.chat.completions.create({
@@ -279,7 +277,6 @@ Do not include anything else, not even a JSON wrapper object.`;
         },
       };
 
-      console.log("Generated questions result: ", result);
       return res.json(result);
     } else {
       throw new AppError(
