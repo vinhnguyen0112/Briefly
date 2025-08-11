@@ -392,23 +392,6 @@ function openContentViewerPopup(content) {
   return { success: true };
 }
 
-// Listen for PDF detection messages from content scripts
-chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.action === "pdf_detected") {
-    console.log("PDF detected:", message.pdf_url);
-    // Send a message to the active tab to extract PDF content
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs.length > 0) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: "extract_pdf",
-          pdf_url: message.pdf_url,
-          page_url: message.page_url,
-        });
-      }
-    });
-  }
-});
-
 //opening settings popup if requested
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   console.log("Background received message:", message.action);
@@ -622,6 +605,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true; // Keep the message channel open for async response
   }
+
   if (message.action === "facebook_login") {
     console.log("CocBot: Received request to authenticate with Facebook");
     authenticateWithFacebook()
@@ -644,6 +628,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "sign_out") {
     console.log("CocBot: Received request to sign out");
     signOut()
@@ -662,6 +647,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "fetch_chat_history") {
     chatHandler
       .getChatsForCurrentUser({
@@ -687,6 +673,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "fetch_chat_messages") {
     chatHandler.getMessagesOfChat(message.chatId).then((response) => {
       sendResponse({
@@ -697,6 +684,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "clear_chat_history") {
     // TODO: Run clear chats from IndexedDB in parallel as well
     chatHandler.deleteAllChatsOfCurrentUser().then((response) => {
@@ -705,6 +693,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "store_page_metadata") {
     sendRequest(`${SERVER_URL}/api/pages`, {
       method: "POST",
@@ -727,6 +716,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "store_pdf_content") {
     sendRequest(`${SERVER_URL}/api/pages?page_url=${message.page_url}`, {
       method: "PUT",
@@ -746,6 +736,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "store_page_summary") {
     sendRequest(`${SERVER_URL}/api/page-summaries`, {
       method: "POST",
@@ -767,6 +758,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "get_page") {
     sendRequest(`${SERVER_URL}/api/pages/${message.page_id}`, {
       method: "GET",
@@ -780,6 +772,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     return true;
   }
+
   if (message.action === "process_images") {
     resetProcessedImages();
     handleCaptionImages(message.images, message.content)
@@ -793,6 +786,20 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         console.error("Failed to handle captions", error);
       });
     return true;
+  }
+
+  if (message.action === "pdf_detected") {
+    console.log("PDF detected:", message.pdf_url);
+    // Send a message to the active tab to extract PDF content
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "extract_pdf",
+          pdf_url: message.pdf_url,
+          page_url: message.page_url,
+        });
+      }
+    });
   }
 });
 
