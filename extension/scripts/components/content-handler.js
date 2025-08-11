@@ -150,7 +150,7 @@ export function updateContentStatus() {
  */
 function buildPageContextIndicator() {
   const indicator = document.createElement("div");
-  indicator.className = "page-context-indicator context-indicator-item";
+  indicator.className = "page-context-indicator context-indicator";
 
   const context = state.isUsingChatContext
     ? state.chatContext
@@ -162,7 +162,6 @@ function buildPageContextIndicator() {
         Reading page context <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
       </span>
     `;
-
     return indicator;
   }
 
@@ -213,6 +212,21 @@ function buildPageContextIndicator() {
     });
     translateElement(refreshBtn);
     indicator.appendChild(refreshBtn);
+  } else {
+    // Info icon
+    const infoIcon = document.createElement("span");
+    infoIcon.className = "page-context-info-icon";
+    infoIcon.innerHTML = `
+      <svg class="w-5 h-5 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
+        <line x1="12" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        <line x1="12" y1="12" x2="12" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+    `;
+    infoIcon.setAttribute("data-i18n-title", "chatContinuedWithPageContext");
+
+    translateElement(infoIcon);
+    indicator.appendChild(infoIcon);
   }
 
   return indicator;
@@ -254,7 +268,7 @@ function buildPdfContextIndicator() {
     </svg>`;
 
   const indicator = document.createElement("div");
-  indicator.className = "pdf-context-indicator context-indicator-item";
+  indicator.className = "pdf-context-indicator context-indicator";
 
   const {
     status,
@@ -266,7 +280,7 @@ function buildPdfContextIndicator() {
   switch (status) {
     case "loading":
       indicator.innerHTML = `
-        <div style="display: flex; justify-content: space-between; gap: 10px;">
+        <div class="context-indicator-content loading">
           ${pdfSvg}
           <span class="loading-dots">Loading PDF<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>
         </div>
@@ -275,12 +289,27 @@ function buildPdfContextIndicator() {
 
     case "reading":
       indicator.innerHTML = `
-        <div style="display: flex; justify-content: space-between; gap: 10px;">
+        <div class="context-indicator-content reading">
           ${pdfSvg}
           <span class="loading-dots">Reading PDF<span class="dot">.</span><span class="dot">.</span><span class="dot">.</span></span>
-          <span style="white-space: nowrap;">Page ${page} of ${totalPages}</span>
+          <span class="page-counter">Page ${page} of ${totalPages}</span>
         </div>
       `;
+
+      // Info icon
+      const infoIcon = document.createElement("span");
+      infoIcon.className = "context-info-icon";
+      infoIcon.innerHTML = `
+        <svg class="w-5 h-5 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+          <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
+          <line x1="12" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          <line x1="12" y1="12" x2="12" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      `;
+      infoIcon.setAttribute("data-i18n-title", "pdfReadingContextInfo");
+
+      translateElement(infoIcon);
+      indicator.appendChild(infoIcon);
       break;
 
     case "success":
@@ -293,7 +322,7 @@ function buildPdfContextIndicator() {
         ) || "Unknown Date";
 
       indicator.innerHTML = `
-        <div style="display: flex; justify-content: space-between; gap: 10px; font-size: 0.9em; overflow-x: auto;">
+        <div class="context-indicator-content success">
           ${pdfSvg}
           <span><strong>${title}</strong> by <em>${author}</em> (${date})</span>
         </div>

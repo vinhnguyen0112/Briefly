@@ -133,3 +133,35 @@ export function formatPdfDate(pdfDate, dateOnly = false) {
     return pdfDate;
   }
 }
+
+/**
+ * Format PDF content with metadata prepended.
+ * @param {Object} params
+ * @param {string} params.content - Raw PDF content text
+ * @param {Object} [params.metadata] - PDF metadata object
+ * @param {number} [params.numPages] - Total number of pages in the PDF
+ * @returns {string|null} Sanitized PDF content with metadata prepended
+ */
+export function formatPdfContent({ content, metadata = {}, numPages } = {}) {
+  if (!content) return null;
+
+  let metadataBlock = "Metadata:\n";
+
+  // Merge numPages into metadata if provided
+  const fullMetadata = {
+    ...metadata,
+    ...(numPages != null ? { numPages } : {}),
+  };
+
+  // Append each key dynamically
+  for (const [key, value] of Object.entries(fullMetadata)) {
+    if (value != null && value !== "") {
+      // Capitalize first letter of key for display
+      const label = key.charAt(0).toUpperCase() + key.slice(1);
+      metadataBlock += `• ${label}: ${value}\n`;
+    }
+  }
+
+  const result = `${metadataBlock}\n${content}`;
+  return result.trim();
+}

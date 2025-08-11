@@ -201,17 +201,11 @@ Do not include anything else, not even a JSON wrapper object.`;
 
     // Handle pdf content
     if (pageContent.pdfContent) {
-      const { content = "", totalPages, metadata } = pageContent.pdfContent;
-
       contentPromptText += `
         --- Embedded PDF detected on this page ---
-        PDF Metadata:
-        - Title: ${metadata?.title || "Unknown"}
-        - Author: ${metadata?.author || "Unknown"}
-        - Number of Pages: ${totalPages || "Unknown"}
 
         Here's an excerpt of the PDF content:
-        ${content.substring(0, 3000)}
+        ${pageContent.pdfContent}
         `;
     }
 
@@ -231,6 +225,8 @@ Do not include anything else, not even a JSON wrapper object.`;
       role: "user",
       content: contentPromptText,
     };
+
+    console.log("Content Prompt: ", contentPrompt); // Debug log
 
     const temperature = language === "vi" ? 0.3 : 0.7;
 

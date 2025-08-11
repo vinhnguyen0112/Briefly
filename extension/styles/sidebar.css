@@ -1976,9 +1976,9 @@ input:checked + .slider:before {
   height: 16px;
 }
 
-.context-indicator-item {
+.context-indicator {
   font-size: 12px;
-  text-align: center;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -1987,11 +1987,24 @@ input:checked + .slider:before {
   background-color: #f4f4f4;
   border-radius: 6px;
   padding: 6px 10px;
+  width: 100%;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE 10+ */
 }
 
-.context-indicator-item::-webkit-scrollbar {
+.context-indicator-content {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+}
+
+.context-indicator-content .page-counter {
+  white-space: nowrap;
+  flex-grow: 1;
+  text-align: left;
+}
+
+.context-indicator::-webkit-scrollbar {
   display: none; /* Chrome, Safari, Edge */
 }
 
@@ -2001,7 +2014,6 @@ input:checked + .slider:before {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-style: italic;
-  text-align: left;
 }
 
 .page-context-refresh-btn {
@@ -2018,17 +2030,49 @@ input:checked + .slider:before {
   opacity: 1.1;
 }
 
+/* pdf reading-mode indicator */
+.pdf-reading-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.pdf-page-count {
+  white-space: nowrap;
+}
+
+.page-context-info-icon {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+}
+
+/* tooltips */
+.context-info-icon,
+.context-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  line-height: 0;
+  cursor: pointer;
+}
+
 /* Loading dots behavior */
-.context-indicator-item .loading-dots .dot {
+.context-indicator .loading-dots .dot {
   animation: blink 1.5s infinite;
   opacity: 0.2;
 }
 
-.context-indicator-item .loading-dots .dot:nth-child(2) {
+.context-indicator .loading-dots .dot:nth-child(2) {
   animation-delay: 0.2s;
 }
 
-.context-indicator-item .loading-dots .dot:nth-child(3) {
+.context-indicator .loading-dots .dot:nth-child(3) {
   animation-delay: 0.4s;
 }
 

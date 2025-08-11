@@ -30,7 +30,10 @@ import {
   createWelcomeContainer,
 } from "./components/ui-handler.js";
 import { elements } from "./components/dom-elements.js";
-import { extractTextFromPDF } from "./components/pdf-handler.js";
+import {
+  extractTextFromPDF,
+  formatPdfContent,
+} from "./components/pdf-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -209,10 +212,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     const authSession = await getUserSession();
     if (!authSession || !authSession.id) return;
     if (state.pdfContent.status === "success" && state.pdfContent.content) {
-      const formattedPdfContent = formatPdfContent(
-        state.pdfContent.content,
-        state.pdfContent.metadata
-      );
+      const formattedPdfContent = formatPdfContent(state.pdfContent);
       chrome.runtime.sendMessage(
         {
           action: "store_pdf_content",
@@ -237,7 +237,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 function storePageMetadata() {
   const pdfContent =
     state.pdfContent?.status === "success"
-      ? formatPdfContent(state.pdfContent.content, state.pdfContent.metadata)
+      ? formatPdfContent(state.pdfContent)
       : null;
   chrome.runtime.sendMessage(
     {
@@ -254,10 +254,7 @@ function storePageMetadata() {
 }
 
 if (state.pdfContent.status === "success" && state.pdfContent.content) {
-  const formattedPdfContent = formatPdfContent(
-    state.pdfContent.content,
-    state.pdfContent.metadata
-  );
+  const formattedPdfContent = formatPdfContent(state.pdfContent);
   chrome.runtime.sendMessage(
     {
       action: "store_pdf_content",
@@ -272,34 +269,4 @@ if (state.pdfContent.status === "success" && state.pdfContent.content) {
       }
     }
   );
-}
-
-/**
- * Format the pdf content with metadata prepended
- * @param {String} content - Raw PDF content
- * @param {Object} metadata - PDF metadata object
- * @returns {String} Sanitized PDF content with metadata prepended
- */
-function formatPdfContent(content, metadata) {
-  if (!content) return null;
-
-  if (!metadata) return content;
-
-  let metadataBlock = "Metadata:\\n";
-
-  if (metadata.title) metadataBlock += `• Title: ${metadata.title}\\n`;
-  if (metadata.author) metadataBlock += `• Author: ${metadata.author}\\n`;
-  if (metadata.subject) metadataBlock += `• Subject: ${metadata.subject}\\n`;
-  if (metadata.keywords) metadataBlock += `• Keywords: ${metadata.keywords}\\n`;
-  if (metadata.language) metadataBlock += `• Language: ${metadata.language}\\n`;
-  if (metadata.creator) metadataBlock += `• Creator: ${metadata.creator}\\n`;
-  if (metadata.producer) metadataBlock += `• Producer: ${metadata.producer}\\n`;
-  if (metadata.creationDate)
-    metadataBlock += `• Created: ${metadata.creationDate}\\n`;
-  if (metadata.modificationDate)
-    metadataBlock += `• Modified: ${metadata.modificationDate}\\n`;
-
-  const result = `${metadataBlock}\\n${content}`;
-
-  return result.trim();
 }

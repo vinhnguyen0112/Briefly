@@ -58,6 +58,7 @@ const translations = {
     noChats: "No chats yet.",
     rename: "Rename",
     delete: "Delete",
+    sendFeedback: "Send Feedback",
 
     account: "Account",
 
@@ -78,6 +79,11 @@ const translations = {
     responseVerbosity: "Control how verbose the answers will be",
     languageToggleDesc: "Select the language for the assistant",
     saveSettings: "Save Settings",
+
+    chatContinuedWithPageContext:
+      "This chat is continued using the original page context",
+    pdfReadingContextInfo:
+      "Continue chatting while PDF is reading will use currently available context.",
   },
 
   vi: {
@@ -136,6 +142,7 @@ const translations = {
     noChats: "Chưa có cuộc trò chuyện nào.",
     rename: "Sửa tên",
     delete: "Xóa",
+    sendFeedback: "Gửi Góp Ý",
 
     account: "Tài Khoản",
 
@@ -157,6 +164,11 @@ const translations = {
     responseVerbosity: "Điều chỉnh mức độ chi tiết của câu trả lời",
     languageToggleDesc: "Chọn ngôn ngữ cho trợ lý",
     saveSettings: "Lưu Cài Đặt",
+
+    chatContinuedWithPageContext:
+      "Cuộc trò chuyện này tiếp tục sử dụng ngữ cảnh trang gốc",
+    pdfReadingContextInfo:
+      "Tiếp tục trò chuyện khi PDF đang được đọc sẽ sử dụng ngữ cảnh hiện có.",
   },
 };
 
@@ -217,26 +229,6 @@ export async function switchLanguage(language) {
 
   await updatePageLanguage();
 
-  // state.generatedQuestions[language] = [];
-  // const questionsContainer = document.querySelector(".generated-questions");
-  // if (questionsContainer) {
-  //   const buttonContainer = document.querySelector(
-  //     ".question-buttons-container"
-  //   );
-  //   if (buttonContainer) {
-  //     buttonContainer.innerHTML = `
-  //       <div class="question-loading">
-  //         <div class="spinner-small"></div>
-  //         <span data-i18n="generatingQuestions">${translate(
-  //           "generatingQuestions"
-  //         )}</span>
-  //       </div>
-  //     `;
-  //   }
-
-  //   questionsContainer.style.display = "block";
-  // }
-
   return translate("languageChanged");
 }
 
@@ -250,6 +242,12 @@ export function translateElement(root = document.body) {
     const key = el.getAttribute("data-i18n");
     el.textContent = translate(key);
   }
+
+  const titles = document.querySelectorAll("[data-i18n-title]");
+  titles.forEach((element) => {
+    const key = element.getAttribute("data-i18n-title");
+    element.title = translate(key);
+  });
 }
 
 export default {

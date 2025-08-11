@@ -35,17 +35,7 @@ paths:
           content:
             application/json:
               schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                      anon_query_count:
-                        type: integer
+                $ref: "#/components/schemas/AnonSessionResponse"
         "400":
           description: Missing visitorId or client IP
           content:
@@ -985,31 +975,7 @@ paths:
         content:
           application/json:
             schema:
-              type: object
-              required:
-                - pageContent
-              properties:
-                pageContent:
-                  type: object
-                  required:
-                    - content
-                  properties:
-                    title:
-                      type: string
-                      description: Page title
-                    content:
-                      type: string
-                      description: Page content (first 3000 characters used)
-                language:
-                  type: string
-                  enum: ["en", "vi"]
-                  default: "en"
-                  description: Language for generated questions
-            example:
-              pageContent:
-                title: "Introduction to Machine Learning"
-                content: "Machine learning is a subset of artificial intelligence that focuses on..."
-              language: "en"
+              $ref: "#/components/schemas/CreateSuggestedQuestionRequest"
       responses:
         "200":
           description: Suggested questions generated successfully
@@ -1393,6 +1359,51 @@ components:
           type: string
           minLength: 1
           description: Article content to provide context for image captioning
+
+    CreateSuggestedQuestionRequest:
+      type: object
+      required:
+        - pageContent
+      properties:
+        pageContent:
+          type: object
+          required:
+            - content
+          properties:
+            title:
+              type: string
+              description: Page title
+            content:
+              type: string
+              description: Page content (first 3000 characters used)
+            pdfContent:
+              type: string
+              description: >
+                Full extracted PDF content from the page with metadata prepended.
+                (first 5000 characters used)
+        language:
+          type: string
+          enum: ["en", "vi"]
+          default: "en"
+          description: Language for generated questions
+      example:
+        pageContent:
+          title: "Introduction to Machine Learning"
+          content: "Machine learning is a subset of artificial intelligence that focuses on..."
+        language: "en"
+
+    AnonSessionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+        data:
+          type: object
+          properties:
+            id:
+              type: string
+            anon_query_count:
+              type: integer
 
     ErrorResponse:
       type: object

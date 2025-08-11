@@ -6,6 +6,7 @@ const { validateAndSanitizeBody } = require("../middlewares/commonMiddlewares");
 const {
   createImageCaptionSchema,
   querySchema,
+  suggestedQuestionSchema,
 } = require("../schemas/yupSchemas");
 
 router.use(validateSession);
@@ -21,6 +22,10 @@ router.post(
   validateAndSanitizeBody(querySchema),
   queryController.handleUserQuery
 );
-router.post("/suggested-questions", queryController.generateSuggestedQuestions);
+router.post(
+  "/suggested-questions",
+  validateAndSanitizeBody(suggestedQuestionSchema),
+  queryController.generateSuggestedQuestions
+);
 
 module.exports = router;

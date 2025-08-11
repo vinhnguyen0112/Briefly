@@ -15,6 +15,7 @@ import {
 import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
+import { formatPdfContent } from "./pdf-handler.js";
 
 const SERVER_URL = "http://localhost:3000";
 
@@ -72,12 +73,16 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
 
   try {
     // Decide if should use live page content or chat history
-    const pageContext = state.isUsingChatContext
-      ? state.chatContext
-      : state.pageContent;
+    const pageContext = {
+      ...(state.isUsingChatContext ? state.chatContext : state.pageContent),
+    };
 
     // Attach PDF content if available
-    if (!state.isUsingChatContext && state.pdfContent) {
+    if (
+      !state.isUsingChatContext &&
+      state.pdfContent &&
+      state.pdfContent.content
+    ) {
       pageContext.pdfContent = state.pdfContent;
     }
 
@@ -343,10 +348,13 @@ export function constructPromptWithPageContent(options) {
   const contextMessage = generateContextMessage(pageContent);
   console.log("Context message: ", contextMessage);
 
+  // Keep 6 recent messages
+  const trimmedHistory = history.slice(-6);
+
   return [
     systemPrompt,
     contextMessage,
-    ...history,
+    ...trimmedHistory,
     {
       role: "user",
       content: query,
@@ -392,6 +400,7 @@ function getLanguageInstructions(lang) {
  * @returns {Object} OpenAI chat message object
  */
 function generateContextMessage(pageContent) {
+  console.log("pageContent in generateContextMessage: ", pageContent);
   const message = {
     role: "system",
     content: "PAGE CONTENT:\n",
@@ -430,45 +439,16 @@ function generateContextMessage(pageContent) {
     });
   }
 
-  // Handle pdf content
+  // Handle PDF content
   if (pdfContent?.content) {
     message.content += `\n\n--- Extracted PDF Document ---\n`;
 
-    if (pdfContent.numPages != null) {
-      message.content += `Total Pages: ${pdfContent.numPages}\n`;
+    const formattedPdf = formatPdfContent(state.pdfContent);
+
+    if (formattedPdf) {
+      // Use first 5000 characters
+      message.content += formattedPdf.slice(0, 5000);
     }
-
-    if (pdfContent.metadata) {
-      const {
-        title,
-        author,
-        subject,
-        keywords,
-        language,
-        creator,
-        producer,
-        creationDate,
-        modificationDate,
-      } = pdfContent.metadata;
-
-      message.content += "Metadata:\n";
-      if (title) message.content += `• Title: ${title}\n`;
-      if (author) message.content += `• Author: ${author}\n`;
-      if (subject) message.content += `• Subject: ${subject}\n`;
-      if (keywords) message.content += `• Keywords: ${keywords}\n`;
-      if (language) message.content += `• Language: ${language}\n`;
-      if (creator) message.content += `• Creator: ${creator}\n`;
-      if (producer) message.content += `• Producer: ${producer}\n`;
-      if (creationDate) message.content += `• Created: ${creationDate}\n`;
-      if (modificationDate)
-        message.content += `• Modified: ${modificationDate}\n`;
-    }
-
-    // Slice off to 5000 chars
-    message.content += `\nContent Preview:\n${pdfContent.content.slice(
-      0,
-      5000
-    )}`;
   }
 
   return message;
@@ -477,21 +457,20 @@ function generateContextMessage(pageContent) {
 /**
  * Generate questions based on current context (live page or chat)
  * @param {Object} [contentOverride] Optional manual override of content
- * @returns {Promise<{success: boolean, questions: string[]}>}
+ * @returns {Promise<{success: boolean, questions?: string[], error?: string}>}
  */
 export async function generateQuestionsFromContent(contentOverride = null) {
-  // Check if user is online
-  if (navigator.onLine === false) {
+  // Check internet connection
+  if (!navigator.onLine) {
     showToast({
       message: "You are offline. Please check your internet connection.",
       type: "error",
       duration: 2000,
     });
-
     return;
   }
 
-  // Check if we have page content ready
+  // Ensure we have extracted page content
   if (!state.pageContent || !state.pageContent.extractionSuccess) {
     return addMessageToChat({
       message: "Page content is still being extracted. Please wait a moment.",
@@ -499,21 +478,33 @@ export async function generateQuestionsFromContent(contentOverride = null) {
     });
   }
 
-  const contentSource =
+  // Determine the base content source
+  const baseContent =
     contentOverride ||
     (state.isUsingChatContext ? state.chatContext : state.pageContent);
 
-  if (!contentSource || !contentSource.content) {
+  if (!baseContent || !baseContent.content) {
     return { success: false, error: "No content available" };
   }
 
-  // Attach PDF content if available and user is not continuing on a chat history
-  if (
-    !state.isUsingChatContext &&
-    state.pdfContent &&
-    state.pdfContent.content
-  ) {
-    contentSource.pdfContent = state.pdfContent;
+  // Clone content object to avoid accidental mutations
+  const contentSource = { ...baseContent };
+
+  // Inject pdfContent (as string) if available
+  if (state.isUsingChatContext) {
+    if (
+      contentSource.pdfContent &&
+      typeof contentSource.pdfContent === "object" &&
+      contentSource.pdfContent.content
+    ) {
+      contentSource.pdfContent = contentSource.pdfContent.content.slice(
+        0,
+        5000
+      );
+    }
+  } else if (state.pdfContent && state.pdfContent.content) {
+    const formattedPdfContent = formatPdfContent(state.pdfContent);
+    contentSource.pdfContent = formattedPdfContent.slice(0, 5000);
   }
 
   state.isGeneratingQuestions = true;
@@ -541,12 +532,12 @@ export async function generateQuestionsFromContent(contentOverride = null) {
         success: true,
         questions: res.data.questions.slice(0, 3),
       };
-    } else {
-      return {
-        success: false,
-        error: res.error?.message || "Failed to extract questions",
-      };
     }
+
+    return {
+      success: false,
+      error: res.error?.message || "Failed to extract questions",
+    };
   } catch (error) {
     console.error("CocBot: Error generating questions", error);
     return { success: false, error: error.message };
