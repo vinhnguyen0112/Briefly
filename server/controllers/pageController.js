@@ -34,16 +34,6 @@ const createPage = async (req, res, next) => {
 
     const id = commonHelper.generateHash(normalizedPageUrl);
 
-    // Try Redis first
-    const cached = await redisHelper.getPage(id);
-    if (cached) {
-      return res.json({
-        success: true,
-        message: "Page found in cache",
-        data: { id, cached: true, expired },
-      });
-    }
-
     // Construct insertion body
     const insertBody = {
       id,
@@ -64,19 +54,10 @@ const createPage = async (req, res, next) => {
       page = await Page.create(insertBody);
     }
 
-    // Update cache
-    await redisHelper.setPage(id, {
-      page_url: page.page_url,
-      normalized_page_url: normalizedPageUrl,
-      title: page.title,
-      page_content: page.page_content,
-      pdf_content: page.pdf_content,
-    });
-
     res.json({
       success: true,
       message: "Page record is fresh and available",
-      data: { id, cached: false, expired },
+      data: { id, expired },
     });
   } catch (err) {
     next(err);
@@ -104,33 +85,12 @@ const getPageByUrl = async (req, res, next) => {
 
     const id = commonHelper.generateHash(normalizedPageUrl);
 
-    // Check Redis cache
-    const cached = await redisHelper.getPage(id);
-    if (cached) {
-      return res.json({
-        success: true,
-        message: "Page found in cache",
-        data: { cached: true, page: { ...cached } },
-      });
-    }
-
-    // Fallback to DB
+    // Check database
     const page = await Page.getById(id);
-
-    // Update Redis
-    if (page) {
-      await redisHelper.setPage(id, {
-        page_url: page.page_url,
-        normalized_page_url: normalizedPageUrl,
-        title: page.title,
-        page_content: page.page_content,
-      });
-    }
 
     res.json({
       success: true,
-      message: "Page fetched from database",
-      data: { cached: false, page },
+      data: { page },
     });
   } catch (err) {
     next(err);
@@ -152,32 +112,12 @@ const getPageById = async (req, res, next) => {
 
     const id = page_id.trim();
 
-    // Check Redis cache
-    const cached = await redisHelper.getPage(id);
-    if (cached) {
-      return res.json({
-        success: true,
-        message: "Page found in cache",
-        data: { cached: true, page: { ...cached } },
-      });
-    }
-
-    // Fallback to DB
+    // Check database
     const page = await Page.getById(id);
-
-    if (page) {
-      await redisHelper.setPage(id, {
-        page_url: page.page_url,
-        normalized_page_url: page.normalized_page_url,
-        title: page.title,
-        page_content: page.page_content,
-      });
-    }
 
     res.json({
       success: true,
-      message: page ? "Page fetched from database" : "Page not found",
-      data: { cached: false, page },
+      data: { page },
     });
   } catch (err) {
     next(err);
@@ -211,11 +151,6 @@ const updatePageById = async (req, res, next) => {
     if (pdf_content) updates.pdf_content = pdf_content;
 
     const affectedRows = await Page.update(id, updates);
-
-    // Only update cache if there's affected rows
-    if (affectedRows !== 0) {
-      await redisHelper.updateRecord(`page`, id, updates);
-    }
 
     res.json({
       success: true,
@@ -262,11 +197,6 @@ const updatePageByUrl = async (req, res, next) => {
     if (pdf_content) updates.pdf_content = pdf_content;
 
     const affectedRows = await Page.update(id, updates);
-
-    // Only update cache if there's affected rows
-    if (affectedRows !== 0) {
-      await redisHelper.updateRecord(`page`, id, updates);
-    }
 
     res.json({
       success: true,

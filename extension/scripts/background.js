@@ -395,13 +395,14 @@ function openContentViewerPopup(content) {
 // Listen for PDF detection messages from content scripts
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.action === "pdf_detected") {
-    console.log("PDF detected:", message.url);
+    console.log("PDF detected:", message.pdf_url);
     // Send a message to the active tab to extract PDF content
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       if (tabs.length > 0) {
         chrome.tabs.sendMessage(tabs[0].id, {
           action: "extract_pdf",
-          url: message.url,
+          pdf_url: message.pdf_url,
+          page_url: message.page_url,
         });
       }
     });

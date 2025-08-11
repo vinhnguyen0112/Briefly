@@ -194,55 +194,6 @@ async function getSessionTTL(sessionId, type) {
   return ttl >= 0 ? ttl : null;
 }
 
-// PAGE METADATA MANAGEMENT
-
-/**
- * Check if a page is already cached in Redis
- * @param {string} pageId
- * @returns {Promise<boolean>}
- */
-async function isPageCached(pageId) {
-  const key = applyPrefix(`page:${pageId}`);
-  return (await client.exists(key)) === 1;
-}
-
-/**
- * Get a page record from Redis
- * Returns null if not found
- * @param {string} pageId
- * @returns {Promise<Object|null>}
- */
-async function getPage(pageId) {
-  const key = applyPrefix(`page:${pageId}`);
-  const value = await client.get(key);
-  return value ? JSON.parse(value) : null;
-}
-
-/**
- * Store page record in Redis or overwrite if pageId exists
- * @param {string} pageId
- * @param {Object} pageMetadata
- * @param {String} pageMetadata.page_url
- * @param {String} pageMetadata.normalized_page_url
- * @param {String} pageMetadata.title
- * @param {String} pageMetadata.page_content
- */
-async function setPage(pageId, pageMetadata) {
-  const key = applyPrefix(`page:${pageId}`);
-  await client.set(key, JSON.stringify(pageMetadata), {
-    EX: process.env.SESSION_TTL,
-  });
-}
-
-/**
- * Remove page cache from Redis
- * @param {string} pageId
- */
-async function deletePage(pageId) {
-  const key = applyPrefix(`page:${pageId}`);
-  await client.del(key);
-}
-
 // PAGE SUMMARY MANAGEMENT
 
 /**
@@ -448,10 +399,6 @@ const redisHelper = {
   refreshSession,
   deleteSession,
   getSessionTTL,
-  getPage,
-  isPageCached,
-  setPage,
-  deletePage,
   getPageSummary,
   setPageSummary,
   deletePageSummaries,

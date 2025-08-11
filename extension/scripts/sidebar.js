@@ -183,10 +183,7 @@ function initializeStartupUI() {
 // Listen for messages from the background script to extract PDF content
 chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   if (message.action === "extract_pdf") {
-    console.log(
-      "Sidebar received PDF extraction request for URL:",
-      message.url
-    );
+    const { pdf_url, page_url } = message;
 
     // Initialize PDF content state
     state.pdfContent = {
@@ -195,7 +192,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
 
     observePdfContentState();
 
-    const result = await extractTextFromPDF(message.url, (partial) => {
+    const result = await extractTextFromPDF(pdf_url, (partial) => {
       // Continously update pdf status
       state.pdfContent = {
         status: "reading",
@@ -207,7 +204,6 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
     });
 
     state.pdfContent.status = result.status;
-
     // Store pdf content
     const authSession = await getUserSession();
     if (!authSession || !authSession.id) return;
@@ -217,7 +213,7 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
         {
           action: "store_pdf_content",
           pdf_content: formattedPdfContent,
-          page_url: state.pageContent.url,
+          page_url, // Use original page_url to avoid storing pdf_content into wrong page
         },
         (response) => {
           // Row not found, re-insert page metadata

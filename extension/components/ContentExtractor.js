@@ -8,11 +8,12 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
-const sendDetected = (url) => {
+const sendDetected = (pdfUrl) => {
   // Send a message to the background script
   chrome.runtime.sendMessage({
     action: "pdf_detected",
-    url,
+    pdf_url: pdfUrl,
+    page_url: window.location.href, // Send along the original page of the pdf
   });
 };
 
@@ -21,7 +22,6 @@ const sendDetected = (url) => {
  * @returns {Promise<void>}
  */
 async function detectPDF() {
-  console.log("Detecting PDF content...");
   // Detect if this is a PDF document
   const url = window.location.href;
 
