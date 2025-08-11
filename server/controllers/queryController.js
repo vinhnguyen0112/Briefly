@@ -190,9 +190,30 @@ Do not include anything else, not even a JSON wrapper object.`;
       content: systemPromptContent,
     };
 
-    let contentPromptText = `Here is the web page content:
-Title: ${pageContent.title}
-${pageContent.content.substring(0, 3000)}`;
+    // Build the content prompt
+    let contentPromptText = `
+      Here is the web page content:
+      Title: ${pageContent.title}
+      URL: ${pageContent.url || "Unknown"}
+
+      ${pageContent.content.substring(0, 3000)}
+      `;
+
+    // Handle pdf content
+    if (pageContent.pdfContent) {
+      contentPromptText += `
+        --- Embedded PDF detected on this page ---
+
+        Here's an excerpt of the PDF content:
+        ${pageContent.pdfContent}
+        `;
+    }
+
+    if (language === "vi") {
+      contentPromptText += `\n\nHãy tạo 3 câu hỏi bằng TIẾNG VIỆT về nội dung này.`;
+    } else {
+      contentPromptText += `\n\nGenerate 3 questions in ENGLISH about this content.`;
+    }
 
     if (language === "vi") {
       contentPromptText += `\n\nHãy tạo 3 câu hỏi bằng TIẾNG VIỆT về nội dung này.`;
@@ -256,7 +277,6 @@ ${pageContent.content.substring(0, 3000)}`;
         },
       };
 
-      console.log("Generated questions result: ", result);
       return res.json(result);
     } else {
       throw new AppError(

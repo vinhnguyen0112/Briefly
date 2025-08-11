@@ -69,15 +69,31 @@ const querySchema = object({
   }).required("metadata is required"),
 });
 
+const suggestedQuestionSchema = object({
+  pageContent: object({
+    title: string().strict().trim().nullable(),
+    url: string().strict().trim().nullable(),
+    content: string().strict().trim().required("Page content is required"),
+    pdfContent: string().strict().trim().nullable(),
+  }).required("pageContent is required"),
+
+  language: string()
+    .strict()
+    .oneOf(["en", "vi"], "Language must be either 'en' or 'vi'")
+    .default("en"),
+});
+
 const createPageSchema = object({
   page_url: string().strict().trim().required(),
   title: string().strict().trim().default("Untitled Page"),
   page_content: string().strict().trim().required(),
+  pdf_content: string().strict().trim().nullable(),
 });
 
 const updatePageSchema = object({
   title: string().strict().trim().nullable(),
   page_content: string().strict().trim().nullable(),
+  pdf_content: string().strict().trim().nullable(),
 });
 
 const createPageSummarySchema = object({
@@ -110,6 +126,7 @@ module.exports = {
   createFeedbackSchema,
   createImageCaptionSchema,
   querySchema,
+  suggestedQuestionSchema,
   createPageSchema,
   updatePageSchema,
   createPageSummarySchema,

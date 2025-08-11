@@ -194,55 +194,6 @@ async function getSessionTTL(sessionId, type) {
   return ttl >= 0 ? ttl : null;
 }
 
-// PAGE METADATA MANAGEMENT
-
-/**
- * Check if a page is already cached in Redis
- * @param {string} pageId
- * @returns {Promise<boolean>}
- */
-async function isPageCached(pageId) {
-  const key = applyPrefix(`page:${pageId}`);
-  return (await client.exists(key)) === 1;
-}
-
-/**
- * Get a page record from Redis
- * Returns null if not found
- * @param {string} pageId
- * @returns {Promise<Object|null>}
- */
-async function getPage(pageId) {
-  const key = applyPrefix(`page:${pageId}`);
-  const value = await client.get(key);
-  return value ? JSON.parse(value) : null;
-}
-
-/**
- * Store page record in Redis or overwrite if pageId exists
- * @param {string} pageId
- * @param {Object} pageMetadata
- * @param {String} pageMetadata.page_url
- * @param {String} pageMetadata.normalized_page_url
- * @param {String} pageMetadata.title
- * @param {String} pageMetadata.page_content
- */
-async function setPage(pageId, pageMetadata) {
-  const key = applyPrefix(`page:${pageId}`);
-  await client.set(key, JSON.stringify(pageMetadata), {
-    EX: process.env.SESSION_TTL,
-  });
-}
-
-/**
- * Remove page cache from Redis
- * @param {string} pageId
- */
-async function deletePage(pageId) {
-  const key = applyPrefix(`page:${pageId}`);
-  await client.del(key);
-}
-
 // PAGE SUMMARY MANAGEMENT
 
 /**
@@ -385,6 +336,62 @@ async function deletePageSummaries(pageId) {
   return totalDeleted;
 }
 
+/**
+ * Partially update a record in Redis by prefix and id.
+ * Only updates the fields provided in 'updates'.
+ * Preserves the original TTL.
+ * @param {string} prefix
+ * @param {string} id
+ * @param {Object} updates
+ * @returns {Object} The updated record
+ */
+async function updateRecord(prefix, id, updates) {
+  const key = applyPrefix(`${prefix}:${id}`);
+
+  // Get both the value and TTL
+  const [existing, ttl] = await Promise.all([client.get(key), client.ttl(key)]);
+
+  let record = {};
+
+  if (existing) {
+    try {
+      record = JSON.parse(existing);
+      console.log("Existing record:", record);
+    } catch (e) {
+      console.error("Failed to parse existing record:", e);
+      record = {};
+    }
+  } else {
+    console.log("No existing record found, returning");
+    return;
+  }
+
+  // Merge updates into existing record
+  const updatedRecord = { ...record, ...updates };
+  console.log("Updated record:", updatedRecord);
+
+  // Set with original TTL or default
+  const setOptions = {};
+
+  if (ttl > 0) {
+    // Key has a TTL, preserve it
+    setOptions.EX = ttl;
+    console.log("Preserving TTL:", ttl);
+  } else if (ttl === -1) {
+    // Key exists but has no expiration, don't set TTL
+    console.log("Key has no expiration, not setting TTL");
+  } else {
+    // Key doesn't exist (ttl === -2), set default TTL
+    const defaultTtl = parseInt(process.env.SESSION_TTL) || 3600;
+    setOptions.EX = defaultTtl;
+    console.log("New key, setting default TTL:", defaultTtl);
+  }
+
+  await client.set(key, JSON.stringify(updatedRecord), setOptions);
+
+  return updatedRecord;
+}
+
 const redisHelper = {
   client,
   createSession,
@@ -392,13 +399,10 @@ const redisHelper = {
   refreshSession,
   deleteSession,
   getSessionTTL,
-  getPage,
-  isPageCached,
-  setPage,
-  deletePage,
   getPageSummary,
   setPageSummary,
   deletePageSummaries,
+  updateRecord,
 };
 
 module.exports = {

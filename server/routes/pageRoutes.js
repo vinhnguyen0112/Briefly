@@ -11,9 +11,17 @@ const {
 router.use(requireAuthenticatedSession);
 
 router.route("/:page_id").get(pageController.getPageById);
+// .put(
+//   validateAndSanitizeBody(updatePageSchema),
+//   pageController.updatePageById
+// );
 
 router
   .route("/")
-  .post(validateAndSanitizeBody(createPageSchema), pageController.createPage);
+  .post(validateAndSanitizeBody(createPageSchema), pageController.createPage)
+  .put(
+    validateAndSanitizeBody(updatePageSchema),
+    pageController.updatePageByUrl
+  );
 
 module.exports = router;

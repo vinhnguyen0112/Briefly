@@ -5,7 +5,6 @@ const Page = require("../models/page");
 const { redisHelper } = require("../helpers/redisHelper");
 
 const PAGE_FRESHNESS_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
-
 /**
  * Check if a timestamp is expired based on max age
  * @param {string|Date} updatedAt
@@ -25,7 +24,7 @@ function isPageExpired(updatedAt) {
 const createPage = async (req, res, next) => {
   try {
     let expired = false;
-    const { page_url, title, page_content } = req.body;
+    const { page_url, title, page_content, pdf_content } = req.body;
 
     // Normalize and validate page_url
     const normalizedPageUrl = commonHelper.processUrl(page_url);
@@ -35,22 +34,15 @@ const createPage = async (req, res, next) => {
 
     const id = commonHelper.generateHash(normalizedPageUrl);
 
-    // Try Redis first
-    const cached = await redisHelper.getPage(id);
-    if (cached) {
-      return res.json({
-        success: true,
-        message: "Page found in cache",
-        data: { id, cached: true, expired },
-      });
-    }
-
+    // Construct insertion body
     const insertBody = {
       id,
       page_url: normalizedPageUrl,
-      ...(title ? { title } : {}),
-      page_content,
     };
+
+    if (title) insertBody.title = title;
+    if (page_content) insertBody.page_content = page_content;
+    if (pdf_content) insertBody.pdf_content = pdf_content;
 
     let page = await Page.getById(id);
 
@@ -62,18 +54,10 @@ const createPage = async (req, res, next) => {
       page = await Page.create(insertBody);
     }
 
-    // Update cache
-    await redisHelper.setPage(id, {
-      page_url: page.page_url,
-      normalized_page_url: normalizedPageUrl,
-      title: page.title,
-      page_content: page.page_content,
-    });
-
     res.json({
       success: true,
       message: "Page record is fresh and available",
-      data: { id, cached: false, expired },
+      data: { id, expired },
     });
   } catch (err) {
     next(err);
@@ -101,33 +85,12 @@ const getPageByUrl = async (req, res, next) => {
 
     const id = commonHelper.generateHash(normalizedPageUrl);
 
-    // Check Redis cache
-    const cached = await redisHelper.getPage(id);
-    if (cached) {
-      return res.json({
-        success: true,
-        message: "Page found in cache",
-        data: { cached: true, page: { ...cached } },
-      });
-    }
-
-    // Fallback to DB
+    // Check database
     const page = await Page.getById(id);
-
-    // Update Redis
-    if (page) {
-      await redisHelper.setPage(id, {
-        page_url: page.page_url,
-        normalized_page_url: normalizedPageUrl,
-        title: page.title,
-        page_content: page.page_content,
-      });
-    }
 
     res.json({
       success: true,
-      message: "Page fetched from database",
-      data: { cached: false, page },
+      data: { page },
     });
   } catch (err) {
     next(err);
@@ -149,32 +112,12 @@ const getPageById = async (req, res, next) => {
 
     const id = page_id.trim();
 
-    // Check Redis cache
-    const cached = await redisHelper.getPage(id);
-    if (cached) {
-      return res.json({
-        success: true,
-        message: "Page found in cache",
-        data: { cached: true, page: { ...cached } },
-      });
-    }
-
-    // Fallback to DB
+    // Check database
     const page = await Page.getById(id);
-
-    if (page) {
-      await redisHelper.setPage(id, {
-        page_url: page.page_url,
-        normalized_page_url: page.normalized_page_url,
-        title: page.title,
-        page_content: page.page_content,
-      });
-    }
 
     res.json({
       success: true,
-      message: page ? "Page fetched from database" : "Page not found",
-      data: { cached: false, page },
+      data: { page },
     });
   } catch (err) {
     next(err);
@@ -187,7 +130,7 @@ const getPageById = async (req, res, next) => {
  * @param {Object} res
  * @param {Function} next
  */
-const updatePage = async (req, res, next) => {
+const updatePageById = async (req, res, next) => {
   try {
     const { id } = req.params;
     if (!id) {
@@ -201,13 +144,60 @@ const updatePage = async (req, res, next) => {
       });
     }
 
-    const { title, summary, suggested_questions } = req.body;
+    const { title, page_content, pdf_content } = req.body;
     const updates = {};
     if (title) updates.title = title;
-    if (summary) updates.summary = summary;
-    if (suggested_questions) updates.suggested_questions = suggested_questions;
+    if (page_content) updates.page_content = page_content;
+    if (pdf_content) updates.pdf_content = pdf_content;
 
     const affectedRows = await Page.update(id, updates);
+
+    res.json({
+      success: true,
+      message: "Page updated successfully.",
+      data: { affectedRows },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
+ * Update a page record using page URL
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const updatePageByUrl = async (req, res, next) => {
+  try {
+    const { page_url } = req.query;
+    if (!page_url) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Missing page url");
+    }
+
+    const normalizedPageUrl = commonHelper.processUrl(page_url);
+    if (!normalizedPageUrl) {
+      throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+    const id = commonHelper.generateHash(normalizedPageUrl);
+
+    if (!req.body || Object.keys(req.body).length === 0) {
+      return res.json({
+        success: true,
+        message: "Nothing to update",
+        data: { affectedRows: 0 },
+      });
+    }
+
+    // Build updates
+    const { title, page_content, pdf_content } = req.body;
+    const updates = {};
+    if (title) updates.title = title;
+    if (page_content) updates.page_content = page_content;
+    if (pdf_content) updates.pdf_content = pdf_content;
+
+    const affectedRows = await Page.update(id, updates);
+
     res.json({
       success: true,
       message: "Page updated successfully.",
@@ -222,5 +212,6 @@ module.exports = {
   createPage,
   getPageByUrl,
   getPageById,
-  updatePage,
+  updatePageById,
+  updatePageByUrl,
 };

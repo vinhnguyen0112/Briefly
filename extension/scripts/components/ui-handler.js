@@ -191,15 +191,6 @@ export async function addMessageToChat({
 
   translateElement(messageElement);
 
-  // const actionsContainer = elements.chatContainer.querySelector(
-  //   ".chat-actions-container"
-  // );
-  // if (actionsContainer) {
-  //   elements.chatContainer.insertBefore(messageElement, actionsContainer);
-  // } else {
-  //   elements.chatContainer.appendChild(messageElement);
-  // }
-
   elements.messageContainer.appendChild(messageElement);
   elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight;
 
@@ -230,6 +221,7 @@ export function updateMessageWithId(tempMessageId, realMessageId) {
 
     // Now show the feedback icon since we have a real message ID
     addFeedbackIconToMessage(messageElement);
+    translateElement(messageElement);
   }
 }
 
@@ -243,7 +235,7 @@ function addFeedbackIconToMessage(messageElement) {
 
   const feedbackButton = document.createElement("button");
   feedbackButton.className = "feedback-button";
-  feedbackButton.title = "Send feedback";
+  feedbackButton.dataset.i18nTitle = "sendFeedback";
   feedbackButton.innerHTML = `
     <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24">
       <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17h6l3 3v-3h2V9h-2M4 4h11v8H9l-3 3v-3H4V4Z"/>
@@ -251,7 +243,6 @@ function addFeedbackIconToMessage(messageElement) {
   `;
   feedbackButton.onclick = (event) => {
     const messageId = messageElement.dataset.messageId;
-    console.log("Message Id: ", messageId);
     showFeedbackModal(messageId);
   };
 
@@ -454,8 +445,7 @@ export function clearChatHistoryList() {
 async function showFeedbackModal(messageId) {
   const userSession = await getUserSession();
   if (!userSession) {
-    // TODO: Change to message passing to invoke dialog
-    alert("You need to login to give feedback.");
+    showSignInAlertPopup();
     return;
   }
 
@@ -470,6 +460,8 @@ async function showFeedbackModal(messageId) {
   modal.id = "cocbot-feedback-modal";
   modal.innerHTML = generateFeedbackModalHTML();
   document.body.appendChild(modal);
+
+  translateElement(modal);
 
   // Close modal and remove blur
   function closeModal() {
@@ -519,13 +511,10 @@ async function showFeedbackModal(messageId) {
     });
 
     try {
-      const response = await sendRequest(
-        `https://dev-capstone-2025.coccoc.com/api/feedback`,
-        {
-          method: "POST",
-          body: { stars, comment, message_id: parseInt(messageId) },
-        }
-      );
+      const response = await sendRequest(`http://localhost:3000/api/feedback`, {
+        method: "POST",
+        body: { stars, comment, message_id: parseInt(messageId) },
+      });
 
       if (response.success) {
         updateToast(toastId, {
@@ -594,21 +583,23 @@ async function showFeedbackModal(messageId) {
   }
 }
 
-// Extracted HTML rendering logic
+/**
+ * Generate raw HTML for feedback modal
+ */
 function generateFeedbackModalHTML() {
   return `
     <div class="cocbot-modal-backdrop"></div>
     <div class="cocbot-modal-content feedback-modal">
       <h2 class="feedback-title" data-i18n="feedbackTitle">Give Feedback</h2>
-      <div class="feedback-subtitle">Rate your experience with Briefly</div>
+      <div class="feedback-subtitle" data-i18n="feedbackSubtitle">Rate your experience with Briefly</div>
       ${renderStars()}
-      <div class="feedback-reason-label">
-        Write your feedback <span class="optional-label">(optional)</span>
+      <div class="feedback-reason-label" data-i18n="feedbackReasonLabel">
+        Write your feedback <span class="optional-label" data-i18n="optionalLabel">(optional)</span>
       </div>
-      <textarea class="feedback-reason-input" placeholder="please write here"></textarea>
+      <textarea class="feedback-reason-input" data-i18n-placeholder="feedbackPlaceholder" placeholder="please write here"></textarea>
       <div class="feedback-modal-actions">
-        <button class="action-button feedback-submit">Submit</button>
-        <button class="action-button feedback-cancel">Cancel</button>
+        <button class="action-button feedback-submit" data-i18n="submitFeedback">Submit</button>
+        <button class="action-button feedback-cancel" data-i18n="cancel">Cancel</button>
       </div>
     </div>
   `;

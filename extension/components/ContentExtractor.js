@@ -8,6 +8,82 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
+const sendDetected = (pdfUrl) => {
+  // Send a message to the background script
+  chrome.runtime.sendMessage({
+    action: "pdf_detected",
+    pdf_url: pdfUrl,
+    page_url: window.location.href, // Send along the original page of the pdf
+  });
+};
+
+/**
+ * Detect for PDF contents on the page.
+ * @returns {Promise<void>}
+ */
+async function detectPDF() {
+  // Detect if this is a PDF document
+  const url = window.location.href;
+
+  // Check if the URL ends with .pdf or has a PDF content type
+  if (url.toLowerCase().endsWith(".pdf")) return sendDetected(url);
+
+  // Check if the content type is PDF
+  if (document.contentType === "application/pdf") return sendDetected(url);
+
+  // Check for <embed> or <object> tags with PDF content
+  const embeds = [...document.getElementsByTagName("embed")];
+  const objects = [...document.getElementsByTagName("object")];
+
+  // Check if any embed or object has a PDF type
+  if (
+    embeds.find((e) => e.type?.includes("pdf")) ||
+    objects.find((o) => o.type?.includes("pdf"))
+  ) {
+    return sendDetected(url);
+  }
+
+  // Check for <iframe> tags with PDF content
+  if (url.includes("viewer.html") && url.includes("file=")) {
+    try {
+      const params = new URLSearchParams(url.split("?")[1]);
+      const file = params.get("file");
+      if (file) {
+        const absoluteUrl = new URL(
+          decodeURIComponent(file),
+          window.location.origin
+        ).href;
+        return sendDetected(absoluteUrl);
+      }
+    } catch (e) {
+      console.warn("Failed to extract PDF from viewer URL:", e);
+      return sendDetected(url);
+    }
+  }
+
+  // Check for iframes that might contain PDF viewers
+  const iframes = [...document.getElementsByTagName("iframe")];
+  for (const iframe of iframes) {
+    const src = iframe.src || iframe.getAttribute("src") || "";
+    if (src.includes("viewer.html") && src.includes("file=")) {
+      try {
+        const params = new URLSearchParams(src.split("?")[1]);
+        const file = params.get("file");
+        if (file) {
+          const absoluteUrl = new URL(
+            decodeURIComponent(file),
+            window.location.origin
+          ).href;
+          return sendDetected(absoluteUrl);
+        }
+      } catch (e) {
+        console.warn("Failed to extract PDF from iframe viewer:", e);
+        return sendDetected(); // fallback if error
+      }
+    }
+  }
+}
+
 // Boot up
 (function initializeContentExtractor() {
   console.log("CocBot: Content Extractor initialized");
@@ -25,6 +101,7 @@ function extractPageContent() {
       url: window.location.href,
       selection: window.getSelection().toString(),
       timestamp: new Date().toISOString(),
+      language: document.documentElement.lang,
     };
 
     console.log("CocBot: Metadata collected", pageMetadata);
@@ -340,16 +417,14 @@ function waitForDomReady(callback) {
   }
 }
 
-// 🚀 Start auto image extraction loop, then fallback to MutationObserver
 waitForDomReady(() => {
+  detectPDF(); // detect if this is a PDF when DOM is ready
   sentImages.clear();
   totalImagesSent = 0;
   const extracted = extractPageContent();
   contentContext = extracted.content || "(no content)";
   // autoSendImagesLoop(3000);
 });
-
-// ===================================== // ================================
 
 // Can we see this element?
 function isVisible(element) {

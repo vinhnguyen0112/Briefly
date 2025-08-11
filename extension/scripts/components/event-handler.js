@@ -828,6 +828,9 @@ async function handleChatHistoryItemClick(e, chat, item) {
           title: page.title,
           url: page.page_url,
           content: page.page_content,
+          pdfContent: {
+            content: page.pdf_content || null,
+          },
           captions: [],
           extractionSuccess: true,
         };

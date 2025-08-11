@@ -611,23 +611,6 @@ body.sidebar-resizing * {
   background-color: rgba(0, 0, 0, 0.15);
 }
 
-/* page info indicator */
-.page-context-indicator {
-  font-size: 12px;
-  color: var(--muted-foreground);
-  margin-top: 10px;
-  text-align: center;
-  padding: 6px 12px;
-  background-color: var(--muted);
-  border-radius: var(--radius);
-  display: inline-block;
-  max-width: 100%;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
-}
-
 /* search box animation stuff */
 .animating-transition #welcome-screen {
   position: absolute;
@@ -1987,38 +1970,52 @@ input:checked + .slider:before {
 
 /* CONTEXT INDICATOR STYLING */
 
-.chat-context-indicator {
-  font-size: 12px;
-  opacity: 0.85;
-  text-align: center;
-  margin-bottom: 10px;
-  padding: 6px 10px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  background-color: #f4f4f4;
-  border-radius: 6px;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.chat-context-favicon {
+.page-context-favicon {
   width: 16px;
   height: 16px;
-  flex-shrink: 0;
 }
 
-.chat-context-title {
+.context-indicator {
+  font-size: 12px;
+  text-align: left;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  background-color: #f4f4f4;
+  border-radius: 6px;
+  padding: 6px 10px;
+  width: 100%;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE 10+ */
+}
+
+.context-indicator-content {
+  width: 100%;
+  display: flex;
+  gap: 8px;
+}
+
+.context-indicator-content .page-counter {
+  white-space: nowrap;
+  flex-grow: 1;
+  text-align: left;
+}
+
+.context-indicator::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Edge */
+}
+
+.page-context-title {
   flex-grow: 1;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   font-style: italic;
-  text-align: left;
 }
 
-.chat-context-refresh-btn {
+.page-context-refresh-btn {
   border: none;
   background: none;
   cursor: pointer;
@@ -2028,20 +2025,46 @@ input:checked + .slider:before {
   transition: opacity 0.2s ease;
 }
 
-.chat-context-refresh-btn:hover {
+.page-context-refresh-btn:hover {
   opacity: 1.1;
 }
 
-.chat-context-indicator .loading-dots .dot {
+/* pdf reading-mode indicator */
+.pdf-reading-container {
+  display: flex;
+  justify-content: flex-start;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+}
+
+.pdf-page-count {
+  white-space: nowrap;
+}
+
+/* tooltips */
+.context-info-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  margin: 0;
+  line-height: 0;
+  cursor: pointer;
+  padding: 4px;
+}
+
+/* Loading dots behavior */
+.context-indicator .loading-dots .dot {
   animation: blink 1.5s infinite;
   opacity: 0.2;
 }
 
-.chat-context-indicator .loading-dots .dot:nth-child(2) {
+.context-indicator .loading-dots .dot:nth-child(2) {
   animation-delay: 0.2s;
 }
 
-.chat-context-indicator .loading-dots .dot:nth-child(3) {
+.context-indicator .loading-dots .dot:nth-child(3) {
   animation-delay: 0.4s;
 }
 

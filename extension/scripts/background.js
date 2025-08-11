@@ -15,8 +15,9 @@ import {
 } from "./components/caption-handler.js";
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
+import * as pdfjs from "../../libs/pdfjs/pdf.mjs";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 const CHAT_QUERY_LIMIT = 20;
 //  first install
@@ -69,37 +70,38 @@ chrome.action.onClicked.addListener(async (tab) => {
     return;
   }
 
-  // Inject script to check document's language
-  try {
-    const results = await chrome.scripting.executeScript({
-      target: { tabId: tab.id },
-      func: () => {
-        const lang = document.documentElement.lang;
-        console.log("Current document lang:", lang);
-        return lang;
-      },
-    });
-    const lang = results && results[0] && results[0].result;
-    if (!lang || (!lang.startsWith("en") && !lang.startsWith("vi"))) {
-      chrome.storage.local.set({ popupReason: "unsupported_lang" }, () => {
-        chrome.action.setPopup({
-          popup: "popup-unsupported-lang.html",
-          tabId: tab.id,
-        });
-        chrome.action.openPopup();
-        isProcessingClick = false;
-      });
-      return;
-    }
-  } catch (e) {
-    chrome.action.setPopup({
-      popup: "popup.html",
-      tabId: tab.id,
-    });
-    chrome.action.openPopup();
-    isProcessingClick = false;
-    return;
-  }
+  // // Inject script to check document's language
+  // try {
+  //   const results = await chrome.scripting.executeScript({
+  //     target: { tabId: tab.id },
+  //     func: () => {
+  //       document.documentElement.lang;
+  //       const lang = document.documentElement.lang;
+  //       console.log("Current document lang:", lang);
+  //       return lang;
+  //     },
+  //   });
+  //   const lang = results && results[0] && results[0].result;
+  //   if (!lang || (!lang.startsWith("en") && !lang.startsWith("vi"))) {
+  //     chrome.storage.local.set({ popupReason: "unsupported_lang" }, () => {
+  //       chrome.action.setPopup({
+  //         popup: "popup-unsupported-lang.html",
+  //         tabId: tab.id,
+  //       });
+  //       chrome.action.openPopup();
+  //       isProcessingClick = false;
+  //     });
+  //     return;
+  //   }
+  // } catch (e) {
+  //   chrome.action.setPopup({
+  //     popup: "popup.html",
+  //     tabId: tab.id,
+  //   });
+  //   chrome.action.openPopup();
+  //   isProcessingClick = false;
+  //   return;
+  // }
 
   console.log("Toggling sidebar");
   chrome.tabs.sendMessage(tab.id, { action: "toggle_sidebar" }, (response) => {
@@ -389,6 +391,23 @@ function openContentViewerPopup(content) {
 
   return { success: true };
 }
+
+// Listen for PDF detection messages from content scripts
+chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
+  if (message.action === "pdf_detected") {
+    console.log("PDF detected:", message.pdf_url);
+    // Send a message to the active tab to extract PDF content
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs.length > 0) {
+        chrome.tabs.sendMessage(tabs[0].id, {
+          action: "extract_pdf",
+          pdf_url: message.pdf_url,
+          page_url: message.page_url,
+        });
+      }
+    });
+  }
+});
 
 //opening settings popup if requested
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
@@ -693,6 +712,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         page_url: message.page_url,
         title: message.title,
         page_content: message.page_content,
+        pdf_content: message.pdf_content,
       },
       withVisitorId: false,
     })
@@ -703,6 +723,25 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       .catch((err) => {
         console.error("Failed to store page:", err);
         sendResponse({ success: false, data: null });
+      });
+
+    return true;
+  }
+  if (message.action === "store_pdf_content") {
+    sendRequest(`${SERVER_URL}/api/pages?page_url=${message.page_url}`, {
+      method: "PUT",
+      body: {
+        pdf_content: message.pdf_content,
+      },
+      withVisitorId: false,
+    })
+      .then((response) => {
+        console.log("store_pdf_content response: ", response);
+        sendResponse({ success: response.success, data: response.data });
+      })
+      .catch((err) => {
+        console.error("Failed to store PDF content:", err);
+        sendResponse({ success: false });
       });
 
     return true;
@@ -788,3 +827,74 @@ chrome.storage.onChanged.addListener((changes, areaName) => {
     idbHandler.clearChats();
   }
 });
+
+/**
+ * Extracts all text content and metadata from a PDF file using PDF.js.
+ *
+ * Returns nulls if unable to read from PDF.
+ * @param {string} pdfUrl PDF's URL
+ * @returns {Promise<{numPages: number, content: string, metadata: object | null}>}
+ */
+export async function extractTextFromPDF(pdfUrl) {
+  try {
+    console.log("Extracting text from PDF:", pdfUrl);
+
+    // Set the PDF.js worker script
+    pdfjsLib.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL(
+      "libs/pdfjs/pdf.worker.mjs"
+    );
+
+    const loadingTask = pdfjsLib.getDocument(pdfUrl);
+    const pdf = await loadingTask.promise;
+
+    let fullText = "";
+
+    for (
+      let pageNum = 1;
+      pageNum <= Math.min(pdf.numPages, MAX_PAGES);
+      pageNum++
+    ) {
+      const page = await pdf.getPage(pageNum);
+      const textContent = await page.getTextContent();
+
+      const pageText = textContent.items
+        .map((item) => item.str?.trim())
+        .filter((str) => str)
+        .join(" ");
+
+      fullText += `${pageText} `;
+
+      // Trim to MAX_LENGTH if necessary
+      if (fullText.length >= MAX_LENGTH) {
+        fullText = fullText.slice(0, MAX_LENGTH);
+        break;
+      }
+    }
+
+    const meta = await pdf.getMetadata();
+    const metadata = {
+      title: meta.info?.Title ?? null,
+      author: meta.info?.Author ?? null,
+      subject: meta.info?.Subject ?? null,
+      keywords: meta.info?.Keywords ?? null,
+      language: meta.info?.Language ?? null,
+      creator: meta.info?.Creator ?? null,
+      producer: meta.info?.Producer ?? null,
+      creationDate: meta.info?.CreationDate ?? null,
+      modificationDate: meta.info?.ModDate ?? null,
+    };
+
+    return {
+      numPages: pdf.numPages,
+      content: fullText,
+      metadata,
+    };
+  } catch (err) {
+    console.error("Failed to extract text or metadata from PDF:", err);
+    return {
+      numPages: null,
+      content: null,
+      metadata: null,
+    };
+  }
+}

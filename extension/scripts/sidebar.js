@@ -7,6 +7,7 @@ import {
   state,
   getVisitorId,
   setVisitorId,
+  getUserSession,
 } from "./components/state.js";
 import {
   renderToggleAccountPopupUI,
@@ -14,6 +15,7 @@ import {
   showPopupDialog,
 } from "./components/event-handler.js";
 import {
+  observePdfContentState,
   requestPageContent,
   setupContentExtractionReliability,
 } from "./components/content-handler.js";
@@ -28,6 +30,10 @@ import {
   createWelcomeContainer,
 } from "./components/ui-handler.js";
 import { elements } from "./components/dom-elements.js";
+import {
+  extractTextFromPDF,
+  formatPdfContent,
+} from "./components/pdf-handler.js";
 
 // main app initialization
 document.addEventListener("DOMContentLoaded", () => {
@@ -137,7 +143,18 @@ document.addEventListener("DOMContentLoaded", () => {
   setupEventListeners();
 
   // get page content
-  requestPageContent();
+  requestPageContent().then(() => {
+    getUserSession().then((session) => {
+      if (session && session.id) {
+        // Store page metadata if extraction was success
+        if (state.pageContent && state.pageContent.extractionSuccess) {
+          console.log("Storing page metadata");
+
+          storePageMetadata();
+        }
+      }
+    });
+  });
 
   // make sure content extraction is reliable
   setupContentExtractionReliability();
@@ -161,4 +178,73 @@ function initializeStartupUI() {
     const chatActionsContainer = createChatActionsContainer();
     elements.chatContainer.appendChild(chatActionsContainer);
   }
+}
+
+// Listen for messages from the background script to extract PDF content
+chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
+  if (message.action === "extract_pdf") {
+    const { pdf_url, page_url } = message;
+
+    // Initialize PDF content state
+    state.pdfContent = {
+      status: "loading",
+    };
+
+    observePdfContentState();
+
+    const result = await extractTextFromPDF(pdf_url, (partial) => {
+      // Continously update pdf status
+      state.pdfContent = {
+        status: "reading",
+        page: partial.page,
+        totalPages: partial.totalPages,
+        content: partial.content,
+        metadata: partial.metadata,
+      };
+    });
+
+    state.pdfContent.status = result.status;
+    // Store pdf content
+    const authSession = await getUserSession();
+    if (!authSession || !authSession.id) return;
+    if (state.pdfContent.status === "success" && state.pdfContent.content) {
+      const formattedPdfContent = formatPdfContent(state.pdfContent);
+      chrome.runtime.sendMessage(
+        {
+          action: "store_pdf_content",
+          pdf_content: formattedPdfContent,
+          page_url, // Use original page_url to avoid storing pdf_content into wrong page
+        },
+        (response) => {
+          // Row not found, re-insert page metadata
+          if (response.success && response.data?.affectedRows === 0) {
+            console.log("Row not found, re-inserting page metadata");
+            storePageMetadata();
+          }
+        }
+      );
+    }
+  }
+});
+
+/**
+ * Helper function to pass store_page_metadata message to background script
+ */
+function storePageMetadata() {
+  const pdfContent =
+    state.pdfContent?.status === "success"
+      ? formatPdfContent(state.pdfContent)
+      : null;
+  chrome.runtime.sendMessage(
+    {
+      action: "store_page_metadata",
+      page_url: state.pageContent.url,
+      title: state.pageContent.title,
+      page_content: state.pageContent.content,
+      pdf_content: pdfContent,
+    },
+    (response) => {
+      // Do sth here if needed
+    }
+  );
 }

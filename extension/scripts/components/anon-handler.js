@@ -12,7 +12,6 @@ export async function getFingerprint() {
 // Requests a new anon session from the server
 async function requestAnonSession() {
   const response = await sendRequest(
-    // "https://dev-capstone-2025.coccoc.com/api/anon",
     "https://dev-capstone-2025.coccoc.com/api/anon",
     {
       method: "POST",

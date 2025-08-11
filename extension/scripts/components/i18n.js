@@ -58,11 +58,13 @@ const translations = {
     noChats: "No chats yet.",
     rename: "Rename",
     delete: "Delete",
+    sendFeedback: "Send Feedback",
 
     account: "Account",
 
     welcome: "Ask me anything about this webpage",
 
+    // configuration
     responseLength: "Maximum Response Length:",
     words: "words",
     responseStyle: "Response Style",
@@ -90,6 +92,20 @@ const translations = {
     confirmDelete: "Delete",
     cancel: "Cancel",
     noChangesDetected: "Please make some changes to update the note.",
+
+    // context indicator
+    chatContinuedWithPageContext:
+      "This chat is continued using the original page context",
+    pdfReadingContextInfo:
+      "Continue chatting while PDF is reading will use currently available context.",
+
+    // feedback
+    feedbackTitle: "Give Feedback",
+    feedbackSubtitle: "Rate your experience with Briefly",
+    feedbackReasonLabel: "Write your feedback",
+    optionalLabel: "(optional)",
+    feedbackPlaceholder: "write here",
+    submitFeedback: "Submit",
   },
 
   vi: {
@@ -148,6 +164,7 @@ const translations = {
     noChats: "Chưa có cuộc trò chuyện nào.",
     rename: "Sửa tên",
     delete: "Xóa",
+    sendFeedback: "Gửi Góp Ý",
 
     account: "Tài Khoản",
 
@@ -181,6 +198,19 @@ const translations = {
     confirmDelete: "Xóa",
     cancel: "Hủy",
     noChangesDetected: "Vui lòng thực hiện thay đổi để cập nhật ghi chú.",
+
+    chatContinuedWithPageContext:
+      "Cuộc trò chuyện này tiếp tục sử dụng ngữ cảnh trang gốc",
+    pdfReadingContextInfo:
+      "Tiếp tục trò chuyện khi PDF đang được đọc sẽ sử dụng ngữ cảnh hiện có.",
+
+    // feedback
+    feedbackTitle: "Gửi Góp Ý",
+    feedbackSubtitle: "Đánh giá trải nghiệm của bạn với Briefly",
+    feedbackReasonLabel: "Viết góp ý của bạn",
+    optionalLabel: "(không bắt buộc)",
+    feedbackPlaceholder: "viết tại đây",
+    submitFeedback: "Gửi",
   },
 };
 
@@ -241,39 +271,30 @@ export async function switchLanguage(language) {
 
   await updatePageLanguage();
 
-  // state.generatedQuestions[language] = [];
-  // const questionsContainer = document.querySelector(".generated-questions");
-  // if (questionsContainer) {
-  //   const buttonContainer = document.querySelector(
-  //     ".question-buttons-container"
-  //   );
-  //   if (buttonContainer) {
-  //     buttonContainer.innerHTML = `
-  //       <div class="question-loading">
-  //         <div class="spinner-small"></div>
-  //         <span data-i18n="generatingQuestions">${translate(
-  //           "generatingQuestions"
-  //         )}</span>
-  //       </div>
-  //     `;
-  //   }
-
-  //   questionsContainer.style.display = "block";
-  // }
-
   return translate("languageChanged");
 }
 
 /**
- * Translates elements with `data-i18n` inside a given root.
+ * Translates elements with `data-i18n` or `data-i18n-title` inside a given root.
  * @param {HTMLElement} root
  */
 export function translateElement(root = document.body) {
-  const elements = root.querySelectorAll("[data-i18n]");
-  for (const el of elements) {
+  // Text content translations
+  root.querySelectorAll("[data-i18n]").forEach((el) => {
     const key = el.getAttribute("data-i18n");
     el.textContent = translate(key);
-  }
+  });
+
+  // Title attribute translations
+  root.querySelectorAll("[data-i18n-title]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-title");
+    el.title = translate(key);
+  });
+
+  root.querySelectorAll("[data-i18n-placeholder]").forEach((el) => {
+    const key = el.getAttribute("data-i18n-placeholder");
+    el.placeholder = translate(key);
+  });
 }
 
 export default {
