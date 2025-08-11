@@ -219,7 +219,6 @@ function addFeedbackIconToMessage(messageElement) {
   `;
   feedbackButton.onclick = (event) => {
     const messageId = messageElement.dataset.messageId;
-    console.log("Message Id: ", messageId);
     showFeedbackModal(messageId);
   };
 
@@ -422,8 +421,7 @@ export function clearChatHistoryList() {
 async function showFeedbackModal(messageId) {
   const userSession = await getUserSession();
   if (!userSession) {
-    // TODO: Change to message passing to invoke dialog
-    alert("You need to login to give feedback.");
+    showSignInAlertPopup();
     return;
   }
 
@@ -438,6 +436,8 @@ async function showFeedbackModal(messageId) {
   modal.id = "cocbot-feedback-modal";
   modal.innerHTML = generateFeedbackModalHTML();
   document.body.appendChild(modal);
+
+  translateElement(modal);
 
   // Close modal and remove blur
   function closeModal() {
@@ -559,21 +559,23 @@ async function showFeedbackModal(messageId) {
   }
 }
 
-// Extracted HTML rendering logic
+/**
+ * Generate raw HTML for feedback modal
+ */
 function generateFeedbackModalHTML() {
   return `
     <div class="cocbot-modal-backdrop"></div>
     <div class="cocbot-modal-content feedback-modal">
       <h2 class="feedback-title" data-i18n="feedbackTitle">Give Feedback</h2>
-      <div class="feedback-subtitle">Rate your experience with Briefly</div>
+      <div class="feedback-subtitle" data-i18n="feedbackSubtitle">Rate your experience with Briefly</div>
       ${renderStars()}
-      <div class="feedback-reason-label">
-        Write your feedback <span class="optional-label">(optional)</span>
+      <div class="feedback-reason-label" data-i18n="feedbackReasonLabel">
+        Write your feedback <span class="optional-label" data-i18n="optionalLabel">(optional)</span>
       </div>
-      <textarea class="feedback-reason-input" placeholder="please write here"></textarea>
+      <textarea class="feedback-reason-input" data-i18n-placeholder="feedbackPlaceholder" placeholder="please write here"></textarea>
       <div class="feedback-modal-actions">
-        <button class="action-button feedback-submit">Submit</button>
-        <button class="action-button feedback-cancel">Cancel</button>
+        <button class="action-button feedback-submit" data-i18n="submitFeedback">Submit</button>
+        <button class="action-button feedback-cancel" data-i18n="cancel">Cancel</button>
       </div>
     </div>
   `;

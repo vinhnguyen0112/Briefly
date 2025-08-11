@@ -2043,15 +2043,7 @@ input:checked + .slider:before {
   white-space: nowrap;
 }
 
-.page-context-info-icon {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  cursor: pointer;
-}
-
 /* tooltips */
-.context-info-icon,
 .context-info-icon {
   display: inline-flex;
   align-items: center;
@@ -2060,6 +2052,7 @@ input:checked + .slider:before {
   margin: 0;
   line-height: 0;
   cursor: pointer;
+  padding: 4px;
 }
 
 /* Loading dots behavior */

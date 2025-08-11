@@ -486,19 +486,12 @@ export async function generateQuestionsFromContent(contentOverride = null) {
 
   // Clone content object to avoid accidental mutations
   const contentSource = { ...baseContent };
+  console.log("contentSource: ", contentSource); // DEBUG
 
-  // Inject pdfContent (as string) if available
+  // Handle pdf content
   if (state.isUsingChatContext) {
-    if (
-      contentSource.pdfContent &&
-      typeof contentSource.pdfContent === "object" &&
-      contentSource.pdfContent.content
-    ) {
-      contentSource.pdfContent = contentSource.pdfContent.content.slice(
-        0,
-        5000
-      );
-    }
+    contentSource.pdfContent =
+      contentSource.pdfContent?.content?.slice(0, 5000) || "";
   } else if (state.pdfContent && state.pdfContent.content) {
     const formattedPdfContent = formatPdfContent(state.pdfContent);
     contentSource.pdfContent = formattedPdfContent.slice(0, 5000);

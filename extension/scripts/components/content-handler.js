@@ -133,6 +133,7 @@ export function updateContentStatus() {
   if (existingIndicator) existingIndicator.remove();
 
   const indicator = buildPageContextIndicator();
+  translateElement(indicator);
 
   const welcomeSection = chatContainer.querySelector(".welcome-container");
   if (welcomeSection) {
@@ -210,12 +211,11 @@ function buildPageContextIndicator() {
         state.generatedQuestions = {};
       });
     });
-    translateElement(refreshBtn);
     indicator.appendChild(refreshBtn);
   } else {
     // Info icon
     const infoIcon = document.createElement("span");
-    infoIcon.className = "page-context-info-icon";
+    infoIcon.className = "context-info-icon";
     infoIcon.innerHTML = `
       <svg class="w-5 h-5 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
@@ -225,7 +225,6 @@ function buildPageContextIndicator() {
     `;
     infoIcon.setAttribute("data-i18n-title", "chatContinuedWithPageContext");
 
-    translateElement(infoIcon);
     indicator.appendChild(infoIcon);
   }
 
@@ -250,6 +249,7 @@ export function updatePdfStatus() {
   if (existingIndicator) existingIndicator.remove();
 
   const indicator = buildPdfContextIndicator();
+  translateElement(indicator);
 
   const pageContextIndicator = chatContainer.querySelector(
     ".page-context-indicator"
@@ -308,7 +308,6 @@ function buildPdfContextIndicator() {
       `;
       infoIcon.setAttribute("data-i18n-title", "pdfReadingContextInfo");
 
-      translateElement(infoIcon);
       indicator.appendChild(infoIcon);
       break;
 

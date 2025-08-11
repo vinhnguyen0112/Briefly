@@ -10,8 +10,6 @@ import * as pdfjs from "../../libs/pdfjs/pdf.mjs";
  */
 export async function extractTextFromPDF(pdfUrl, onProgress) {
   try {
-    console.log("Extracting text from PDF:", pdfUrl);
-
     // Set PDF.js worker
     pdfjs.GlobalWorkerOptions.workerSrc = chrome.runtime.getURL(
       "libs/pdfjs/pdf.worker.mjs"

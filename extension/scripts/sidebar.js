@@ -252,21 +252,3 @@ function storePageMetadata() {
     }
   );
 }
-
-if (state.pdfContent.status === "success" && state.pdfContent.content) {
-  const formattedPdfContent = formatPdfContent(state.pdfContent);
-  chrome.runtime.sendMessage(
-    {
-      action: "store_pdf_content",
-      content: formattedPdfContent,
-      page_url: state.pageContent.url,
-    },
-    (response) => {
-      // Row not found, re-insert page metadata
-      if (response.success && response.data?.affectedRows === 0) {
-        console.log("Row not found, re-inserting page metadata");
-        storePageMetadata();
-      }
-    }
-  );
-}
