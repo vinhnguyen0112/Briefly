@@ -78,8 +78,13 @@ const translations = {
     technicalDesc:
       "Precise terminology and thorough analysis for advanced understanding",
     responseVerbosity: "Control how verbose the answers will be",
-    languageToggleDesc: "Select the language for the assistant",
     saveSettings: "Save Settings",
+
+    // language toggle
+    languageToggleTitle: "Language:",
+    english: "English",
+    vietnamese: "Vietnamese",
+    languageToggleDesc: "Select the language for the assistant",
 
     forThisPage: "For This Page",
     allNotes: "All Notes",
@@ -183,6 +188,7 @@ const translations = {
 
     welcome: "Hỏi tôi bất kì thứ gì về trang web này",
 
+    // configuration
     responseLength: "Độ Dài Phản Hồi Tối Đa:",
     words: "từ",
     responseStyle: "Phong Cách Phản Hồi",
@@ -197,8 +203,13 @@ const translations = {
     technicalDesc:
       "Thuật ngữ chính xác và phân tích chuyên sâu cho người dùng nâng cao",
     responseVerbosity: "Điều chỉnh mức độ chi tiết của câu trả lời",
-    languageToggleDesc: "Chọn ngôn ngữ cho trợ lý",
     saveSettings: "Lưu Cài Đặt",
+
+    // language toggle
+    languageToggleTitle: "Ngôn ngữ:",
+    english: "Tiếng Anh",
+    vietnamese: "Tiếng Việt",
+    languageToggleDesc: "Tùy chỉnh ngôn ngữ cho trợ lý",
 
     forThisPage: "Cho Trang Này",
     allNotes: "Tất Cả Ghi Chú",

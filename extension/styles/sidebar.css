@@ -420,6 +420,7 @@ body.sidebar-resizing * {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 12px;
 }
 
 .input-container {
@@ -759,8 +760,7 @@ body.sidebar-resizing * {
 #chat-screen {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 48px);
-  /*TODO: Temporary fix for off-screened chatbar*/
+  height: 100%;
   width: 100%;
 }
 
@@ -1732,29 +1732,6 @@ input:checked + .slider:before {
   background-color: #1d4ed8;
   /* blue-700 */
   color: #fff;
-}
-
-.sidebar-toolbar .left-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.sidebar-toolbar .left-actions button {
-  padding: 4px;
-  color: var(--muted-foreground);
-  border: none;
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  transition: background-color 0.2s, color 0.2s;
-  padding: 6px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sidebar-toolbar .left-actions button:hover {
-  opacity: 0.8;
 }
 
 /* FEEDBACK */

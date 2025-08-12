@@ -44,11 +44,6 @@ export function closeAllScreensAndPanels() {
   }
   state.isNotesOpen = false;
 
-  const toolbar = document.querySelector(".sidebar-toolbar");
-  if (toolbar) {
-    toolbar.classList.remove("notes-open");
-  }
-
   // hide sign in alert
   if (elements.signInAlertOverlay) {
     elements.signInAlertOverlay.style.display = "none";

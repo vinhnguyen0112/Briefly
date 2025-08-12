@@ -162,23 +162,6 @@
       </div>
 
       <div class="sidebar-content-wrapper">
-        <!-- Toolbar -->
-        <div class="sidebar-toolbar">
-          <div class="left-actions"></div>
-
-          <!-- Language toggle -->
-          <div class="right-actions">
-            <div class="language-toggle-container">
-              <span class="toggle-label" id="en-label">EN</span>
-              <label class="switch">
-                <input type="checkbox" id="language-toggle" />
-                <span class="lang-slider round"></span>
-              </label>
-              <span class="toggle-label" id="vi-label">VI</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Chat screen (hidden initially) -->
         <div id="chat-screen">
           <div class="sidebar-content" id="chat-container">
@@ -477,6 +460,47 @@
               &times;
             </button>
           </div>
+
+          <!-- Add language toggle here -->
+          <div class="language-toggle-container" style="margin-bottom: 16px">
+            <span
+              class="toggle-title"
+              data-i18n="languageToggleTitle"
+              style="margin-bottom: 4px; display: block"
+            >
+            </span>
+            <span
+              class="toggle-desc"
+              data-i18n="languageToggleDesc"
+              style="
+                color: var(--muted-foreground);
+                font-size: 0.75rem;
+                margin-bottom: 8px;
+                display: block;
+              "
+            >
+            </span>
+            <div
+              class="toggle-row"
+              style="display: flex; align-items: center; gap: 8px"
+            >
+              <span
+                class="toggle-label"
+                id="en-label"
+                data-i18n="english"
+              ></span>
+              <label class="switch">
+                <input type="checkbox" id="language-toggle" />
+                <span class="lang-slider round"></span>
+              </label>
+              <span
+                class="toggle-label"
+                id="vi-label"
+                data-i18n="vietnamese"
+              ></span>
+            </div>
+          </div>
+
           <div id="config-content">
             <div class="config-section">
               <div class="config-form">
@@ -720,24 +744,35 @@
 
     <style>
       /* LANGUAGE TOGGLE STYLING */
-      .sidebar-toolbar {
+      .language-toggle-container {
         display: flex;
-        padding: 8px 16px;
-        border-bottom: 1px solid var(--border);
-        align-items: center;
-        justify-content: space-between;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0;
       }
 
-      .language-toggle-container {
+      .toggle-row {
         display: flex;
         align-items: center;
         gap: 8px;
+      }
+
+      .toggle-title {
+        font-size: 0.95rem;
+        font-weight: 500;
+        color: var(--foreground);
       }
 
       .toggle-label {
         font-size: 0.75rem;
         color: var(--muted-foreground);
         font-weight: 500;
+      }
+
+      .toggle-desc {
+        margin-left: 8px;
+        color: var(--muted-foreground);
+        font-size: 0.75rem;
       }
 
       .switch {
@@ -760,19 +795,21 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: var(--border);
+        background-color: #ccc;
         transition: 0.4s;
+        border-radius: 20px;
       }
 
       .lang-slider:before {
         position: absolute;
         content: "";
-        height: 14px;
-        width: 14px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: var(--primary);
         transition: 0.4s;
+        border-radius: 50%;
       }
 
       input:checked + .lang-slider {
@@ -785,6 +822,7 @@
 
       input:checked + .lang-slider:before {
         transform: translateX(16px);
+        background-color: var(--primary-foreground);
       }
 
       .lang-slider.round {

@@ -128,11 +128,6 @@ export function setupEventListeners() {
       elements.notesButton.classList.remove("active");
       state.isNotesOpen = false;
 
-      const toolbar = document.querySelector(".sidebar-toolbar");
-      if (toolbar) {
-        toolbar.classList.remove("notes-open");
-      }
-
       elements.chatScreen.style.display = "flex";
     } else {
       const notAllowed = await isSignInNeeded();
@@ -158,11 +153,6 @@ export function setupEventListeners() {
     elements.notesScreen.style.display = "none";
     elements.notesButton.classList.remove("active");
     state.isNotesOpen = false;
-
-    const toolbar = document.querySelector(".sidebar-toolbar");
-    if (toolbar) {
-      toolbar.classList.remove("notes-open");
-    }
 
     elements.chatScreen.style.display = "flex";
   });
