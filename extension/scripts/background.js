@@ -17,7 +17,7 @@ import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 import * as pdfjs from "../../libs/pdfjs/pdf.mjs";
 
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
 
 const CHAT_QUERY_LIMIT = 20;
 //  first install
