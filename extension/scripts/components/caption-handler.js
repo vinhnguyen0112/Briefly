@@ -1,4 +1,5 @@
 const processedImages = new Set();
+import { sendRequest } from "./state.js";
 
 export async function handleCaptionImages(imageUrls, content) {
   const newImages = imageUrls.filter((img) => !processedImages.has(img));
@@ -44,24 +45,25 @@ async function callCaptionApi(images, content) {
   console.log("Sending to caption API:", { sources: images, content });
 
   try {
-    const response = await fetch(
-      "https://dev-capstone-2025.coccoc.com/api/query/captionize",
+    const data = await sendRequest(
+      "http://localhost:3000/api/query/captionize",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sources: images, context: content }),
+        body: { sources: images, context: content },
       }
     );
 
-    if (!response.ok) {
+    console.log("Caption API response:", data);
+
+    if (data.success && data.data && Array.isArray(data.data.captions)) {
+      console.log(`Received ${data.data.captions.length} captions`);
+      return data.data.captions;
+    } else {
+      console.error("Invalid response structure:", data);
       return images.map(() => null);
     }
-
-    const data = await response.json();
-    return Array.isArray(data.captions)
-      ? data.captions
-      : images.map(() => null);
   } catch (error) {
+    console.error("Caption API error:", error);
     return images.map(() => null);
   }
 }

@@ -350,7 +350,7 @@ function extractAllImageSources() {
   }
 
   console.log(
-    `📸 Final: Collected ${newImages.length} image(s) from main content`
+    `Final: Collected ${newImages.length} image(s) from main content`
   );
   return newImages;
 }
@@ -423,7 +423,7 @@ waitForDomReady(() => {
   totalImagesSent = 0;
   const extracted = extractPageContent();
   contentContext = extracted.content || "(no content)";
-  // autoSendImagesLoop(3000);
+  autoSendImagesLoop(3000);
 });
 
 // Can we see this element?
