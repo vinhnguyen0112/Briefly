@@ -505,6 +505,7 @@ function renderAllNotes(notes) {
   setupNotesInfiniteScroll();
 }
 
+let isSaving = false;
 /**
  * Processes note save requests with comprehensive validation and feedback
  * Handles both new note creation and existing note updates
@@ -517,13 +518,21 @@ export async function handleSaveNote() {
     return;
   }
 
+  if (isSaving) {
+    return;
+  }
+
+  isSaving = true;
+
   const content = elements.noteContent.value.trim();
 
   if (!content) {
+    isSaving = false;
     return;
   }
 
   if (state.isEditingNote && content === originalContent.trim()) {
+    isSaving = false;
     return;
   }
 
@@ -572,6 +581,8 @@ export async function handleSaveNote() {
       type: "error",
       duration: 1000,
     });
+  } finally {
+    isSaving = false;
   }
 }
 
