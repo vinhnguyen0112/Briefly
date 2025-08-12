@@ -168,6 +168,12 @@ body.sidebar-resizing * {
   color: var(--primary-foreground);
 }
 
+/* account popup */
+#account-popup {
+  min-width: fit-content;
+  max-width: fit-content;
+}
+
 /* CONFIG ELEMENTS STYLING */
 
 /* config button */
@@ -1923,11 +1929,6 @@ input:checked + .slider:before {
   cursor: not-allowed;
   opacity: 0.5;
   transition: opacity 0.2s;
-}
-
-#account-popup {
-  min-width: fit-content;
-  max-width: fit-content;
 }
 
 /* Loading spinner styling */

@@ -33,7 +33,7 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
   // Check if user is online
   if (navigator.onLine === false) {
     showToast({
-      message: "You are offline. Please check your internet connection.",
+      dataI18n: "youAreOffline",
       type: "error",
       duration: 2000,
     });
@@ -446,7 +446,7 @@ export async function generateQuestionsFromContent(contentOverride = null) {
   // Check internet connection
   if (!navigator.onLine) {
     showToast({
-      message: "You are offline. Please check your internet connection.",
+      dataI18n: "youAreOffline",
       type: "error",
       duration: 2000,
     });

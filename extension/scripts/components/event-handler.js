@@ -306,10 +306,7 @@ function setupAuthenticationButtons() {
   elements.googleLoginButtons.forEach((b) => {
     b.addEventListener("click", () => {
       const toastId = showToast({
-        message:
-          state.language === "en"
-            ? "Signing in with Google..."
-            : "Đang đăng nhập với Google...",
+        dataI18n: "signingInWithGoogle",
         type: "loading",
         duration: null,
       });
@@ -318,21 +315,15 @@ function setupAuthenticationButtons() {
           closeAccountPopupUI();
           closeSignInAlertPopup();
           updateToast(toastId, {
-            message:
-              state.language === "en"
-                ? "Signed in successfully"
-                : "Đăng nhập thành công",
+            dataI18n: "success",
             type: "success",
-            duration: 2000,
+            duration: 1000,
           });
         } else {
           updateToast(toastId, {
-            message:
-              state.language === "en"
-                ? "Google sign-in failed"
-                : "Đăng nhập Google thất bại",
+            dataI18n: "failed",
             type: "error",
-            duration: 2000,
+            duration: 1000,
           });
         }
       });
@@ -343,10 +334,7 @@ function setupAuthenticationButtons() {
   elements.facebookLoginButtons.forEach((b) => {
     b.addEventListener("click", () => {
       const toastId = showToast({
-        message:
-          state.language === "en"
-            ? "Signing in with Facebook..."
-            : "Đang đăng nhập với Facebook...",
+        dataI18n: "signingInWithFacebook",
         type: "loading",
         duration: null,
       });
@@ -355,21 +343,15 @@ function setupAuthenticationButtons() {
           closeAccountPopupUI();
           closeSignInAlertPopup();
           updateToast(toastId, {
-            message:
-              state.language === "en"
-                ? "Signed in successfully"
-                : "Đăng nhập thành công",
+            dataI18n: "success",
             type: "success",
-            duration: 2000,
+            duration: 1000,
           });
         } else {
           updateToast(toastId, {
-            message:
-              state.language === "en"
-                ? "Facebook sign-in failed"
-                : "Đăng nhập Facebook thất bại",
+            dataI18n: "failed",
             type: "error",
-            duration: 2000,
+            duration: 1000,
           });
         }
       });
@@ -379,7 +361,7 @@ function setupAuthenticationButtons() {
   // Sign out button
   elements.signOutButton.addEventListener("click", () => {
     const toastId = showToast({
-      message: state.language === "en" ? "Signing out..." : "Đang đăng xuất...",
+      dataI18n: "signingOut",
       type: "loading",
       duration: null,
     });
@@ -387,19 +369,15 @@ function setupAuthenticationButtons() {
       if (response.success) {
         closeAccountPopupUI();
         updateToast(toastId, {
-          message:
-            state.language === "en"
-              ? "Signed out successfully"
-              : "Đăng xuất thành công",
+          dataI18n: "success",
           type: "success",
-          duration: 2000,
+          duration: 1000,
         });
       } else {
         updateToast(toastId, {
-          message:
-            state.language === "en" ? "Sign out failed" : "Đăng xuất thất bại",
+          dataI18n: "failed",
           type: "error",
-          duration: 2000,
+          duration: 1000,
         });
       }
     });
@@ -513,13 +491,8 @@ function showClearChatHistoryDialog() {
  * Event handler for clear chat history
  */
 function clearChatHistoryEventHandler() {
-  // TODO: Refactor event handler to exclude current chat from deletion
-
   const toastId = showToast({
-    message:
-      state.language === "en"
-        ? "Deleting all history"
-        : "Đang xóa toàn bộ lịch sử",
+    dataI18n: "deleting",
     type: "loading",
     duration: null,
   });
@@ -535,17 +508,16 @@ function clearChatHistoryEventHandler() {
       resetCurrentChatState();
 
       updateToast(toastId, {
-        message:
-          state.language === "en" ? "Delete successfully" : "Xóa thành công",
+        dataI18n: "success",
         type: "success",
-        duration: 2000,
+        duration: 1000,
       });
     } else {
       console.log("Briefly: Clear user history failed!");
       updateToast(toastId, {
-        message: state.language === "en" ? "Delete failed" : "Xóa thất bại",
+        dataI18n: "failed",
         type: "error",
-        duration: 2000,
+        duration: 1000,
       });
     }
   });
@@ -776,6 +748,9 @@ function createChatHistoryItem(chat) {
   return item;
 }
 
+// Spam lock for chat history item click
+let isFetchingChatHistoryItem = false;
+
 /**
  * Handles click on a chat history item (excluding menu/actions).
  * @param {Event} e
@@ -783,8 +758,6 @@ function createChatHistoryItem(chat) {
  * @param {HTMLElement} item
  */
 async function handleChatHistoryItemClick(e, chat, item) {
-  console.log("Chat history item clicked:", chat);
-
   // Prevent clicks on action buttons/input fields
   if (
     e.target.closest(".chat-history-actions-menu") ||
@@ -794,8 +767,18 @@ async function handleChatHistoryItemClick(e, chat, item) {
     return;
   }
 
+  // Prevent spamming
+  if (isFetchingChatHistoryItem) return;
+  isFetchingChatHistoryItem = true;
+
   let messages = [];
   let chatContext = null;
+
+  const toastId = showToast({
+    dataI18n: "loading",
+    type: "loading",
+    duration: null,
+  });
 
   if (navigator.onLine) {
     // Fetch messages and original context if online
@@ -855,6 +838,8 @@ async function handleChatHistoryItemClick(e, chat, item) {
       }
     } catch (err) {
       console.warn("Failed to fetch chat or context:", err);
+    } finally {
+      removeToast(toastId);
     }
   } else {
     messages = await idbHandler.getMessagesForChat(chat.id);
@@ -878,6 +863,8 @@ async function handleChatHistoryItemClick(e, chat, item) {
   }
 
   setCurrentChatState({ ...chat, history });
+
+  isFetchingChatHistoryItem = false; // Release the lock
 }
 
 /**
@@ -946,7 +933,7 @@ function showRenameChatInput(item, chat) {
     if (newTitle && newTitle !== currentTitle) {
       // Show toast
       const toastId = showToast({
-        message: state.language === "en" ? "Renaming chat" : "Đang sửa tên",
+        dataI18n: "updating",
         type: "loading",
         duration: null,
       });
@@ -959,22 +946,16 @@ function showRenameChatInput(item, chat) {
 
         // Update toast to display success
         updateToast(toastId, {
-          message:
-            state.language === "en"
-              ? "Rename successfully"
-              : "Sửa tên thành công",
+          dataI18n: "success",
           type: "success",
-          duration: 2000,
+          duration: 1000,
         });
       } catch (err) {
         console.error(err);
         updateToast(toastId, {
-          message:
-            state.language === "en"
-              ? "Something went wrong, please try again later"
-              : "Đã xảy ra lỗi, vui lòng thử lại sau",
+          dataI18n: "failed",
           type: "error",
-          duration: 2000,
+          duration: 1000,
         });
         isRenaming = false;
         return;
@@ -1010,7 +991,7 @@ function showDeleteChatDialog(chat) {
         style: "danger",
         eventHandler: async () => {
           const toastId = showToast({
-            message: state.language === "en" ? "Deleting chat" : "Đang xóa",
+            dataI18n: "deleting",
             type: "loading",
             duration: null,
           });
@@ -1027,22 +1008,16 @@ function showDeleteChatDialog(chat) {
             }
 
             updateToast(toastId, {
-              message:
-                state.language === "en"
-                  ? "Chat deleted sucessfully"
-                  : "Xóa thành công",
+              dataI18n: "success",
               type: "success",
-              duration: 2000,
+              duration: 1000,
             });
           } catch (err) {
             console.error(err);
             updateToast(toastId, {
-              message:
-                state.language === "en"
-                  ? "Something went wrong, please try again later"
-                  : "Đã xảy ra lỗi, vui lòng thử lại sau",
+              dataI18n: "failed",
               type: "error",
-              duration: 2000,
+              duration: 1000,
             });
           }
         },

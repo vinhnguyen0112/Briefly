@@ -106,6 +106,19 @@ const translations = {
     optionalLabel: "(optional)",
     feedbackPlaceholder: "write here",
     submitFeedback: "Submit",
+
+    // toast
+    youAreOffline: "You are offline.",
+    signingInWithGoogle: "Signing in with Google",
+    signingInWithFacebook: "Signing in with Facebook",
+    signingOut: "Signing out",
+    success: "Success",
+    failed: "Failed",
+    loading: "Loading",
+    deleting: "Deleting",
+    updating: "Updating",
+    creating: "Creating",
+    submitting: "Submitting",
   },
 
   vi: {
@@ -211,6 +224,19 @@ const translations = {
     optionalLabel: "(không bắt buộc)",
     feedbackPlaceholder: "viết tại đây",
     submitFeedback: "Gửi",
+
+    // toast
+    youAreOffline: "Bạn đang ngoại tuyến.",
+    signingInWithGoogle: "Đang đăng nhập bằng Google",
+    signingInWithFacebook: "Đang đăng nhập bằng Facebook",
+    signingOut: "Đang đăng xuất",
+    success: "Thành công",
+    failed: "Thất bại",
+    loading: "Đang tải",
+    deleting: "Đang xóa",
+    updating: "Đang cập nhật",
+    creating: "Đang tạo",
+    submitting: "Đang gửi",
   },
 };
 
