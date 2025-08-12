@@ -81,10 +81,10 @@ const translations = {
     saveSettings: "Save Settings",
 
     // language toggle
-    languageToggleTitle: "Language:",
+    languageToggleTitle: "Language",
     english: "English",
     vietnamese: "Vietnamese",
-    languageToggleDesc: "Select the language for the assistant",
+    languageToggleDesc: "Select language for the assistant",
 
     forThisPage: "For This Page",
     allNotes: "All Notes",
@@ -206,7 +206,7 @@ const translations = {
     saveSettings: "Lưu Cài Đặt",
 
     // language toggle
-    languageToggleTitle: "Ngôn ngữ:",
+    languageToggleTitle: "Ngôn ngữ",
     english: "Tiếng Anh",
     vietnamese: "Tiếng Việt",
     languageToggleDesc: "Tùy chỉnh ngôn ngữ cho trợ lý",

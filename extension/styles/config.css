@@ -8,7 +8,7 @@
 .config-form {
   display: flex;
   flex-direction: column;
-  gap: 24px;
+  gap: 1rem;
 }
 
 .config-section {
@@ -176,7 +176,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 16px;
+  margin-bottom: 0.5rem;
 }
 
 .config-header h3 {
