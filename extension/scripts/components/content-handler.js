@@ -1,16 +1,9 @@
 // handles page content extraction and rendering
 import { elements } from "./dom-elements.js";
-import { state } from "./state.js";
-import {
-  resetSuggestedQuestionsContainer,
-  switchToChat,
-} from "./ui-handler.js";
-import {
-  generateQuestionsFromContent,
-  processUserQuery,
-} from "./api-handler.js";
+import { getUserSession, state } from "./state.js";
+import { resetSuggestedQuestionsContainer } from "./ui-handler.js";
 import { translateElement } from "./i18n.js";
-import { formatPdfDate } from "./pdf-handler.js";
+import { formatPdfContent, formatPdfDate } from "./pdf-handler.js";
 
 /**
  * Extracts page content by messaging the background script.
@@ -32,7 +25,7 @@ export function requestPageContent() {
     function tryFetch() {
       chrome.runtime.sendMessage(
         { action: "extract_page_content", forceRefresh: true },
-        (response) => {
+        async (response) => {
           // No response from background script
           if (!response) {
             console.error("CocBot: No response from background script");
@@ -47,6 +40,21 @@ export function requestPageContent() {
             // Update UI and reset retry counter
             updateContentStatus();
             state.contentFetchAttempts = 0;
+
+            const authSession = await getUserSession();
+            if (authSession && authSession.id) {
+              const pdfContent =
+                state.pdfContent?.status === "success"
+                  ? formatPdfContent(state.pdfContent)
+                  : null;
+              chrome.runtime.sendMessage({
+                action: "store_page_metadata",
+                page_url: state.pageContent.url,
+                title: state.pageContent.title,
+                page_content: state.pageContent.content,
+                pdf_content: pdfContent,
+              });
+            }
 
             return resolve(response.content);
           }

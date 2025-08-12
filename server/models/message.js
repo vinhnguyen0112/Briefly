@@ -25,6 +25,36 @@ class Message {
   }
 
   /**
+   * Bulk insert messages into a chat
+   * @param {Array<Object>} messages Array of message objects
+   * @returns {Promise<Array<number>>} Array of inserted message IDs
+   */
+  async createBulk(messages) {
+    if (!Array.isArray(messages) || messages.length === 0) return [];
+
+    const columns = Object.keys(messages[0]);
+    const placeholders = messages
+      .map(() => `(${columns.map(() => "?").join(", ")})`)
+      .join(", ");
+    const values = messages.flatMap((msg) => columns.map((col) => msg[col]));
+
+    const query = `INSERT INTO messages (${columns.join(
+      ", "
+    )}) VALUES ${placeholders}`;
+    const result = await dbHelper.executeQuery(query, values);
+
+    const rowIds = [];
+    for (
+      let i = result.insertId;
+      i < result.insertId + result.affectedRows;
+      i++
+    ) {
+      rowIds.push(i);
+    }
+    return rowIds;
+  }
+
+  /**
    * Get a message by ID
    * @param {String} id ID of the message
    * @returns {Promise<Object>} Chat object

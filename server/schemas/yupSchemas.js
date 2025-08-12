@@ -15,6 +15,19 @@ const createMessageSchema = object({
   model: string().strict().trim().nullable(),
 });
 
+const createMessagePairSchema = object({
+  messages: array()
+    .of(
+      object({
+        role: string().strict().trim().required(),
+        content: string().strict().trim().required(),
+        model: string().strict().trim().nullable(),
+      })
+    )
+    .length(2, "Exactly two messages (user and assistant) are required")
+    .required("Messages array is required"),
+});
+
 const createFeedbackSchema = object({
   stars: number()
     .required("Stars rating is required")
@@ -123,6 +136,7 @@ module.exports = {
   createChatSchema,
   updateChatSchema,
   createMessageSchema,
+  createMessagePairSchema,
   createFeedbackSchema,
   createImageCaptionSchema,
   querySchema,

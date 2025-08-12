@@ -1,6 +1,6 @@
 import { getUserSession, sendRequest } from "./state.js";
 
-const API_BASE = "https://dev-capstone-2025.coccoc.com/api/chats";
+const API_BASE = "http://localhost:3000/api/chats";
 
 /**
  * Create a new chat.
@@ -104,6 +104,20 @@ async function addMessage(chatId, messageBody) {
 }
 
 /**
+ * Add a pair of messages to a chat atomically.
+ * @param {string} chatId
+ * @param {Array<Object>} messages Array of messages [{role, content, model?}, ...]
+ * @returns {Promise<Object>} The added messages data.
+ */
+async function addMessagePair(chatId, messages) {
+  const response = await sendRequest(`${API_BASE}/${chatId}/messages/pair`, {
+    method: "POST",
+    body: { messages },
+  });
+  return response;
+}
+
+/**
  * Get all messages of a chat.
  * @param {string} chatId ID of the chat.
  * @returns {Promise<Object>} The messages response.
@@ -120,6 +134,7 @@ const chatHandler = {
   deleteChatById,
   deleteAllChatsOfCurrentUser,
   addMessage,
+  addMessagePair,
   getMessagesOfChat,
 };
 

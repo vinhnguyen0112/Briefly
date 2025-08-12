@@ -17,7 +17,7 @@ import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { formatPdfContent } from "./pdf-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -176,12 +176,6 @@ async function persistChatAndMessages(
   model,
   tempMessageId
 ) {
-  const userSession = await getUserSession();
-  if (!userSession || !userSession.id) {
-    await increaseAnonQueryCount();
-    return;
-  }
-
   const pageUrl = state.pageContent.url;
   const pageTitle = state.pageContent.title;
 
@@ -220,29 +214,21 @@ async function persistChatAndMessages(
       });
     }
 
-    const userMessageResult = await chatHandler.addMessage(chatId, {
-      role: "user",
-      content: userQuery,
-    });
+    // message pair
+    const messagePair = [
+      { role: "user", content: userQuery },
+      { role: "assistant", content: assistantMessage, model },
+    ];
+    const pairResult = await chatHandler.addMessagePair(chatId, messagePair);
 
-    const assistantMessageResult = await chatHandler.addMessage(chatId, {
-      role: "assistant",
-      content: assistantMessage,
-      model,
-    });
-
-    if (assistantMessageResult?.success && assistantMessageResult?.data?.id) {
-      updateMessageWithId(tempMessageId, assistantMessageResult.data.id);
+    if (pairResult?.success && Array.isArray(pairResult.data?.ids)) {
+      // Update tempMessageId with assistant message's real ID (second in pair)
+      updateMessageWithId(tempMessageId, pairResult.data.ids[1]);
     }
 
-    await idbHandler.addMessageToChat(chatId, {
-      role: "user",
-      content: userQuery,
-    });
-    await idbHandler.addMessageToChat(chatId, {
-      role: "assistant",
-      content: assistantMessage,
-    });
+    // Persist to local IndexedDB as before
+    await idbHandler.addMessageToChat(chatId, messagePair[0]);
+    await idbHandler.addMessageToChat(chatId, messagePair[1]);
 
     if (isNewChat && chat) {
       state.chatHistory.unshift(chat);
