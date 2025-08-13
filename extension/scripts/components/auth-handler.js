@@ -2,7 +2,7 @@ import { clearUserSession, getAnonSession, getUserSession } from "./state.js";
 
 const GOOGLE_AUTH_URL = "https://accounts.google.com/o/oauth2/auth";
 const FACEBOOK_AUTH_URL = "https://www.facebook.com/v22.0/dialog/oauth";
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
 
 /**
  * Checks if the user is authenticated and if the session is valid.
@@ -55,17 +55,6 @@ export const isSessionValid = async (sessionId) => {
       throw err;
     }
   }
-};
-
-/**
- * Checks if the user needs to sign in to continue querying.
- * @returns {Promise<boolean>}
- */
-export const isSignInNeeded = async () => {
-  const { anon_query_count } = await getAnonSession();
-  const userSession = await getUserSession();
-  // User is unauthenticated & anon query count exceed 3
-  return anon_query_count >= 3 && !userSession;
 };
 
 /**

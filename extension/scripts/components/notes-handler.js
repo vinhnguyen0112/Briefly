@@ -8,10 +8,10 @@ import {
   updateNote,
   deleteNote,
   resetNotesPaginationState,
+  getUserSession,
 } from "./state.js";
 import { translate, translateElement } from "./i18n.js";
 import { escapeHtml, showToast, updateToast } from "./ui-handler.js";
-import { isSignInNeeded } from "./auth-handler.js";
 
 let notesScrollListenerSetup = false;
 let currentScrollHandler = null;
@@ -512,12 +512,6 @@ let isSaving = false;
  * Provides real-time user feedback through toast notifications
  */
 export async function handleSaveNote() {
-  const notAllowed = await isSignInNeeded();
-  if (notAllowed) {
-    showSignInAlertPopup();
-    return;
-  }
-
   if (isSaving) {
     return;
   }
@@ -818,8 +812,8 @@ function createNoteItem(note, showUrl = false) {
  */
 export async function openNoteEditor(existingContent = "", noteUrl = null) {
   if (!existingContent) {
-    const notAllowed = await isSignInNeeded();
-    if (notAllowed) {
+    const authSession = await getUserSession();
+    if (!authSession || !authSession.id) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
           chrome.tabs.sendMessage(tabs[0].id, {

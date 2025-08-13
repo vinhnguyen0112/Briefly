@@ -135,11 +135,19 @@ const validateSession = async (req, res, next) => {
 
     // Session not found - reject regardless of type
     if (!sessionData) {
-      throw new AppError(
-        ERROR_CODES.UNAUTHORIZED,
-        "Session not found or invalid",
-        401
-      );
+      if (parsed.type === "auth") {
+        throw new AppError(
+          ERROR_CODES.UNAUTHORIZED,
+          "Session not found or invalid",
+          401
+        );
+      } else {
+        throw new AppError(
+          ERROR_CODES.UNAUTHENTICATED,
+          "Session not found or invalid",
+          401
+        );
+      }
     }
 
     req.sessionType = parsed.type;

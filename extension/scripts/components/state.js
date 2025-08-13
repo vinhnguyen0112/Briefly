@@ -216,7 +216,7 @@ export async function saveConfig(config) {
 export async function getNotesForUrl(url, offset = 0, limit = 20) {
   try {
     const timestamp = Date.now();
-    const apiUrl = `http://localhost:3000/api/notes?page_url=${encodeURIComponent(
+    const apiUrl = `https://dev-capstone-2025.coccoc.com/api/notes?page_url=${encodeURIComponent(
       url
     )}&offset=${offset}&limit=${limit}&_t=${timestamp}`;
 
@@ -247,7 +247,7 @@ export async function getAllNotes(offset = 0, limit = 20) {
   try {
     // Add timestamp để tránh cache
     const timestamp = Date.now();
-    const apiUrl = `http://localhost:3000/api/notes/all?offset=${offset}&limit=${limit}&_t=${timestamp}`;
+    const apiUrl = `https://dev-capstone-2025.coccoc.com/api/notes/all?offset=${offset}&limit=${limit}&_t=${timestamp}`;
 
     const response = await sendRequest(apiUrl);
 
@@ -274,13 +274,16 @@ export async function getAllNotes(offset = 0, limit = 20) {
 
 export async function saveNote(note) {
   try {
-    const response = await sendRequest("http://localhost:3000/api/notes", {
-      method: "POST",
-      body: {
-        page_url: note.url,
-        note: note.content,
-      },
-    });
+    const response = await sendRequest(
+      "https://dev-capstone-2025.coccoc.com/api/notes",
+      {
+        method: "POST",
+        body: {
+          page_url: note.url,
+          note: note.content,
+        },
+      }
+    );
     return response.data.id;
   } catch (error) {
     console.error("Error saving note:", error);
@@ -291,7 +294,7 @@ export async function saveNote(note) {
 export async function updateNote(id, content) {
   try {
     const response = await sendRequest(
-      `http://localhost:3000/api/notes/${id}`,
+      `https://dev-capstone-2025.coccoc.com/api/notes/${id}`,
       {
         method: "PUT",
         body: {
@@ -309,7 +312,7 @@ export async function updateNote(id, content) {
 export async function deleteNote(id) {
   try {
     const response = await sendRequest(
-      `http://localhost:3000/api/notes/${id}`,
+      `https://dev-capstone-2025.coccoc.com/api/notes/${id}`,
       {
         method: "DELETE",
       }
@@ -443,7 +446,19 @@ export async function sendRequest(url, options = {}) {
     const userSession = await getUserSession();
     const anonSession = !userSession && (await getAnonSession());
     const sessionId = userSession?.id || anonSession?.id;
-    if (!sessionId) throw new Error("No active session found");
+    // No session found
+    if (!sessionId) {
+      return chrome.tabs.query(
+        { active: true, currentWindow: true },
+        (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "sign_in_required",
+            });
+          }
+        }
+      );
+    }
     headers.set(
       "Authorization",
       `Bearer ${userSession ? `auth:${sessionId}` : `anon:${sessionId}`}`
@@ -481,6 +496,14 @@ export async function sendRequest(url, options = {}) {
             });
           }
         });
+      });
+    } else if (code === "UNAUTHENTICATED") {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            action: "sign_in_required",
+          });
+        }
       });
     } else if (code === "ANON_QUERY_LIMIT_REACHED") {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {

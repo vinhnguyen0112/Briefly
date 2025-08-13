@@ -2460,3 +2460,8 @@ input:checked + .slider:before {
     transform: rotate(360deg);
   }
 }
+
+/* Sign in alert popup */
+#sign-in-alert-popup .popup-message {
+  margin-bottom: 1rem;
+}

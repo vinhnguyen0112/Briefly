@@ -35,7 +35,6 @@ import { switchLanguage, translateElement } from "./i18n.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { updateContentStatus } from "./content-handler.js";
-import { isSignInNeeded } from "./auth-handler.js";
 
 export function setupEventListeners() {
   elements.closeSidebarButton.addEventListener("click", () => {
@@ -130,8 +129,8 @@ export function setupEventListeners() {
 
       elements.chatScreen.style.display = "flex";
     } else {
-      const notAllowed = await isSignInNeeded();
-      if (notAllowed) {
+      const authSession = await getUserSession();
+      if (!authSession || !authSession.id) {
         chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
           if (tabs[0]) {
             chrome.tabs.sendMessage(tabs[0].id, {

@@ -11,12 +11,11 @@ import {
   showToast,
   updateMessageWithId,
 } from "./ui-handler.js";
-import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { formatPdfContent } from "./pdf-handler.js";
 
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -47,18 +46,6 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
       role: "assistant",
     });
   }
-
-  // const notAllowed = await isSignInNeeded();
-  // if (notAllowed) {
-  //   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-  //     if (tabs[0]) {
-  //       chrome.tabs.sendMessage(tabs[0].id, {
-  //         action: "sign_in_required",
-  //       });
-  //     }
-  //   });
-  //   return;
-  // }
 
   // Show user prompt with thinking indicator
   addMessageToChat({
