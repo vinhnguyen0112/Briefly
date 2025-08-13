@@ -69,13 +69,6 @@ async function callCaptionApi(images, content) {
 }
 
 export function resetProcessedImages() {
-  console.log(
-    "Resetting processedImages set. Before reset:",
-    Array.from(processedImages)
-  );
   processedImages.clear();
-  console.log(
-    "After reset, processedImages set is now:",
-    Array.from(processedImages)
-  );
+  console.log("Processed images reset.");
 }
