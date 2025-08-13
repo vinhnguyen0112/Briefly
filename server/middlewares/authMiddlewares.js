@@ -96,11 +96,11 @@ async function refreshSessionIfNeeded(id, type, sessionData) {
       const newExpiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
       if (type === "auth") {
-        await redisHelper.createSession({ id, ...cleanedSessionData }, "auth");
         await Session.update(id, { expires_at: newExpiresAt });
+        await redisHelper.createSession({ id, ...cleanedSessionData }, "auth");
       } else {
-        await redisHelper.createSession({ id, ...cleanedSessionData }, "anon");
         await AnonSession.update(id, { expires_at: newExpiresAt });
+        await redisHelper.createSession({ id, ...cleanedSessionData }, "anon");
       }
     }
   } catch (err) {
@@ -111,7 +111,7 @@ async function refreshSessionIfNeeded(id, type, sessionData) {
 
 /**
  * Middleware to validate a session from the Authorization header.
- * If the session is anonymous and invalid, assigns a new anonymous session.
+ * Throws an error if the session is not found or invalid.
  * Sets req.sessionType and req.session.
  * @param {Object} req
  * @param {Object} res
@@ -133,25 +133,11 @@ const validateSession = async (req, res, next) => {
       await refreshSessionIfNeeded(parsed.actualId, parsed.type, sessionData);
     }
 
-    // Invalid anonymous session, assign new
-    if (!sessionData && parsed.type === "anon") {
-      const { clientIp, visitorId } = req;
-      const anonSessionId = generateHash(visitorId, clientIp);
-
-      await AnonSession.create({ id: anonSessionId, anon_query_count: 0 });
-      await redisHelper.createSession({ id: anonSessionId }, "anon");
-
-      req.sessionType = "anon";
-      req.session = { id: anonSessionId, anon_query_count: 0 };
-      req.newAnonSessionAssigned = true;
-      return next();
-    }
-
-    // Invalid authenticated session, throws
-    if (!sessionData && parsed.type === "auth") {
+    // Session not found - reject regardless of type
+    if (!sessionData) {
       throw new AppError(
         ERROR_CODES.UNAUTHORIZED,
-        "Authenticated session not found or invalid",
+        "Session not found or invalid",
         401
       );
     }
@@ -211,35 +197,7 @@ const requireAuthenticatedSession = async (req, res, next) => {
   }
 };
 
-/**
- * Middleware to attach metadata about a newly assigned anonymous session to the response.
- * Adds meta.newAnonSessionAssigned and meta.newAnonSession to the response body if applicable.
- * @param {Object} req
- * @param {Object} res
- * @param {Function} next
- */
-const attachNewAnonSession = (req, res, next) => {
-  const originalJson = res.json.bind(res);
-
-  res.json = (body) => {
-    if (req.newAnonSessionAssigned && req.session) {
-      body = {
-        ...body,
-        meta: {
-          ...(body.meta || {}),
-          newAnonSessionAssigned: true,
-          newAnonSession: req.session,
-        },
-      };
-    }
-    return originalJson(body);
-  };
-
-  next();
-};
-
 module.exports = {
   validateSession,
   requireAuthenticatedSession,
-  attachNewAnonSession,
 };

@@ -505,13 +505,10 @@ async function showFeedbackModal(messageId) {
     });
 
     try {
-      const response = await sendRequest(
-        `https://dev-capstone-2025.coccoc.com/api/feedback`,
-        {
-          method: "POST",
-          body: { stars, comment, message_id: parseInt(messageId) },
-        }
-      );
+      const response = await sendRequest(`http://localhost:3000/api/feedback`, {
+        method: "POST",
+        body: { stars, comment, message_id: parseInt(messageId) },
+      });
 
       if (response.success) {
         updateToast(toastId, {
@@ -785,6 +782,9 @@ export function handleContentMessage(message) {
         message:
           "Your session has expired and you have been signed out for security reasons",
       });
+      break;
+    case "anon_query_limit_reached":
+      showSignInAlertPopup();
       break;
     case "sign_in_required":
       showSignInAlertPopup();

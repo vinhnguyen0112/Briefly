@@ -1,9 +1,8 @@
 import {
   state,
-  increaseAnonQueryCount,
-  getUserSession,
   resetCurrentChatState,
   sendRequest,
+  getUserSession,
 } from "./state.js";
 import {
   addMessageToChat,
@@ -17,7 +16,7 @@ import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { formatPdfContent } from "./pdf-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -49,17 +48,17 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
     });
   }
 
-  const notAllowed = await isSignInNeeded();
-  if (notAllowed) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: "sign_in_required",
-        });
-      }
-    });
-    return;
-  }
+  // const notAllowed = await isSignInNeeded();
+  // if (notAllowed) {
+  //   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+  //     if (tabs[0]) {
+  //       chrome.tabs.sendMessage(tabs[0].id, {
+  //         action: "sign_in_required",
+  //       });
+  //     }
+  //   });
+  //   return;
+  // }
 
   // Show user prompt with thinking indicator
   addMessageToChat({
@@ -123,16 +122,19 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
         state.currentChat.history = state.currentChat.history.slice(-6);
       }
 
-      // Persist and get real message IDs, then update the UI
-      persistChatAndMessages(
-        query,
-        assistantMessage,
-        response.model,
-        tempMessageId
-      );
+      const authSession = await getUserSession();
+      if (authSession && authSession.id) {
+        // Persist and get real message IDs, then update the UI
+        persistChatAndMessages(
+          query,
+          assistantMessage,
+          response.model,
+          tempMessageId
+        );
 
-      if (metadata.event === "summarize") {
-        persistPageSummary(assistantMessage);
+        if (metadata.event === "summarize") {
+          persistPageSummary(assistantMessage);
+        }
       }
 
       return { success: true, message: assistantMessage };

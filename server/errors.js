@@ -13,6 +13,7 @@ const ERROR_CODES = {
   OUT_OF_RANGE: "OUT_OF_RANGE", // MySQL data out of range warning
   TOO_LONG: "TOO_LONG", // MySQL data too long warning
   DATA_TRUNCATED: "DATA_TRUNCATED", // MySQL data truncated warning
+  ANON_QUERY_LIMIT_REACHED: "ANON_QUERY_LIMIT_REACHED", // Anonymous query limit reached
 };
 
 module.exports = { ERROR_CODES };

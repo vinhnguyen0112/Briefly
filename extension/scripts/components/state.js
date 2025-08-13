@@ -1,6 +1,5 @@
 // Global state object
 // Only persist in IDB when user click to view a chat
-
 export const state = {
   pageContent: null,
   chatContext: null,
@@ -140,15 +139,6 @@ export function saveAnonSession(data) {
   });
 }
 
-// Increase anon query count for the current anon session
-export async function increaseAnonQueryCount() {
-  const anonSession = await getAnonSession();
-  await saveAnonSession({
-    ...anonSession,
-    anon_query_count: (anonSession.anon_query_count || 0) + 1,
-  });
-}
-
 // User session management
 export async function getUserSession() {
   return new Promise((resolve) => {
@@ -226,7 +216,7 @@ export async function saveConfig(config) {
 export async function getNotesForUrl(url, offset = 0, limit = 20) {
   try {
     const timestamp = Date.now();
-    const apiUrl = `https://dev-capstone-2025.coccoc.com/api/notes?page_url=${encodeURIComponent(
+    const apiUrl = `http://localhost:3000/api/notes?page_url=${encodeURIComponent(
       url
     )}&offset=${offset}&limit=${limit}&_t=${timestamp}`;
 
@@ -257,7 +247,7 @@ export async function getAllNotes(offset = 0, limit = 20) {
   try {
     // Add timestamp để tránh cache
     const timestamp = Date.now();
-    const apiUrl = `https://dev-capstone-2025.coccoc.com/api/notes/all?offset=${offset}&limit=${limit}&_t=${timestamp}`;
+    const apiUrl = `http://localhost:3000/api/notes/all?offset=${offset}&limit=${limit}&_t=${timestamp}`;
 
     const response = await sendRequest(apiUrl);
 
@@ -284,16 +274,13 @@ export async function getAllNotes(offset = 0, limit = 20) {
 
 export async function saveNote(note) {
   try {
-    const response = await sendRequest(
-      "https://dev-capstone-2025.coccoc.com/api/notes",
-      {
-        method: "POST",
-        body: {
-          page_url: note.url,
-          note: note.content,
-        },
-      }
-    );
+    const response = await sendRequest("http://localhost:3000/api/notes", {
+      method: "POST",
+      body: {
+        page_url: note.url,
+        note: note.content,
+      },
+    });
     return response.data.id;
   } catch (error) {
     console.error("Error saving note:", error);
@@ -304,7 +291,7 @@ export async function saveNote(note) {
 export async function updateNote(id, content) {
   try {
     const response = await sendRequest(
-      `https://dev-capstone-2025.coccoc.com/api/notes/${id}`,
+      `http://localhost:3000/api/notes/${id}`,
       {
         method: "PUT",
         body: {
@@ -322,7 +309,7 @@ export async function updateNote(id, content) {
 export async function deleteNote(id) {
   try {
     const response = await sendRequest(
-      `https://dev-capstone-2025.coccoc.com/api/notes/${id}`,
+      `http://localhost:3000/api/notes/${id}`,
       {
         method: "DELETE",
       }
@@ -495,6 +482,14 @@ export async function sendRequest(url, options = {}) {
           }
         });
       });
+    } else if (code === "ANON_QUERY_LIMIT_REACHED") {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            action: "anon_query_limit_reached",
+          });
+        }
+      });
     } else {
       console.error(`Error ${code}: ${message}`);
     }
@@ -503,14 +498,15 @@ export async function sendRequest(url, options = {}) {
 
   const data = await response.json();
 
-  // If server assigned a new anonymous session, save it
-  if (
-    data.meta &&
-    data.meta.newAnonSessionAssigned &&
-    data.meta.newAnonSession
-  ) {
-    console.log("New anon session assigned, saving to storage...");
-    await saveAnonSession(data.meta.newAnonSession);
+  // If server increased anon_query_count, update it
+  if (data.anon_query_count) {
+    const anonSession = await getAnonSession();
+    if (anonSession && anonSession.id) {
+      await saveAnonSession({
+        id: anonSession.id,
+        anon_query_count: data.anon_query_count,
+      });
+    }
   }
 
   return data;

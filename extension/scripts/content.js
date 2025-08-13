@@ -278,6 +278,24 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     sendResponse({ success: true });
   }
+  if (message.action === "anon_query_limit_reached") {
+    const iframe = document.getElementById("isal-sidebar-iframe");
+    const container = document.getElementById("isal-sidebar-container");
+
+    // Only update if the sidebar is currently open
+    if (iframe && container && container.classList.contains("active")) {
+      console.log("CocBot: Notifying sidebar to react to auth session change");
+
+      // Send message to the sidebar and update the UI
+      iframe.contentWindow.postMessage(
+        {
+          action: "anon_query_limit_reached",
+        },
+        "*"
+      );
+    }
+    sendResponse({ success: true });
+  }
   if (message.action === "sign_in_required") {
     const iframe = document.getElementById("isal-sidebar-iframe");
     const container = document.getElementById("isal-sidebar-container");
