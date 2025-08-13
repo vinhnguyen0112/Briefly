@@ -153,7 +153,7 @@ export async function increaseAnonQueryCount() {
 export async function getUserSession() {
   return new Promise((resolve) => {
     chrome.storage.local.get(["auth_session"], (result) => {
-      console.log(`Cocbot: Gotten auth session `, result.auth_session);
+      // console.log(`Cocbot: Gotten auth session `, result.auth_session);
       resolve(result.auth_session);
     });
   });
@@ -181,7 +181,7 @@ export async function clearUserSession() {
 export async function getVisitorId() {
   return new Promise((resolve) => {
     chrome.storage.local.get(["visitor_id"], (result) => {
-      console.log(`Cocbot: Gotten visitor ID: `, result.visitor_id);
+      // console.log(`Cocbot: Gotten visitor ID: `, result.visitor_id);
       resolve(result.visitor_id);
     });
   });

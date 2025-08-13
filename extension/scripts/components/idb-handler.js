@@ -17,7 +17,7 @@ async function openIndexedDB() {
 
     request.onsuccess = (event) => {
       const db = event.target.result;
-      console.log(`IndexedDB '${DB_NAME}' opened successfully`);
+      // console.log(`IndexedDB '${DB_NAME}' opened successfully`);
       resolve({ db });
     };
 
