@@ -99,6 +99,8 @@ const translations = {
     noChangesDetected: "Please make some changes to update the note.",
 
     // context indicator
+    readingPageContext: "Reading page context...",
+    limitedPageContextWarning: "⚠️ Limited page context available",
     chatContinuedWithPageContext:
       "This chat is continued using the original page context",
     pdfReadingContextInfo:
@@ -223,6 +225,9 @@ const translations = {
     cancel: "Hủy",
     noChangesDetected: "Vui lòng thực hiện thay đổi để cập nhật ghi chú.",
 
+    // context indicator
+    readingPageContext: "Đang đọc ngữ cảnh trang...",
+    limitedPageContextWarning: "⚠️ Ngữ cảnh trang bị giới hạn",
     chatContinuedWithPageContext:
       "Cuộc trò chuyện này tiếp tục sử dụng ngữ cảnh trang gốc",
     pdfReadingContextInfo:
