@@ -8,6 +8,7 @@ const swaggerUi = require("swagger-ui-express");
 const authRoutes = require("./routes/authRoutes");
 const anonRoutes = require("./routes/anonRoutes");
 const chatRoutes = require("./routes/chatRoutes");
+const noteRoutes = require("./routes/noteRoutes");
 const testRoutes = require("./routes/testRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const queryRoutes = require("./routes/queryRoutes");
@@ -47,6 +48,7 @@ app.use("/api/query", queryRoutes);
 app.use("/api/pages", pageRoutes);
 app.use("/api/page-summaries", pageSummaryRoutes);
 app.use("/status", healthCheckRoutes);
+app.use("/api/notes", noteRoutes);
 
 // health check
 app.get("/api/health", (req, res) => {

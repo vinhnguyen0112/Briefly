@@ -8,6 +8,7 @@
     <link rel="stylesheet" href="styles/config.css" />
     <link rel="stylesheet" href="styles/content-viewer.css" />
   </head>
+
   <body>
     <div class="sidebar">
       <div id="sidebar-resize-handle" class="resize-handle"></div>
@@ -89,34 +90,6 @@
             </svg>
           </button>
           <button
-            id="config-button"
-            class="icon-button"
-            data-i18n-title="configure"
-            title="Configure"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="16"
-              height="16"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              stroke-width="2"
-              stroke-linecap="round"
-              stroke-linejoin="round"
-            >
-              <line x1="4" y1="21" x2="4" y2="14"></line>
-              <line x1="4" y1="10" x2="4" y2="3"></line>
-              <line x1="12" y1="21" x2="12" y2="12"></line>
-              <line x1="12" y1="8" x2="12" y2="3"></line>
-              <line x1="20" y1="21" x2="20" y2="16"></line>
-              <line x1="20" y1="12" x2="20" y2="3"></line>
-              <line x1="1" y1="14" x2="7" y2="14"></line>
-              <line x1="9" y1="8" x2="15" y2="8"></line>
-              <line x1="17" y1="16" x2="23" y2="16"></line>
-            </svg>
-          </button>
-          <button
             id="account-button"
             class="icon-button"
             data-i18n-title="account"
@@ -161,23 +134,6 @@
       </div>
 
       <div class="sidebar-content-wrapper">
-        <!-- Toolbar -->
-        <div class="sidebar-toolbar">
-          <div class="left-actions"></div>
-
-          <!-- Language toggle -->
-          <div class="right-actions">
-            <div class="language-toggle-container">
-              <span class="toggle-label" id="en-label">EN</span>
-              <label class="switch">
-                <input type="checkbox" id="language-toggle" />
-                <span class="lang-slider round"></span>
-              </label>
-              <span class="toggle-label" id="vi-label">VI</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Chat screen (hidden initially) -->
         <div id="chat-screen">
           <div class="sidebar-content" id="chat-container">
@@ -218,13 +174,12 @@
         <!-- Notes screen (hidden initially) -->
         <div id="notes-screen" style="display: none">
           <div class="notes-header">
-            <h3 data-i18n="pageNotes">Page Notes</h3>
+            <h3 data-i18n="pageNotes">Notes</h3>
             <div class="notes-actions">
               <button
                 id="add-note-button"
                 class="icon-button"
                 data-i18n-title="addNote"
-                title="Add Note"
               >
                 <svg
                   xmlns="http://www.w3.org/2000/svg"
@@ -234,18 +189,14 @@
                   fill="none"
                   stroke="currentColor"
                   stroke-width="2"
-                  stroke-linecap="round"
-                  stroke-linejoin="round"
                 >
-                  <line x1="12" y1="5" x2="12" y2="19"></line>
-                  <line x1="5" y1="12" x2="19" y2="12"></line>
+                  <path d="M12 5v14M5 12h14" />
                 </svg>
               </button>
               <button
-                id="close-notes-button"
+                id="reload-notes-button"
                 class="icon-button"
-                data-i18n-title="close"
-                title="Close Notes"
+                data-i18n-title="reloadNotes"
               >
                 <svg
                   class="w-6 h-6 text-gray-800 dark:text-white"
@@ -261,41 +212,102 @@
                     stroke-linecap="round"
                     stroke-linejoin="round"
                     stroke-width="2"
-                    d="M6 18 17.94 6M18 18 6.06 6"
+                    d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"
                   />
+                </svg>
+              </button>
+              <button
+                id="close-notes-button"
+                class="icon-button"
+                data-i18n-title="close"
+                title="Close Notes"
+              >
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
                 </svg>
               </button>
             </div>
           </div>
 
+          <!-- Notes tabs -->
+          <div class="notes-tabs">
+            <button
+              id="notes-tab-current"
+              class="notes-tab active"
+              data-tab="current"
+            >
+              <span data-i18n="forThisPage">For This Page</span>
+            </button>
+            <button id="notes-tab-all" class="notes-tab" data-tab="all">
+              <span data-i18n="allNotes">All Notes</span>
+            </button>
+          </div>
+
           <div id="notes-container" class="notes-content">
-            <!-- Notes list will appear here -->
-            <div class="notes-empty" id="notes-empty-state">
-              <p data-i18n="noNotes">No notes for this page yet.</p>
-              <button
-                id="create-first-note"
-                class="button"
-                data-i18n="createFirstNote"
-              >
-                Create your first note
-              </button>
+            <!-- Tab content for current page -->
+            <div
+              id="notes-tab-current-content"
+              class="notes-tab-content active"
+            >
+              <div class="notes-empty" id="notes-empty-state-current">
+                <p data-i18n="noNotesThisPage">No notes for this page yet.</p>
+                <button
+                  id="create-first-note-current"
+                  class="button"
+                  data-i18n="createFirstNote"
+                >
+                  Create First Note
+                </button>
+              </div>
+              <div id="notes-list-current"></div>
             </div>
-            <div id="notes-list">
-              <!-- Notes will be added here dynamically -->
+
+            <!-- Tab content for all notes -->
+            <div id="notes-tab-all-content" class="notes-tab-content">
+              <div class="notes-empty" id="notes-empty-state-all">
+                <p data-i18n="noNotesAtAll">No notes created yet.</p>
+                <button
+                  id="create-first-note-all"
+                  class="button"
+                  data-i18n="createFirstNote"
+                >
+                  Create First Note
+                </button>
+              </div>
+              <div id="notes-list-all"></div>
             </div>
           </div>
 
-          <!-- Note editor (hidden initially) -->
+          <!-- Note editor (remains the same) -->
           <div id="note-editor" style="display: none">
             <div class="note-editor-header">
-              <h4 data-i18n="editNote">Edit Note</h4>
+              <h4 id="note-editor-title" data-i18n="editNote">Edit Note</h4>
+              <div class="note-editor-url" id="note-editor-url"></div>
               <button
                 id="close-editor-button"
                 class="icon-button"
                 data-i18n-title="close"
                 title="Close Editor"
               >
-                ×
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                >
+                  <path d="M18 6L6 18M6 6l12 12" />
+                </svg>
               </button>
             </div>
             <textarea
@@ -490,8 +502,8 @@
                           examples</span
                         >
                       </div>
-                      </label>
-                      <label class="radio-card" data-style="technical">
+                    </label>
+                    <label class="radio-card" data-style="technical">
                       <input
                         type="radio"
                         name="response-style"
@@ -529,8 +541,74 @@
 
     <div id="account-popup" class="popup" style="display: none">
       <div class="popup-content">
-        <button id="sign-out-button" class="button button-secondary">
-          <span data-i18n="signOut" data-i18n-title="signOut">Sign Out</span>
+        <!-- Language Toggle Section -->
+        <div class="language-toggle-container">
+          <span
+            class="toggle-title"
+            data-i18n="languageToggleTitle"
+            style="margin-bottom: 4px; display: block"
+          >
+            Language
+          </span>
+          <span
+            class="toggle-desc"
+            data-i18n="languageToggleDesc"
+            style="
+              color: var(--muted-foreground);
+              font-size: 0.75rem;
+              margin-bottom: 8px;
+              display: block;
+            "
+          >
+            Customize assistant language
+          </span>
+          <div class="toggle-row">
+            <span class="toggle-label" id="en-label" data-i18n="english"
+              >English</span
+            >
+            <label class="switch">
+              <input type="checkbox" id="language-toggle" />
+              <span class="lang-slider round"></span>
+            </label>
+            <span class="toggle-label" id="vi-label" data-i18n="vietnamese"
+              >Vietnamese</span
+            >
+          </div>
+        </div>
+
+        <!-- Config Button Section -->
+        <button
+          id="config-button"
+          class="icon-button"
+          data-i18n-title="configure"
+          title="Configure"
+        >
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+            style="margin-right: 8px"
+          >
+            <line x1="4" y1="21" x2="4" y2="14"></line>
+            <line x1="4" y1="10" x2="4" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="12"></line>
+            <line x1="12" y1="8" x2="12" y2="3"></line>
+            <line x1="20" y1="21" x2="20" y2="16"></line>
+            <line x1="20" y1="12" x2="20" y2="3"></line>
+            <line x1="1" y1="14" x2="7" y2="14"></line>
+            <line x1="9" y1="8" x2="15" y2="8"></line>
+            <line x1="17" y1="16" x2="23" y2="16"></line>
+          </svg>
+          <span data-i18n="configure">Configure</span>
+        </button>
+
+        <button id="sign-out-button" class="auth-button">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             width="16"
@@ -543,8 +621,10 @@
               d="M17 7L15.59 8.41L18.17 11H8V13H18.17L15.59 15.58L17 17L22 12M4 5H12V3H4C2.9 3 2 3.9 2 5V19C2 20.1 2.9 21 4 21H12V19H4V5Z"
             />
           </svg>
+          <span data-i18n="signOut" data-i18n-title="signOut">Sign Out</span>
         </button>
-        <button class="button auth-button google-login-button header-button">
+
+        <button class="auth-button google-login-button header-button">
           <svg
             viewBox="0 0 262 262"
             xmlns="http://www.w3.org/2000/svg"
@@ -576,7 +656,7 @@
           >
         </button>
 
-        <button class="button auth-button facebook-login-button header-button">
+        <button class="auth-button facebook-login-button header-button">
           <svg
             xmlns="http://www.w3.org/2000/svg"
             height="16"
@@ -604,7 +684,7 @@
             You need to sign in to continue using this feature. Please sign in
             to proceed.
           </p>
-          <button class="button auth-button google-login-button alert-button">
+          <button class="auth-button google-login-button alert-button">
             <svg
               viewBox="0 0 262 262"
               xmlns="http://www.w3.org/2000/svg"
@@ -633,7 +713,7 @@
             </svg>
             Sign in with Google
           </button>
-          <button class="button auth-button facebook-login-button alert-button">
+          <button class="auth-button facebook-login-button alert-button">
             <svg
               xmlns="http://www.w3.org/2000/svg"
               height="16"
@@ -663,24 +743,40 @@
 
     <style>
       /* LANGUAGE TOGGLE STYLING */
-      .sidebar-toolbar {
+      .language-toggle-container {
         display: flex;
-        padding: 8px 16px;
-        border-bottom: 1px solid var(--border);
-        align-items: center;
-        justify-content: space-between;
+        gap: 12px;
+        flex-direction: column;
+        align-items: flex-start;
+        margin-bottom: 0.75rem;
+        padding: 0;
       }
 
-      .language-toggle-container {
+      .toggle-row {
         display: flex;
         align-items: center;
         gap: 8px;
       }
 
-      .toggle-label {
-        font-size: 0.75rem;
-        color: var(--muted-foreground);
+      .toggle-title {
+        font-size: 14px;
         font-weight: 500;
+        color: var(--foreground);
+      }
+
+      .toggle-label {
+        font-size: 12px;
+        font-weight: 500;
+        opacity: 0.6;
+      }
+
+      .toggle-label.active {
+        opacity: 1.1;
+      }
+
+      .toggle-desc {
+        color: var(--muted-foreground);
+        font-size: 13px;
       }
 
       .switch {
@@ -703,19 +799,21 @@
         left: 0;
         right: 0;
         bottom: 0;
-        background-color: var(--border);
+        background-color: #ccc;
         transition: 0.4s;
+        border-radius: 20px;
       }
 
       .lang-slider:before {
         position: absolute;
         content: "";
-        height: 14px;
-        width: 14px;
-        left: 3px;
-        bottom: 3px;
-        background-color: white;
+        height: 16px;
+        width: 16px;
+        left: 2px;
+        bottom: 2px;
+        background-color: var(--primary);
         transition: 0.4s;
+        border-radius: 50%;
       }
 
       input:checked + .lang-slider {
@@ -728,6 +826,7 @@
 
       input:checked + .lang-slider:before {
         transform: translateX(16px);
+        background-color: var(--primary-foreground);
       }
 
       .lang-slider.round {
@@ -738,6 +837,5 @@
         border-radius: 50%;
       }
     </style>
-  
   </body>
 </html>

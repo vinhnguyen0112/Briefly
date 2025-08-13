@@ -46,10 +46,34 @@ export const elements = {
   notesButton: document.getElementById("notes-button"),
   closeNotesButton: document.getElementById("close-notes-button"),
   addNoteButton: document.getElementById("add-note-button"),
-  notesList: document.getElementById("notes-list"),
-  notesEmptyState: document.getElementById("notes-empty-state"),
-  createFirstNoteButton: document.getElementById("create-first-note"),
+  reloadNotesButton: document.getElementById("reload-notes-button"),
+
+  // Tab controls
+  notesTabCurrent: document.getElementById("notes-tab-current"),
+  notesTabAll: document.getElementById("notes-tab-all"),
+
+  // Tab content areas
+  notesTabCurrentContent: document.getElementById("notes-tab-current-content"),
+  notesTabAllContent: document.getElementById("notes-tab-all-content"),
+
+  // Lists for each tab
+  notesListCurrent: document.getElementById("notes-list-current"),
+  notesListAll: document.getElementById("notes-list-all"),
+
+  // Empty states for each tab
+  notesEmptyStateCurrent: document.getElementById("notes-empty-state-current"),
+  notesEmptyStateAll: document.getElementById("notes-empty-state-all"),
+
+  // Create buttons for each tab
+  createFirstNoteButtonCurrent: document.getElementById(
+    "create-first-note-current"
+  ),
+  createFirstNoteButtonAll: document.getElementById("create-first-note-all"),
+
+  // Note editor (shared)
   noteEditor: document.getElementById("note-editor"),
+  noteEditorTitle: document.getElementById("note-editor-title"),
+  noteEditorUrl: document.getElementById("note-editor-url"),
   noteContent: document.getElementById("note-content"),
   saveNoteButton: document.getElementById("save-note-button"),
   cancelNoteButton: document.getElementById("cancel-note-button"),

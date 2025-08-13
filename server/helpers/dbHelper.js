@@ -13,7 +13,7 @@ const pool = mysql.createPool({
 
 /**
  * Get a connection from the pool
- * @returns {Promise} A promise that resolves to a MySQL connection
+ * @returns {Promise<mysql.Connection>} A promise that resolves to a MySQL connection
  */
 async function getConnection() {
   try {

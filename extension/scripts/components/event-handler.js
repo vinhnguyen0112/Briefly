@@ -28,13 +28,14 @@ import {
   openNoteEditor,
   closeNoteEditor,
   handleSaveNote,
+  reloadNotes,
+  switchNotesTab,
 } from "./notes-handler.js";
 import { switchLanguage, translateElement } from "./i18n.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { updateContentStatus } from "./content-handler.js";
 
-// wires up all the event listeners in the app
 export function setupEventListeners() {
   elements.closeSidebarButton.addEventListener("click", () => {
     window.parent.postMessage({ action: "close_sidebar" }, "*");
@@ -91,6 +92,16 @@ export function setupEventListeners() {
     }
   });
 
+  elements.createFirstNoteButtonCurrent?.addEventListener("click", async () => {
+    console.log("Create first note (current) clicked");
+    await openNoteEditor();
+  });
+
+  elements.createFirstNoteButtonAll?.addEventListener("click", async () => {
+    console.log("Create first note (all) clicked");
+    await openNoteEditor();
+  });
+
   // Handle submit via button click
   elements.chatForm.addEventListener("submit", (e) => {
     e.preventDefault(); // prevent real form submission
@@ -110,7 +121,7 @@ export function setupEventListeners() {
     }
   });
 
-  elements.notesButton.addEventListener("click", () => {
+  elements.notesButton.addEventListener("click", async () => {
     if (state.isNotesOpen) {
       elements.notesScreen.style.display = "none";
       elements.notesButton.classList.remove("active");
@@ -118,9 +129,20 @@ export function setupEventListeners() {
 
       elements.chatScreen.style.display = "flex";
     } else {
-      closeAllScreensAndPanels();
+      const authSession = await getUserSession();
+      if (!authSession || !authSession.id) {
+        chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "sign_in_required",
+            });
+          }
+        });
+        return;
+      }
 
-      openNotesPanel();
+      closeAllScreensAndPanels();
+      await openNotesPanel();
       elements.notesButton.classList.add("active");
       state.isNotesOpen = true;
     }
@@ -134,16 +156,20 @@ export function setupEventListeners() {
     elements.chatScreen.style.display = "flex";
   });
 
-  elements.addNoteButton.addEventListener("click", () => {
-    openNoteEditor();
+  elements.addNoteButton.addEventListener("click", async () => {
+    await openNoteEditor();
   });
 
-  elements.createFirstNoteButton.addEventListener("click", () => {
-    openNoteEditor();
+  elements.createFirstNoteButton?.addEventListener("click", async () => {
+    await openNoteEditor();
   });
 
-  elements.saveNoteButton.addEventListener("click", () => {
-    handleSaveNote();
+  elements.reloadNotesButton?.addEventListener("click", () => {
+    reloadNotes();
+  });
+
+  elements.saveNoteButton.addEventListener("click", async () => {
+    await handleSaveNote();
   });
 
   elements.cancelNoteButton.addEventListener("click", () => {
@@ -152,6 +178,14 @@ export function setupEventListeners() {
 
   elements.closeEditorButton.addEventListener("click", () => {
     closeNoteEditor();
+  });
+
+  elements.notesTabCurrent?.addEventListener("click", () => {
+    switchNotesTab("current");
+  });
+
+  elements.notesTabAll?.addEventListener("click", () => {
+    switchNotesTab("all");
   });
 
   // language toggle
@@ -165,27 +199,6 @@ export function setupEventListeners() {
       enLabel.classList.toggle("active", language === "en");
       viLabel.classList.toggle("active", language === "vi");
     }
-
-    // const questionsContainer = document.querySelector(".generated-questions");
-    // if (questionsContainer && questionsContainer.style.display !== "none") {
-    //   const buttonContainer = document.querySelector(
-    //     ".question-buttons-container"
-    //   );
-    //   if (buttonContainer) {
-    //     buttonContainer.innerHTML = `
-    //       <div class="question-loading">
-    //         <div class="spinner-small"></div>
-    //         <span data-i18n="generatingQuestions">
-    //           ${
-    //             language === "vi"
-    //               ? "Đang tạo câu hỏi..."
-    //               : "Generating questions..."
-    //           }
-    //         </span>
-    //       </div>
-    //     `;
-    //   }
-    // }
 
     // Use the new internationalization module to switch language
     switchLanguage(language).then((message) => {
@@ -282,10 +295,7 @@ function setupAuthenticationButtons() {
   elements.googleLoginButtons.forEach((b) => {
     b.addEventListener("click", () => {
       const toastId = showToast({
-        message:
-          state.language === "en"
-            ? "Signing in with Google..."
-            : "Đang đăng nhập với Google...",
+        dataI18n: "signingInWithGoogle",
         type: "loading",
         duration: null,
       });
@@ -294,21 +304,15 @@ function setupAuthenticationButtons() {
           closeAccountPopupUI();
           closeSignInAlertPopup();
           updateToast(toastId, {
-            message:
-              state.language === "en"
-                ? "Signed in successfully"
-                : "Đăng nhập thành công",
+            dataI18n: "success",
             type: "success",
-            duration: 2000,
+            duration: 1000,
           });
         } else {
           updateToast(toastId, {
-            message:
-              state.language === "en"
-                ? "Google sign-in failed"
-                : "Đăng nhập Google thất bại",
+            dataI18n: "failed",
             type: "error",
-            duration: 2000,
+            duration: 1000,
           });
         }
       });
@@ -319,10 +323,7 @@ function setupAuthenticationButtons() {
   elements.facebookLoginButtons.forEach((b) => {
     b.addEventListener("click", () => {
       const toastId = showToast({
-        message:
-          state.language === "en"
-            ? "Signing in with Facebook..."
-            : "Đang đăng nhập với Facebook...",
+        dataI18n: "signingInWithFacebook",
         type: "loading",
         duration: null,
       });
@@ -331,21 +332,15 @@ function setupAuthenticationButtons() {
           closeAccountPopupUI();
           closeSignInAlertPopup();
           updateToast(toastId, {
-            message:
-              state.language === "en"
-                ? "Signed in successfully"
-                : "Đăng nhập thành công",
+            dataI18n: "success",
             type: "success",
-            duration: 2000,
+            duration: 1000,
           });
         } else {
           updateToast(toastId, {
-            message:
-              state.language === "en"
-                ? "Facebook sign-in failed"
-                : "Đăng nhập Facebook thất bại",
+            dataI18n: "failed",
             type: "error",
-            duration: 2000,
+            duration: 1000,
           });
         }
       });
@@ -355,7 +350,7 @@ function setupAuthenticationButtons() {
   // Sign out button
   elements.signOutButton.addEventListener("click", () => {
     const toastId = showToast({
-      message: state.language === "en" ? "Signing out..." : "Đang đăng xuất...",
+      dataI18n: "signingOut",
       type: "loading",
       duration: null,
     });
@@ -363,19 +358,15 @@ function setupAuthenticationButtons() {
       if (response.success) {
         closeAccountPopupUI();
         updateToast(toastId, {
-          message:
-            state.language === "en"
-              ? "Signed out successfully"
-              : "Đăng xuất thành công",
+          dataI18n: "success",
           type: "success",
-          duration: 2000,
+          duration: 1000,
         });
       } else {
         updateToast(toastId, {
-          message:
-            state.language === "en" ? "Sign out failed" : "Đăng xuất thất bại",
+          dataI18n: "failed",
           type: "error",
-          duration: 2000,
+          duration: 1000,
         });
       }
     });
@@ -489,13 +480,8 @@ function showClearChatHistoryDialog() {
  * Event handler for clear chat history
  */
 function clearChatHistoryEventHandler() {
-  // TODO: Refactor event handler to exclude current chat from deletion
-
   const toastId = showToast({
-    message:
-      state.language === "en"
-        ? "Deleting all history"
-        : "Đang xóa toàn bộ lịch sử",
+    dataI18n: "deleting",
     type: "loading",
     duration: null,
   });
@@ -511,17 +497,16 @@ function clearChatHistoryEventHandler() {
       resetCurrentChatState();
 
       updateToast(toastId, {
-        message:
-          state.language === "en" ? "Delete successfully" : "Xóa thành công",
+        dataI18n: "success",
         type: "success",
-        duration: 2000,
+        duration: 1000,
       });
     } else {
       console.log("Briefly: Clear user history failed!");
       updateToast(toastId, {
-        message: state.language === "en" ? "Delete failed" : "Xóa thất bại",
+        dataI18n: "failed",
         type: "error",
-        duration: 2000,
+        duration: 1000,
       });
     }
   });
@@ -573,14 +558,18 @@ function fetchChatHistory() {
       action: "fetch_chat_history",
       currentPage: state.pagination.currentPage,
     },
-    async (response) => {
-      mergeFetchedChats(response.chats);
-      state.pagination.isFetching = false;
-      state.pagination.hasMore = response.hasMore;
+    (response) => {
+      if (!response || !response.success) {
+        console.error("Failed to fetch chat history:", response.error);
+      } else {
+        mergeFetchedChats(response.chats);
+        state.pagination.hasMore = response.hasMore;
 
+        renderCurrentPageChatHistory();
+        state.pagination.currentPage += 1;
+      }
+      state.pagination.isFetching = false;
       removeChatHistorySpinner(chatHistoryList);
-      renderCurrentPageChatHistory();
-      state.pagination.currentPage += 1;
     }
   );
 }
@@ -748,6 +737,9 @@ function createChatHistoryItem(chat) {
   return item;
 }
 
+// Spam lock for chat history item click
+let isFetchingChatHistoryItem = false;
+
 /**
  * Handles click on a chat history item (excluding menu/actions).
  * @param {Event} e
@@ -755,8 +747,6 @@ function createChatHistoryItem(chat) {
  * @param {HTMLElement} item
  */
 async function handleChatHistoryItemClick(e, chat, item) {
-  console.log("Chat history item clicked:", chat);
-
   // Prevent clicks on action buttons/input fields
   if (
     e.target.closest(".chat-history-actions-menu") ||
@@ -766,8 +756,18 @@ async function handleChatHistoryItemClick(e, chat, item) {
     return;
   }
 
+  // Prevent spamming
+  if (isFetchingChatHistoryItem) return;
+  isFetchingChatHistoryItem = true;
+
   let messages = [];
   let chatContext = null;
+
+  const toastId = showToast({
+    dataI18n: "loading",
+    type: "loading",
+    duration: null,
+  });
 
   if (navigator.onLine) {
     // Fetch messages and original context if online
@@ -827,6 +827,8 @@ async function handleChatHistoryItemClick(e, chat, item) {
       }
     } catch (err) {
       console.warn("Failed to fetch chat or context:", err);
+    } finally {
+      removeToast(toastId);
     }
   } else {
     messages = await idbHandler.getMessagesForChat(chat.id);
@@ -850,6 +852,8 @@ async function handleChatHistoryItemClick(e, chat, item) {
   }
 
   setCurrentChatState({ ...chat, history });
+
+  isFetchingChatHistoryItem = false; // Release the lock
 }
 
 /**
@@ -918,7 +922,7 @@ function showRenameChatInput(item, chat) {
     if (newTitle && newTitle !== currentTitle) {
       // Show toast
       const toastId = showToast({
-        message: state.language === "en" ? "Renaming chat" : "Đang sửa tên",
+        dataI18n: "updating",
         type: "loading",
         duration: null,
       });
@@ -931,22 +935,16 @@ function showRenameChatInput(item, chat) {
 
         // Update toast to display success
         updateToast(toastId, {
-          message:
-            state.language === "en"
-              ? "Rename successfully"
-              : "Sửa tên thành công",
+          dataI18n: "success",
           type: "success",
-          duration: 2000,
+          duration: 1000,
         });
       } catch (err) {
         console.error(err);
         updateToast(toastId, {
-          message:
-            state.language === "en"
-              ? "Something went wrong, please try again later"
-              : "Đã xảy ra lỗi, vui lòng thử lại sau",
+          dataI18n: "failed",
           type: "error",
-          duration: 2000,
+          duration: 1000,
         });
         isRenaming = false;
         return;
@@ -982,7 +980,7 @@ function showDeleteChatDialog(chat) {
         style: "danger",
         eventHandler: async () => {
           const toastId = showToast({
-            message: state.language === "en" ? "Deleting chat" : "Đang xóa",
+            dataI18n: "deleting",
             type: "loading",
             duration: null,
           });
@@ -999,22 +997,16 @@ function showDeleteChatDialog(chat) {
             }
 
             updateToast(toastId, {
-              message:
-                state.language === "en"
-                  ? "Chat deleted sucessfully"
-                  : "Xóa thành công",
+              dataI18n: "success",
               type: "success",
-              duration: 2000,
+              duration: 1000,
             });
           } catch (err) {
             console.error(err);
             updateToast(toastId, {
-              message:
-                state.language === "en"
-                  ? "Something went wrong, please try again later"
-                  : "Đã xảy ra lỗi, vui lòng thử lại sau",
+              dataI18n: "failed",
               type: "error",
-              duration: 2000,
+              duration: 1000,
             });
           }
         },
@@ -1350,131 +1342,3 @@ function initializeConfigUI() {
     });
   });
 }
-
-// External function for rendering UI config
-// function renderConfigUI(containerId, onSave) {
-//   const container = document.getElementById(containerId);
-
-//   if (!container) {
-//     console.error("CocBot: Config container not found");
-//     return;
-//   }
-
-//   getConfig().then((config) => {
-//     const maxWordCount = config?.maxWordCount || 150;
-//     const responseStyle = config?.responseStyle || "conversational";
-
-//     container.innerHTML = `
-//   <div class="config-section">
-//     <div class="config-form">
-//       <div class="form-group">
-//         <label for="max-word-count" class="form-label">
-//           <span data-i18n="responseLength">Maximum Response Length:</span>
-//           <span id="word-count-value">${maxWordCount}</span>
-//           <span data-i18n="words">words</span>
-//         </label>
-//         <div class="slider-container">
-//           <input type="range" id="max-word-count" min="50" max="500" step="10" value="${maxWordCount}" class="slider">
-//           <div class="slider-markers">
-//             <span>50</span>
-//             <span>150</span>
-//             <span>300</span>
-//             <span>500</span>
-//           </div>
-//         </div>
-//         <div class="help-text" data-i18n="responseVerbosity">Control how verbose the answers will be</div>
-//       </div>
-
-//       <div class="form-group response-style-group">
-//         <label class="form-label" data-i18n="responseStyle">Response Style:</label>
-//         <div class="radio-options">
-//           <label class="radio-card ${
-//             responseStyle === "conversational" ? "selected" : ""
-//           }" data-style="conversational">
-//             <input type="radio" name="response-style" value="conversational" ${
-//               responseStyle === "conversational" ? "checked" : ""
-//             }>
-//             <div class="radio-card-content">
-//               <span class="radio-card-title" data-i18n="conversational">Conversational</span>
-//               <span class="radio-card-desc" data-i18n="conversationalDesc">Friendly, easy-to-understand explanations using everyday language</span>
-//             </div>
-//           </label>
-//           <label class="radio-card ${
-//             responseStyle === "educational" ? "selected" : ""
-//           }" data-style="educational">
-//             <input type="radio" name="response-style" value="educational" ${
-//               responseStyle === "educational" ? "checked" : ""
-//             }>
-//             <div class="radio-card-content">
-//               <span class="radio-card-title" data-i18n="educational">Educational</span>
-//               <span class="radio-card-desc" data-i18n="educationalDesc">Structured explanations with clear points and examples</span>
-//             </div>
-//           </label>
-//           <label class="radio-card ${
-//             responseStyle === "technical" ? "selected" : ""
-//           }" data-style="technical">
-//             <input type="radio" name="response-style" value="technical" ${
-//               responseStyle === "technical" ? "checked" : ""
-//             }>
-//             <div class="radio-card-content">
-//               <span class="radio-card-title" data-i18n="technical">Technical</span>
-//               <span class="radio-card-desc" data-i18n="technicalDesc">Precise terminology and thorough analysis for advanced understanding</span>
-//             </div>
-//           </label>
-//         </div>
-//       </div>
-
-//       <div class="form-actions">
-//         <button id="save-config" type="button" class="btn-primary" data-i18n="saveSettings">Save Settings</button>
-//       </div>
-//     </div>
-//   </div>
-// `;
-
-//     // Update word count display as slider changes
-//     const slider = document.getElementById("max-word-count");
-//     const wordCountValue = document.getElementById("word-count-value");
-
-//     slider.addEventListener("input", () => {
-//       wordCountValue.textContent = slider.value;
-//     });
-
-//     // Highlight selected radio card
-//     const radioCards = document.querySelectorAll(".radio-card");
-//     radioCards.forEach((card) => {
-//       card.addEventListener("click", () => {
-//         // Select the radio input
-//         const radioInput = card.querySelector('input[type="radio"]');
-//         radioInput.checked = true;
-
-//         // Update visual selection
-//         radioCards.forEach((c) => c.classList.remove("selected"));
-//         card.classList.add("selected");
-//       });
-//     });
-
-//     document.getElementById("save-config").addEventListener("click", () => {
-//       const maxWordCount = parseInt(
-//         document.getElementById("max-word-count").value
-//       );
-//       const responseStyle = document.querySelector(
-//         'input[name="response-style"]:checked'
-//       ).value;
-
-//       // Use a default personality that aligns with the backend
-//       const personality =
-//         "Be helpful and informative, focusing on the content.";
-
-//       const newConfig = {
-//         ...config,
-//         personality,
-//         maxWordCount,
-//         responseStyle,
-//       };
-
-//       saveConfig(newConfig).then(() => {
-//         if (onSave) onSave(newConfig);
-//       });
-//     });
-//   });
-// }

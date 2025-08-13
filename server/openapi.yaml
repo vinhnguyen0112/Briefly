@@ -114,7 +114,7 @@ paths:
       tags:
         - Auth
       security:
-        - googleAuth:: []
+        - googleAuth: []
       responses:
         "200":
           description: Successfully authenticated
@@ -1116,6 +1116,285 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
+  /notes:
+    get:
+      summary: Get notes for a page
+      description: >
+        Retrieves paginated notes for a specific page URL for the authenticated user.
+        Requires page_url query parameter and supports pagination with offset and limit.
+      tags:
+        - Notes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: page_url
+          required: true
+          schema:
+            type: string
+            format: uri
+          description: URL of the page to get notes for
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Offset for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+          description: Limit for pagination
+      responses:
+        "200":
+          description: Notes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      notes:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Note"
+                      hasMore:
+                        type: boolean
+                        description: Indicates if there are more notes available
+        "400":
+          description: Missing page_url, invalid page URL, or invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create a new note
+      description: Creates a new note for the authenticated user on a specific page URL.
+      tags:
+        - Notes
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CreateNoteRequest"
+            example:
+              page_url: "https://example.com/article"
+              note: "This is an important point about AI development that I want to remember."
+      responses:
+      "200":
+        description: Note created successfully
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                success:
+                  type: boolean
+                data:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: Generated UUID for the created note
+            example:
+              success: true
+              data:
+                id: "550e8400-e29b-41d4-a716-446655440000"
+        "400":
+          description: Invalid input - missing required fields or invalid page URL
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Internal server error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notes/all:
+    get:
+      summary: Get all notes for authenticated user
+      description: >
+        Retrieves paginated notes for the authenticated user across all pages.
+        Supports pagination with offset and limit.
+      tags:
+        - Notes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: query
+          name: offset
+          schema:
+            type: integer
+            default: 0
+            minimum: 0
+          description: Offset for pagination
+        - in: query
+          name: limit
+          schema:
+            type: integer
+            default: 20
+            minimum: 1
+          description: Limit for pagination
+      responses:
+        "200":
+          description: Notes retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      notes:
+                        type: array
+                        items:
+                          $ref: "#/components/schemas/Note"
+                      hasMore:
+                        type: boolean
+                        description: Indicates if there are more notes available
+        "400":
+          description: Invalid pagination parameters
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
+  /notes/{id}:
+    put:
+      summary: Update a note by ID
+      description: Updates a note by its ID. Only the owner can update their note.
+      tags:
+        - Notes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Note ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpdateNoteRequest"
+            example:
+              note: "Updated note content with additional insights about the topic."
+      responses:
+        "200":
+          description: Note updated successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      affectedRows:
+                        type: integer
+                        description: Number of rows affected by the update
+        "400":
+          description: Invalid input - missing required fields
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Note not found or user doesn't own the note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    delete:
+      summary: Delete a note by ID
+      description: Deletes a note by its ID. Only the owner can delete their note.
+      tags:
+        - Notes
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+            format: uuid
+          description: Note ID
+      responses:
+        "200":
+          description: Note deleted successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  data:
+                    type: object
+                    properties:
+                      affectedRows:
+                        type: integer
+                        description: Number of rows affected by the deletion
+        "401":
+          description: Unauthorized or invalid session
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "404":
+          description: Note not found or user doesn't own the note
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+
 components:
   securitySchemes:
     bearerAuth:
@@ -1417,3 +1696,54 @@ components:
               type: string
             message:
               type: string
+
+    Note:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique identifier for the note
+        user_id:
+          type: string
+          description: ID of the user who created the note
+        page_url:
+          type: string
+          format: uri
+          description: URL of the page this note belongs to
+        note:
+          type: string
+          description: The note content
+        created_at:
+          type: string
+          format: date-time
+          description: Timestamp when the note was created
+        updated_at:
+          type: string
+          format: date-time
+          description: Timestamp when the note was last updated
+
+    CreateNoteRequest:
+      type: object
+      required:
+        - page_url
+        - note
+      properties:
+        page_url:
+          type: string
+          format: uri
+          description: URL of the page to create note for
+          minLength: 1
+        note:
+          type: string
+          description: Content of the note
+          minLength: 1
+
+    UpdateNoteRequest:
+      type: object
+      required:
+        - note
+      properties:
+        note:
+          type: string
+          description: Updated content of the note
+          minLength: 1

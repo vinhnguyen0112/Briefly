@@ -78,8 +78,25 @@ const translations = {
     technicalDesc:
       "Precise terminology and thorough analysis for advanced understanding",
     responseVerbosity: "Control how verbose the answers will be",
-    languageToggleDesc: "Select the language for the assistant",
     saveSettings: "Save Settings",
+
+    // language toggle
+    languageToggleTitle: "Language",
+    english: "English",
+    vietnamese: "Vietnamese",
+    languageToggleDesc: "Select language for the assistant",
+
+    forThisPage: "For This Page",
+    allNotes: "All Notes",
+    noNotesThisPage: "No notes for this page yet.",
+    noNotesAtAll: "No notes created yet.",
+    reloadNotes: "Reload Notes",
+    deleteNote: "Delete Note",
+    deleteNoteConfirmation:
+      "Are you sure you want to delete this note? This action cannot be undone.",
+    confirmDelete: "Delete",
+    cancel: "Cancel",
+    noChangesDetected: "Please make some changes to update the note.",
 
     // context indicator
     chatContinuedWithPageContext:
@@ -94,6 +111,19 @@ const translations = {
     optionalLabel: "(optional)",
     feedbackPlaceholder: "write here",
     submitFeedback: "Submit",
+
+    // toast
+    youAreOffline: "You are offline.",
+    signingInWithGoogle: "Signing in with Google",
+    signingInWithFacebook: "Signing in with Facebook",
+    signingOut: "Signing out",
+    success: "Success",
+    failed: "Failed",
+    loading: "Loading",
+    deleting: "Deleting",
+    updating: "Updating",
+    creating: "Creating",
+    submitting: "Submitting",
   },
 
   vi: {
@@ -111,7 +141,7 @@ const translations = {
     apiKeySettings: "Cài Đặt Khóa API",
     responseSettings: "Cài Đặt Phản Hồi",
     pageNotes: "Ghi Chú Trang",
-    editNote: "Chỉnh Sửa Ghi Chú",
+    editNote: "Sửa Ghi Chú",
 
     quickActions: "Thao Tác Nhanh",
     summarize: "Tóm tắt trang web này cho tôi",
@@ -158,6 +188,7 @@ const translations = {
 
     welcome: "Hỏi tôi bất kì thứ gì về trang web này",
 
+    // configuration
     responseLength: "Độ Dài Phản Hồi Tối Đa:",
     words: "từ",
     responseStyle: "Phong Cách Phản Hồi",
@@ -172,8 +203,25 @@ const translations = {
     technicalDesc:
       "Thuật ngữ chính xác và phân tích chuyên sâu cho người dùng nâng cao",
     responseVerbosity: "Điều chỉnh mức độ chi tiết của câu trả lời",
-    languageToggleDesc: "Chọn ngôn ngữ cho trợ lý",
     saveSettings: "Lưu Cài Đặt",
+
+    // language toggle
+    languageToggleTitle: "Ngôn ngữ",
+    english: "Tiếng Anh",
+    vietnamese: "Tiếng Việt",
+    languageToggleDesc: "Tùy chỉnh ngôn ngữ cho trợ lý",
+
+    forThisPage: "Cho Trang Này",
+    allNotes: "Tất Cả Ghi Chú",
+    noNotesThisPage: "Chưa có ghi chú nào cho trang này.",
+    noNotesAtAll: "Chưa có ghi chú nào được tạo.",
+    reloadNotes: "Tải Lại Ghi Chú",
+    deleteNote: "Xóa Ghi Chú",
+    deleteNoteConfirmation:
+      "Bạn có chắc chắn muốn xóa ghi chú này không? Hành động này không thể hoàn tác.",
+    confirmDelete: "Xóa",
+    cancel: "Hủy",
+    noChangesDetected: "Vui lòng thực hiện thay đổi để cập nhật ghi chú.",
 
     chatContinuedWithPageContext:
       "Cuộc trò chuyện này tiếp tục sử dụng ngữ cảnh trang gốc",
@@ -187,6 +235,19 @@ const translations = {
     optionalLabel: "(không bắt buộc)",
     feedbackPlaceholder: "viết tại đây",
     submitFeedback: "Gửi",
+
+    // toast
+    youAreOffline: "Bạn đang ngoại tuyến.",
+    signingInWithGoogle: "Đang đăng nhập bằng Google",
+    signingInWithFacebook: "Đang đăng nhập bằng Facebook",
+    signingOut: "Đang đăng xuất",
+    success: "Thành công",
+    failed: "Thất bại",
+    loading: "Đang tải",
+    deleting: "Đang xóa",
+    updating: "Đang cập nhật",
+    creating: "Đang tạo",
+    submitting: "Đang gửi",
   },
 };
 

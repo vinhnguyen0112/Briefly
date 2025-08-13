@@ -218,6 +218,42 @@ const addMessage = async (req, res, next) => {
 };
 
 /**
+ * Adds a pair of messages (user + assistant) to a chat atomically.
+ * @param {Object} req
+ * @param {Object} res
+ * @param {Function} next
+ */
+const addMessagePair = async (req, res, next) => {
+  try {
+    const { chat_id } = req.params;
+    const { messages } = req.body;
+
+    if (!chat_id || !Array.isArray(messages) || messages.length !== 2) {
+      throw new AppError(
+        ERROR_CODES.INVALID_INPUT,
+        "Missing chat_id or invalid messages array (must be 2 items)"
+      );
+    }
+
+    // Attach chat_id to each message
+    const messagesToInsert = messages.map((msg) => ({
+      chat_id,
+      ...msg,
+    }));
+
+    const ids = await Message.createBulk(messagesToInsert);
+
+    res.json({
+      success: true,
+      message: "Message pair added successfully",
+      data: { ids },
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+/**
  * Retrieves all messages for a chat by chat_id.
  * @param {Object} req
  * @param {Object} res
@@ -244,5 +280,6 @@ module.exports = {
   deleteChatById,
   deleteChatsOfUser,
   addMessage,
+  addMessagePair,
   getMessages,
 };

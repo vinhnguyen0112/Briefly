@@ -4,13 +4,14 @@ const { ERROR_CODES } = require("../errors");
 let pLimit = require("p-limit");
 const commonHelper = require("../helpers/commonHelper");
 const { redisHelper } = require("../helpers/redisHelper");
-const Page = require("../models/page");
 const PageSummary = require("../models/pageSummary");
+const AnonSession = require("../models/anonSession");
 
 const limit = pLimit(5); // 5 concurrency
 const ONE_DAY_MS = 24 * 60 * 60 * 1000; // 1 day in ms
 const FRESHNESS_BUFFER_MS = 5 * 60 * 1000; // 5 mins offset for clock drift
 const FRESHNESS_THRESHOLD = ONE_DAY_MS - FRESHNESS_BUFFER_MS;
+const MAX_ANON_QUERIES = 3;
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -33,8 +34,6 @@ function getNormalizedPageMeta(pageUrl) {
  * @param {Object} res
  * @param {Function} next
  */
-
-// TODO: Might want to do sth when summary is expired
 const handleUserQuery = async (req, res, next) => {
   try {
     const { messages, metadata } = req.body;
@@ -42,6 +41,17 @@ const handleUserQuery = async (req, res, next) => {
     const pageMeta = getNormalizedPageMeta(metadata.page_url);
     if (!pageMeta) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Invalid page URL");
+    }
+
+    // Check anon limit before doing any expensive work
+    if (
+      req.sessionType === "anon" &&
+      req.session.anon_query_count >= MAX_ANON_QUERIES
+    ) {
+      throw new AppError(
+        ERROR_CODES.ANON_QUERY_LIMIT_REACHED,
+        "Anonymous query limit reached"
+      );
     }
 
     let assistantMessage;
@@ -61,6 +71,22 @@ const handleUserQuery = async (req, res, next) => {
       );
     }
 
+    let newCount = null;
+    // Increase anon query count
+    if (req.sessionType === "anon") {
+      const affectedRows = await AnonSession.increaseAnonQueryCount(
+        req.session.id
+      );
+
+      if (affectedRows > 0) {
+        // Update cache
+        newCount = req.session.anon_query_count + 1;
+        await redisHelper.updateRecord("anon", req.session.id, {
+          anon_query_count: newCount,
+        });
+      }
+    }
+
     return res.json({
       success: true,
       data: {
@@ -68,6 +94,7 @@ const handleUserQuery = async (req, res, next) => {
         usage: assistantMessage.usage,
         model: assistantMessage.model,
       },
+      anon_query_count: newCount,
     });
   } catch (err) {
     next(err);

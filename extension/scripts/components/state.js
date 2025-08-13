@@ -1,6 +1,5 @@
 // Global state object
 // Only persist in IDB when user click to view a chat
-
 export const state = {
   pageContent: null,
   chatContext: null,
@@ -22,7 +21,9 @@ export const state = {
   currentPageUrl: "",
   isEditingNote: false,
   currentEditingNoteTimestamp: null,
-  language: "en", // Default language is English
+  currentNotesTab: "current",
+  currentEditingNoteUrl: null,
+  language: "en",
   currentChat: {
     id: null,
     title: "",
@@ -37,7 +38,52 @@ export const state = {
   chatHistory: [],
   isChatHistoryEventsInitialized: false,
   toastIdCounter: 0,
+  notesPagination: {
+    current: {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    },
+    all: {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    },
+  },
+  notesData: {
+    current: [],
+    all: [],
+  },
 };
+
+/**
+ * Reset notes pagination state
+ * @param {string} tab - "current" or "all"
+ */
+export function resetNotesPaginationState(tab = null) {
+  if (tab) {
+    state.notesPagination[tab] = {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    };
+    state.notesData[tab] = [];
+  } else {
+    // Reset both tabs
+    state.notesPagination.current = {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    };
+    state.notesPagination.all = {
+      currentPage: 0,
+      hasMore: true,
+      isFetching: false,
+    };
+    state.notesData.current = [];
+    state.notesData.all = [];
+  }
+}
 
 // Load sidebar width from storage
 export function loadSidebarWidth() {
@@ -90,15 +136,6 @@ export function saveAnonSession(data) {
     chrome.storage.local.set({ anon_session: { ...data, id: data.id } }, () =>
       resolve(data.id)
     );
-  });
-}
-
-// Increase anon query count for the current anon session
-export async function increaseAnonQueryCount() {
-  const anonSession = await getAnonSession();
-  await saveAnonSession({
-    ...anonSession,
-    anon_query_count: (anonSession.anon_query_count || 0) + 1,
   });
 }
 
@@ -176,68 +213,125 @@ export async function saveConfig(config) {
   });
 }
 
-// Notes management
-export async function getNotesForUrl(url) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["notes"], (result) => {
-      const allNotes = result.notes || {};
-      resolve(allNotes[url] || []);
-    });
-  });
+export async function getNotesForUrl(url, offset = 0, limit = 20) {
+  try {
+    const timestamp = Date.now();
+    const apiUrl = `https://dev-capstone-2025.coccoc.com/api/notes?page_url=${encodeURIComponent(
+      url
+    )}&offset=${offset}&limit=${limit}&_t=${timestamp}`;
+
+    const response = await sendRequest(apiUrl);
+
+    const result = {
+      notes: response.data.notes.map((note) => ({
+        content: note.note,
+        timestamp: new Date(note.created_at).getTime(),
+        url: note.page_url,
+        id: note.id,
+      })),
+      hasMore: response.data.hasMore,
+    };
+
+    console.log(
+      `API Response: ${result.notes.length} notes, hasMore: ${result.hasMore}`
+    );
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching notes:", error);
+    return { notes: [], hasMore: false };
+  }
+}
+
+export async function getAllNotes(offset = 0, limit = 20) {
+  try {
+    // Add timestamp để tránh cache
+    const timestamp = Date.now();
+    const apiUrl = `https://dev-capstone-2025.coccoc.com/api/notes/all?offset=${offset}&limit=${limit}&_t=${timestamp}`;
+
+    const response = await sendRequest(apiUrl);
+
+    const result = {
+      notes: response.data.notes.map((note) => ({
+        content: note.note,
+        timestamp: new Date(note.created_at).getTime(),
+        url: note.page_url,
+        id: note.id,
+      })),
+      hasMore: response.data.hasMore,
+    };
+
+    console.log(
+      `API Response: ${result.notes.length} notes, hasMore: ${result.hasMore}`
+    );
+
+    return result;
+  } catch (error) {
+    console.error("Error fetching all notes:", error);
+    return { notes: [], hasMore: false };
+  }
 }
 
 export async function saveNote(note) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["notes"], (result) => {
-      const allNotes = result.notes || {};
-      const urlNotes = allNotes[note.url] || [];
-      urlNotes.push(note);
-      allNotes[note.url] = urlNotes;
-
-      chrome.storage.local.set({ notes: allNotes }, () => {
-        resolve();
-      });
-    });
-  });
-}
-
-export async function updateNote(timestamp, content) {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["notes"], (result) => {
-      const allNotes = result.notes || {};
-      const urlNotes = allNotes[state.currentPageUrl] || [];
-
-      const noteIndex = urlNotes.findIndex(
-        (note) => note.timestamp === timestamp
-      );
-      if (noteIndex !== -1) {
-        urlNotes[noteIndex].content = content;
-        allNotes[state.currentPageUrl] = urlNotes;
-
-        chrome.storage.local.set({ notes: allNotes }, () => {
-          resolve();
-        });
-      } else {
-        resolve();
+  try {
+    const response = await sendRequest(
+      "https://dev-capstone-2025.coccoc.com/api/notes",
+      {
+        method: "POST",
+        body: {
+          page_url: note.url,
+          note: note.content,
+        },
       }
-    });
-  });
+    );
+    return response.data.id;
+  } catch (error) {
+    console.error("Error saving note:", error);
+    throw error;
+  }
 }
 
-export async function deleteNote(timestamp) {
+export async function updateNote(id, content) {
+  try {
+    const response = await sendRequest(
+      `https://dev-capstone-2025.coccoc.com/api/notes/${id}`,
+      {
+        method: "PUT",
+        body: {
+          note: content,
+        },
+      }
+    );
+    return response.data.affectedRows > 0;
+  } catch (error) {
+    console.error("Error updating note:", error);
+    throw error;
+  }
+}
+
+export async function deleteNote(id) {
+  try {
+    const response = await sendRequest(
+      `https://dev-capstone-2025.coccoc.com/api/notes/${id}`,
+      {
+        method: "DELETE",
+      }
+    );
+    return response.data.affectedRows > 0;
+  } catch (error) {
+    console.error("Error deleting note:", error);
+    throw error;
+  }
+}
+
+export async function getCurrentTabUrl() {
   return new Promise((resolve) => {
-    chrome.storage.local.get(["notes"], (result) => {
-      const allNotes = result.notes || {};
-      const urlNotes = allNotes[state.currentPageUrl] || [];
-
-      const filteredNotes = urlNotes.filter(
-        (note) => note.timestamp !== timestamp
-      );
-      allNotes[state.currentPageUrl] = filteredNotes;
-
-      chrome.storage.local.set({ notes: allNotes }, () => {
-        resolve();
-      });
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      if (tabs && tabs[0]) {
+        resolve(tabs[0].url);
+      } else {
+        resolve(state.currentPageUrl || state.pageContent?.url || "");
+      }
     });
   });
 }
@@ -352,7 +446,19 @@ export async function sendRequest(url, options = {}) {
     const userSession = await getUserSession();
     const anonSession = !userSession && (await getAnonSession());
     const sessionId = userSession?.id || anonSession?.id;
-    if (!sessionId) throw new Error("No active session found");
+    // No session found
+    if (!sessionId) {
+      return chrome.tabs.query(
+        { active: true, currentWindow: true },
+        (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "sign_in_required",
+            });
+          }
+        }
+      );
+    }
     headers.set(
       "Authorization",
       `Bearer ${userSession ? `auth:${sessionId}` : `anon:${sessionId}`}`
@@ -391,6 +497,22 @@ export async function sendRequest(url, options = {}) {
           }
         });
       });
+    } else if (code === "UNAUTHENTICATED") {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            action: "sign_in_required",
+          });
+        }
+      });
+    } else if (code === "ANON_QUERY_LIMIT_REACHED") {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            action: "anon_query_limit_reached",
+          });
+        }
+      });
     } else {
       console.error(`Error ${code}: ${message}`);
     }
@@ -399,14 +521,15 @@ export async function sendRequest(url, options = {}) {
 
   const data = await response.json();
 
-  // If server assigned a new anonymous session, save it
-  if (
-    data.meta &&
-    data.meta.newAnonSessionAssigned &&
-    data.meta.newAnonSession
-  ) {
-    console.log("New anon session assigned, saving to storage...");
-    await saveAnonSession(data.meta.newAnonSession);
+  // If server increased anon_query_count, update it
+  if (data.anon_query_count) {
+    const anonSession = await getAnonSession();
+    if (anonSession && anonSession.id) {
+      await saveAnonSession({
+        id: anonSession.id,
+        anon_query_count: data.anon_query_count,
+      });
+    }
   }
 
   return data;
