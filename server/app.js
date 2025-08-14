@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const fs = require("fs");
 const yaml = require("js-yaml");
 const swaggerUi = require("swagger-ui-express");
+const { register } = require("./utils/metrics");
 
 const authRoutes = require("./routes/authRoutes");
 const anonRoutes = require("./routes/anonRoutes");
@@ -53,6 +54,16 @@ app.use("/api/notes", noteRoutes);
 // health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "CocBot API is running" });
+});
+
+// prometheus metrics endpoint
+app.get("/metrics", async (req, res) => {
+  try {
+    res.set("Content-Type", register.contentType);
+    res.end(await register.metrics());
+  } catch (err) {
+    res.status(500).end("metrics_error");
+  }
 });
 
 // Global error handler
