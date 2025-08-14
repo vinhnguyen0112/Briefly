@@ -47,6 +47,54 @@ const dbQueryDurationSeconds = new client.Histogram({
   registers: [register],
 });
 
+// RAG metrics
+const ragOperationsTotal = new client.Counter({
+  name: "rag_operations_total",
+  help: "total rag operations",
+  labelNames: ["operation", "status"],
+  registers: [register],
+});
+
+const ragOperationDurationSeconds = new client.Histogram({
+  name: "rag_operation_duration_seconds",
+  help: "rag operation duration in seconds",
+  labelNames: ["operation"],
+  buckets: [0.1, 0.5, 1, 2, 5, 10, 30],
+  registers: [register],
+});
+
+// ChromaDB metrics
+const chromaOperationsTotal = new client.Counter({
+  name: "chroma_operations_total",
+  help: "total chromadb operations",
+  labelNames: ["operation", "status"],
+  registers: [register],
+});
+
+const chromaOperationDurationSeconds = new client.Histogram({
+  name: "chroma_operation_duration_seconds",
+  help: "chromadb operation duration in seconds",
+  labelNames: ["operation"],
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2, 5],
+  registers: [register],
+});
+
+// HTTP metrics
+const httpRequestsTotal = new client.Counter({
+  name: "http_requests_total",
+  help: "total http requests",
+  labelNames: ["method", "route", "status"],
+  registers: [register],
+});
+
+const httpRequestDurationSeconds = new client.Histogram({
+  name: "http_request_duration_seconds",
+  help: "http request duration in seconds",
+  labelNames: ["method", "route"],
+  buckets: [0.05, 0.1, 0.25, 0.5, 1, 2.5, 5, 10],
+  registers: [register],
+});
+
 module.exports = {
   client,
   register,
@@ -55,6 +103,12 @@ module.exports = {
   dbQueriesTotal,
   dbQueryErrorsTotal,
   dbQueryDurationSeconds,
+  ragOperationsTotal,
+  ragOperationDurationSeconds,
+  chromaOperationsTotal,
+  chromaOperationDurationSeconds,
+  httpRequestsTotal,
+  httpRequestDurationSeconds,
 };
 
 
