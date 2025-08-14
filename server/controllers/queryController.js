@@ -6,17 +6,11 @@ const commonHelper = require("../helpers/commonHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const PageSummary = require("../models/pageSummary");
 const AnonSession = require("../models/anonSession");
-<<<<<<< Updated upstream
-=======
 const Page = require("../models/page");
 const ragService = require("../services/ragService");
-const {
-  llmRequestsTotal,
-  llmRequestDurationSeconds,
-} = require("../utils/metrics");
->>>>>>> Stashed changes
 
 const limit = pLimit(5); // 5 concurrency
+const openaiLimit = pLimit(3); // 3 concurrent OpenAI requests
 const ONE_DAY_MS = 24 * 60 * 60 * 1000; // 1 day in ms
 const FRESHNESS_BUFFER_MS = 5 * 60 * 1000; // 5 mins offset for clock drift
 const FRESHNESS_THRESHOLD = ONE_DAY_MS - FRESHNESS_BUFFER_MS;
@@ -167,12 +161,14 @@ const handleUserQuery = async (req, res, next) => {
  * @returns {Promise<{message: string, usage: Object, model: string}>}
  */
 async function generateAssistantResponse(messages, max_tokens) {
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.7,
-    max_tokens,
-    messages,
-  });
+  const completion = await openaiLimit(() =>
+    openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      max_tokens,
+      messages,
+    })
+  );
 
   if (
     !completion ||
@@ -314,12 +310,14 @@ Do not include anything else, not even a JSON wrapper object.`;
 
     const temperature = language === "vi" ? 0.3 : 0.7;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [systemPrompt, contentPrompt],
-      temperature,
-      max_tokens: 500,
-    });
+    const completion = await openaiLimit(() =>
+      openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [systemPrompt, contentPrompt],
+        temperature,
+        max_tokens: 500,
+      })
+    );
 
     if (
       !completion ||
@@ -418,11 +416,13 @@ const captionize = async (req, res, next) => {
             },
           ];
 
-          const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages,
-            temperature: 0.5,
-          });
+          const response = await openaiLimit(() =>
+            openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages,
+              temperature: 0.5,
+            })
+          );
 
           const raw = response.choices?.[0]?.message?.content?.trim() || "";
           const clean = raw.replace(/^['"]+|['"]+$/g, "").split(/\r?\n/)[0];

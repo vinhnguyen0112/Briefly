@@ -25,11 +25,16 @@ function chunkText(text, chunkSize = 2000, overlap = 200) {
 
 async function embedTexts(texts) {
   if (!texts || texts.length === 0) return [];
-  const resp = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: texts,
-  });
-  return resp.data.map((d) => d.embedding);
+  try {
+    const resp = await openai.embeddings.create({
+      model: "text-embedding-3-small",
+      input: texts,
+    });
+    return resp.data.map((d) => d.embedding);
+  } catch (error) {
+    console.error("OpenAI embedding error:", error);
+    throw new Error(`Failed to generate embeddings: ${error.message}`);
+  }
 }
 
 async function getOrCreateUserCollection(userId) {
@@ -37,8 +42,9 @@ async function getOrCreateUserCollection(userId) {
   const name = getUserCollectionName(userId);
   try {
     return await client.getOrCreateCollection({ name });
-  } catch (e) {
-    return await client.createCollection({ name });
+  } catch (error) {
+    console.error(`Failed to get/create collection ${name}:`, error);
+    throw new Error(`ChromaDB collection error: ${error.message}`);
   }
 }
 
@@ -60,7 +66,9 @@ async function upsertPage({
 
   try {
     await collection.delete({ where: { page_id: pageId } });
-  } catch (_) {}
+  } catch (error) {
+    console.error(`Failed to delete existing chunks for page ${pageId}:`, error);
+  }
 
   const embeddings = await embedTexts(chunks);
   const ids = chunks.map((_, i) => `${pageId}:${i}`);
