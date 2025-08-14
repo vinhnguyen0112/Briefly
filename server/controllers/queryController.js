@@ -6,6 +6,15 @@ const commonHelper = require("../helpers/commonHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const PageSummary = require("../models/pageSummary");
 const AnonSession = require("../models/anonSession");
+<<<<<<< Updated upstream
+=======
+const Page = require("../models/page");
+const ragService = require("../services/ragService");
+const {
+  llmRequestsTotal,
+  llmRequestDurationSeconds,
+} = require("../utils/metrics");
+>>>>>>> Stashed changes
 
 const limit = pLimit(5); // 5 concurrency
 const ONE_DAY_MS = 24 * 60 * 60 * 1000; // 1 day in ms
@@ -63,12 +72,62 @@ const handleUserQuery = async (req, res, next) => {
       );
     }
     if (!assistantMessage) {
-      // If not a summarize event or if no cached || stored summary
-      // Generate response
-      assistantMessage = await generateAssistantResponse(
-        messages,
-        metadata.max_tokens
-      );
+      const isAuth = req.sessionType === "auth" && req.session?.user_id;
+      let useRag = Boolean(metadata.use_rag);
+      if (!useRag && isAuth) {
+        const pageRow = await Page.getById(pageMeta.pageId);
+        const contentLen =
+          (pageRow?.page_content?.length || 0) +
+          (pageRow?.pdf_content?.length || 0);
+        useRag = contentLen > 4000;
+      }
+
+      if (useRag && isAuth) {
+        const pageRow = await Page.getById(pageMeta.pageId);
+        if (pageRow) {
+          await ragService.ensurePageIngested({
+            userId: req.session.user_id,
+            pageId: pageMeta.pageId,
+            pageUrl: pageRow.page_url,
+            title: pageRow.title,
+            content: pageRow.page_content,
+            pdfContent: pageRow.pdf_content,
+            language: req.headers["accept-language"] || "",
+          });
+          const contexts = await ragService.queryPage({
+            userId: req.session.user_id,
+            pageId: pageMeta.pageId,
+            query: messages[messages.length - 1]?.content || "",
+            topK: 6,
+          });
+          const contextBlock = contexts
+            .map((c) => `[#${c.meta.chunk_index}] ${c.text}`)
+            .join("\n\n");
+          const ragMessages = [
+            {
+              role: "system",
+              content:
+                "You are a helpful assistant. Use the provided context snippets from the current page to answer. If the answer is not present, say you don't know.",
+            },
+            {
+              role: "system",
+              content: `Context snippets from page ${pageRow.title || ""} (${pageRow.page_url}):\n\n${contextBlock}`,
+            },
+            messages[messages.length - 1],
+          ];
+          assistantMessage = await generateAssistantResponse(
+            ragMessages,
+            metadata.max_tokens
+          );
+        }
+      }
+
+      if (!assistantMessage) {
+        assistantMessage = await generateAssistantResponse(
+          messages,
+          metadata.max_tokens
+        );
+      }
     }
 
     let newCount = null;

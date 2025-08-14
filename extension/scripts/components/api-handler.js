@@ -262,11 +262,18 @@ export async function callOpenAI(messages, metadata) {
     : state.pageContent?.url || window.location.href;
   metadata.language = state.language || "en";
 
+  const contentLen =
+    (state.isUsingChatContext
+      ? (state.chatContext?.content || "").length
+      : (state.pageContent?.content || "").length) +
+    (state.pdfContent?.content ? formatPdfContent(state.pdfContent).length : 0);
+  const useRag = contentLen > 4000;
+
   const res = await sendRequest(`${SERVER_URL}/api/query/ask`, {
     method: "POST",
     body: {
       messages,
-      metadata,
+      metadata: { ...metadata, use_rag: useRag },
     },
   });
 
