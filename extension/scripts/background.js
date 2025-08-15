@@ -432,8 +432,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "extract_page_content") {
+    // resetProcessedImages();
     console.log(
-      "CocBot: Received extract_page_content request",
+      "VH: Received extract_page_content request",
       message.forceRefresh ? "(forced refresh)" : ""
     );
 
@@ -774,12 +775,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "process_images") {
-    resetProcessedImages();
     handleCaptionImages(message.images, message.content)
       .then((captions) => {
         chrome.tabs.sendMessage(sender.tab.id, {
           action: "caption_results",
-          captions: captions,
+          captions,
         });
       })
       .catch((error) => {

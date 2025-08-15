@@ -770,7 +770,7 @@ export function handleContentMessage(message) {
       break;
 
     case "refresh_page_content":
-      console.log("CocBot: URL changed, requesting fresh content");
+      console.log("VH: URL changed, requesting fresh content");
 
       // Reset content extraction state
       state.contentFetchAttempts = 0;

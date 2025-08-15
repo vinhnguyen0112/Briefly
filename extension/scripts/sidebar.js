@@ -227,6 +227,31 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   }
 });
 
+window.addEventListener("message", (event) => {
+  if (event.data.action === "caption_update") {
+    const incoming = Array.isArray(event.data.captions)
+      ? event.data.captions
+      : [];
+    console.log("VH: Received caption update:", incoming);
+
+    if (state.pageContent) {
+      const prev = Array.isArray(state.pageContent.captions)
+        ? state.pageContent.captions
+        : [];
+      state.pageContent.captions = prev.concat(incoming);
+      state.pageContent.imagesProcessing = false;
+
+      console.log(
+        "VH: State updated: +",
+        incoming.length,
+        "captions (total:",
+        state.pageContent.captions.length,
+        ")"
+      );
+    }
+  }
+});
+
 /**
  * Helper function to pass store_page_metadata message to background script
  */

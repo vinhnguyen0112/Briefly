@@ -11,6 +11,7 @@ import {
 } from "./api-handler.js";
 import { translateElement } from "./i18n.js";
 import { formatPdfDate } from "./pdf-handler.js";
+import { resetProcessedImages } from "./caption-handler.js";
 
 /**
  * Extracts page content by messaging the background script.
