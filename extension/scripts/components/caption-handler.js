@@ -1,44 +1,83 @@
-const processedImages = new Set();
+export const processedImagesByTab = {};
+
 import { sendRequest } from "./state.js";
 
-export async function handleCaptionImages(imageUrls, content) {
-  const newImages = imageUrls.filter((img) => !processedImages.has(img));
+const MAX_TOTAL_CAPTIONS_PER_TAB = 3;
 
-  if (newImages.length === 0) {
-    console.log("All images already captioned, skipping.");
-    return [];
+export async function handleCaptionImages(imageUrls, content, tabId) {
+  if (!processedImagesByTab[tabId]) processedImagesByTab[tabId] = {};
+  const store = processedImagesByTab[tabId];
+
+  const currentCaptionCount = Object.keys(store).length;
+
+  if (currentCaptionCount >= MAX_TOTAL_CAPTIONS_PER_TAB) {
+    console.warn(
+      `[Caption][limit] Tab ${tabId} has ${currentCaptionCount} captions (max: ${MAX_TOTAL_CAPTIONS_PER_TAB}). No more images will be extracted!`
+    );
+    return Object.entries(store).map(([src, caption]) => ({ src, caption }));
   }
 
-  newImages.forEach((img) => processedImages.add(img));
+  const imagesWithCaption = [];
+  const imagesToCaption = [];
 
-  let captions = await callCaptionApi(newImages, content);
-
-  const validCaptions = [];
-  const retryList = [];
-
-  captions.forEach((caption, index) => {
-    const src = newImages[index];
-    if (caption && caption.trim()) {
-      validCaptions.push({ src, caption });
+  imageUrls.forEach((src) => {
+    if (store[src]) {
+      imagesWithCaption.push({ src, caption: store[src] });
     } else {
-      retryList.push(src);
+      imagesToCaption.push(src);
     }
   });
 
-  for (const imgSrc of retryList) {
-    let retryCount = 0;
-    let caption = null;
-    while (retryCount < 3 && (!caption || caption.trim() === "")) {
-      const [retryCaption] = await callCaptionApi([imgSrc], content);
-      caption = retryCaption;
-      retryCount++;
-    }
-    if (caption && caption.trim()) {
-      validCaptions.push({ src: imgSrc, caption });
+  const availableSlots = MAX_TOTAL_CAPTIONS_PER_TAB - currentCaptionCount;
+  const limitedImagesToCaption = imagesToCaption.slice(0, availableSlots);
+
+  const validCaptions = [...imagesWithCaption];
+  const retryList = [];
+
+  if (limitedImagesToCaption.length > 0) {
+    const captions = await callCaptionApi(limitedImagesToCaption, content);
+
+    captions.forEach((caption, index) => {
+      const src = limitedImagesToCaption[index];
+      if (caption && caption.trim()) {
+        store[src] = caption;
+        validCaptions.push({ src, caption });
+      } else {
+        retryList.push(src);
+      }
+    });
+
+    for (const imgSrc of retryList) {
+      let retryCount = 0;
+      let caption = null;
+
+      while (
+        retryCount < 3 &&
+        (!caption || caption.trim() === "") &&
+        Object.keys(store).length < MAX_TOTAL_CAPTIONS_PER_TAB
+      ) {
+        retryCount++;
+        const [retryCaption] = await callCaptionApi([imgSrc], content);
+        caption = retryCaption;
+      }
+      if (caption && caption.trim()) {
+        store[imgSrc] = caption;
+        validCaptions.push({ src: imgSrc, caption });
+      }
     }
   }
 
-  return validCaptions.map((item) => item.caption);
+  console.log(
+    `[Caption] Tab ${tabId} summary: cache=${imagesWithCaption.length}, api=${
+      validCaptions.length - imagesWithCaption.length
+    }`
+  );
+  console.log(
+    `[Caption] Tab ${tabId}: Caption store:`,
+    processedImagesByTab[tabId]
+  );
+
+  return validCaptions;
 }
 
 async function callCaptionApi(images, content) {
@@ -68,7 +107,14 @@ async function callCaptionApi(images, content) {
   }
 }
 
-export function resetProcessedImages() {
-  processedImages.clear();
-  console.log("Processed images reset.");
+export function resetProcessedImages(tabId) {
+  if (tabId) {
+    processedImagesByTab[tabId] = {};
+    console.log(`[Caption] Reset processed images for tab ${tabId}`);
+  } else {
+    Object.keys(processedImagesByTab).forEach(
+      (tid) => (processedImagesByTab[tid] = {})
+    );
+    console.log("[Caption] Reset processed images for all tabs");
+  }
 }

@@ -11,7 +11,6 @@ import {
 } from "./api-handler.js";
 import { translateElement } from "./i18n.js";
 import { formatPdfDate } from "./pdf-handler.js";
-import { resetProcessedImages } from "./caption-handler.js";
 
 /**
  * Extracts page content by messaging the background script.
@@ -19,7 +18,7 @@ import { resetProcessedImages } from "./caption-handler.js";
  *
  * @returns {Promise<Object>} Resolves with content (full or partial), or rejects on failure.
  */
-export function requestPageContent() {
+export function requestPageContent(forceReset = true) {
   return new Promise((resolve, reject) => {
     console.log("CocBot: Requesting page content");
 
@@ -32,7 +31,7 @@ export function requestPageContent() {
     // Internal function that performs the actual extraction logic (with retry support)
     function tryFetch() {
       chrome.runtime.sendMessage(
-        { action: "extract_page_content", forceRefresh: true },
+        { action: "extract_page_content", forceRefresh: true, forceReset },
         (response) => {
           // No response from background script
           if (!response) {
@@ -207,7 +206,7 @@ function buildPageContextIndicator() {
       </svg>
     `;
     refreshBtn.addEventListener("click", () => {
-      requestPageContent().then(() => {
+      requestPageContent(false).then(() => {
         resetSuggestedQuestionsContainer();
         state.generatedQuestions = {};
       });

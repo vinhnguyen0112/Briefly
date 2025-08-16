@@ -12,6 +12,7 @@ import {
 import {
   handleCaptionImages,
   resetProcessedImages,
+  processedImagesByTab,
 } from "./components/caption-handler.js";
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
@@ -432,7 +433,10 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "extract_page_content") {
-    // resetProcessedImages();
+    if (message.forceReset) {
+      resetProcessedImages();
+      console.log("VH: Forced reset caption cache");
+    }
     console.log(
       "VH: Received extract_page_content request",
       message.forceRefresh ? "(forced refresh)" : ""
@@ -775,15 +779,29 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "process_images") {
-    handleCaptionImages(message.images, message.content)
-      .then((captions) => {
-        chrome.tabs.sendMessage(sender.tab.id, {
+    const tabId = sender.tab?.id;
+    console.log(`[Background] Tab ${tabId}: Received process_images signal`);
+    handleCaptionImages(message.images, message.content, tabId)
+      .then((captionPairs) => {
+        const captions = captionPairs.map((item) => item.caption);
+        chrome.tabs.sendMessage(tabId, {
           action: "caption_results",
           captions,
+          captionPairs,
         });
+        console.log(
+          `[Background] Tab ${tabId}: Sent ${captions.length} captions`
+        );
+        console.log(
+          `[Background] Tab ${tabId}: Caption store:`,
+          processedImagesByTab[tabId]
+        );
       })
       .catch((error) => {
-        console.error("Failed to handle captions", error);
+        console.error(
+          `[Background] Tab ${tabId}: Failed to handle captions`,
+          error
+        );
       });
     return true;
   }

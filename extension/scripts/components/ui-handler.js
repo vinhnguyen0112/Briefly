@@ -777,7 +777,7 @@ export function handleContentMessage(message) {
       state.pageContent = null;
 
       // Request fresh content
-      requestPageContent();
+      requestPageContent(false);
 
       break;
 
