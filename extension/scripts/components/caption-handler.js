@@ -2,7 +2,7 @@ export const processedImagesByTab = {};
 
 import { sendRequest } from "./state.js";
 
-const MAX_TOTAL_CAPTIONS_PER_TAB = 3;
+const MAX_TOTAL_CAPTIONS_PER_TAB = 100;
 
 export async function handleCaptionImages(imageUrls, content, tabId) {
   if (!processedImagesByTab[tabId]) processedImagesByTab[tabId] = {};
@@ -52,7 +52,7 @@ export async function handleCaptionImages(imageUrls, content, tabId) {
       let caption = null;
 
       while (
-        retryCount < 3 &&
+        retryCount < 1 &&
         (!caption || caption.trim() === "") &&
         Object.keys(store).length < MAX_TOTAL_CAPTIONS_PER_TAB
       ) {
@@ -72,11 +72,6 @@ export async function handleCaptionImages(imageUrls, content, tabId) {
       validCaptions.length - imagesWithCaption.length
     }`
   );
-  console.log(
-    `[Caption] Tab ${tabId}: Caption store:`,
-    processedImagesByTab[tabId]
-  );
-
   return validCaptions;
 }
 
@@ -92,10 +87,7 @@ async function callCaptionApi(images, content) {
       }
     );
 
-    console.log("Caption API response:", data);
-
     if (data.success && data.data && Array.isArray(data.data.captions)) {
-      console.log(`Received ${data.data.captions.length} captions`);
       return data.data.captions;
     } else {
       console.error("Invalid response structure:", data);

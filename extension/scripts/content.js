@@ -388,11 +388,6 @@ function quickReadinessCheck() {
   const structureOk = hasBasicStructure;
 
   const isReady = contentScore >= 2 && notLoading && structureOk;
-
-  console.log(
-    `VH: Quick readiness - Content: ${contentScore}/3, Loading: ${!notLoading}, Structure: ${structureOk}, Ready: ${isReady}`
-  );
-
   return isReady;
 }
 

@@ -780,7 +780,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "process_images") {
     const tabId = sender.tab?.id;
-    console.log(`[Background] Tab ${tabId}: Received process_images signal`);
     handleCaptionImages(message.images, message.content, tabId)
       .then((captionPairs) => {
         const captions = captionPairs.map((item) => item.caption);
@@ -789,11 +788,9 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
           captions,
           captionPairs,
         });
+        console.log(`Tab ${tabId}: Sent ${captions.length} captions`);
         console.log(
-          `[Background] Tab ${tabId}: Sent ${captions.length} captions`
-        );
-        console.log(
-          `[Background] Tab ${tabId}: Caption store:`,
+          `Tab ${tabId}: Caption store:`,
           processedImagesByTab[tabId]
         );
       })
