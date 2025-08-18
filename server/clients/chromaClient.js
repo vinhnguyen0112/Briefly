@@ -12,14 +12,7 @@ async function getClient() {
   let config;
   if (process.env.NODE_ENV === "development_local") {
     client = new ChromaClient({
-      path: "https://api.trychroma.com:8000",
-      auth: {
-        provider: "token",
-        credentials: "ck-Hk4S3avz6BvbgovvsCTn3ueTjxrsjVqQBNUpgScjoVCt",
-        tokenHeaderType: "X_CHROMA_TOKEN",
-      },
-      tenant: "a102252f-784d-452a-aaf3-3036799bbf02",
-      database: "local_db",
+      path: "http://localhost:8000",
     });
   } else {
     config = {

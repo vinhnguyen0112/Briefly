@@ -73,10 +73,6 @@ async function upsertPage({
   const pdfText = (pdfContent || "").trim();
   const fullText = [baseText, pdfText].filter(Boolean).join("\n\n");
 
-  console.log("Base text length:", baseText.length);
-  console.log("PDF text length:", pdfText.length);
-  console.log("Full text length:", fullText.length);
-
   const chunks = chunkText(fullText);
   console.log("Number of chunks generated:", chunks.length);
   if (chunks.length === 0) {
@@ -86,7 +82,6 @@ async function upsertPage({
 
   try {
     await collection.delete({ where: { page_id: pageId } });
-    console.log(`Deleted existing chunks for page ${pageId}.`);
   } catch (error) {
     console.error(
       `Failed to delete existing chunks for page ${pageId}:`,
@@ -95,10 +90,7 @@ async function upsertPage({
   }
 
   const embeddings = await embedTexts(chunks);
-  console.log("Generated embeddings:", embeddings.length);
-
   const ids = chunks.map((_, i) => `${pageId}:${i}`);
-  console.log("Generated IDs:", ids);
 
   const metadatas = chunks.map((_, i) => ({
     page_id: pageId,
@@ -150,11 +142,9 @@ async function queryPage({ userId, pageId, query, topK = 6 }) {
   console.log("Collection retrieved:", collection.name);
 
   const allItems = await collection.get();
-  console.log("Collection item count:", allItems.ids?.length || 0);
   console.dir(allItems, { depth: null }); // detailed structure if needed
 
   const [embedding] = await embedTexts([query]);
-  console.log("Embedding vector length:", embedding.length);
 
   const results = await collection.query({
     queryEmbeddings: [embedding],
@@ -162,8 +152,6 @@ async function queryPage({ userId, pageId, query, topK = 6 }) {
     where: { page_id: pageId },
     include: ["documents", "metadatas", "distances"],
   });
-  console.log("Raw query results:");
-  console.dir(results, { depth: null });
 
   const docs = (results.documents?.[0] || []).map((doc, idx) => {
     const mapped = {

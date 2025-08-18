@@ -98,11 +98,7 @@ const handleUserQuery = async (req, res, next) => {
             .map((c) => `[#${c.meta.chunk_index}] ${c.text}`)
             .join("\n\n");
           const ragMessages = [
-            {
-              role: "system",
-              content:
-                "You are a helpful assistant. Use the provided context snippets from the current page to answer. If the answer is not present, say you don't know.",
-            },
+            messages[0],
             {
               role: "system",
               content: `Context snippets from page ${pageRow.title || ""} (${
