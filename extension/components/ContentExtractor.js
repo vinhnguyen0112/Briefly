@@ -129,7 +129,7 @@ function extractPageContent() {
     // 2. Try content-specific divs (often more reliable than article)
     if (mainContent.trim() === "") {
       const contentDivSelectors = [
-        ".entry-content", // WordPress và nhiều CMS khác
+        ".entry-content", // WordPress and other CMS khác
         ".post-content", // Blog posts
         ".article-content", // News articles
         ".content", // Generic content
@@ -475,7 +475,7 @@ function waitForDomReady(callback) {
 }
 
 waitForDomReady(() => {
-  detectPDF(); // detect if this is a PDF when DOM is ready
+  detectPDF(); // detect for PDFs when DOM is ready
 });
 
 // Can we see this element?

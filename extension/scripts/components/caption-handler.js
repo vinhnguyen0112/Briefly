@@ -80,7 +80,7 @@ async function callCaptionApi(images, content) {
 
   try {
     const data = await sendRequest(
-      "http://localhost:3000/api/query/captionize",
+      "https://dev-capstone-2025.coccoc.com/api/query/captionize",
       {
         method: "POST",
         body: { sources: images, context: content },
