@@ -88,12 +88,14 @@ const handleUserQuery = async (req, res, next) => {
             pdfContent: pageRow.pdf_content,
             language: req.headers["accept-language"] || "",
           });
-          const contexts = await ragService.queryPage({
-            userId: req.session.user_id,
-            pageId: pageMeta.pageId,
-            query: messages[messages.length - 1]?.content || "",
-            topK: 6,
-          });
+          const { docs: contexts, queryEmbedding } = await ragService.queryPage(
+            {
+              userId: req.session.user_id,
+              pageId: pageMeta.pageId,
+              query: messages[messages.length - 1]?.content || "",
+              topK: 6,
+            }
+          );
           const contextBlock = contexts
             .map((c) => `[#${c.meta.chunk_index}] ${c.text}`)
             .join("\n\n");

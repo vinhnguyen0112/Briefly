@@ -136,16 +136,10 @@ async function ensurePageIngested({
 }
 
 async function queryPage({ userId, pageId, query, topK = 6 }) {
-  console.log("queryPage called with:", { userId, pageId, query, topK });
-
   const collection = await getOrCreateUserCollection(userId);
   console.log("Collection retrieved:", collection.name);
 
-  const allItems = await collection.get();
-  console.dir(allItems, { depth: null }); // detailed structure if needed
-
   const [embedding] = await embedTexts([query]);
-
   const results = await collection.query({
     queryEmbeddings: [embedding],
     nResults: topK,
@@ -163,8 +157,8 @@ async function queryPage({ userId, pageId, query, topK = 6 }) {
     return mapped;
   });
 
-  console.log("Final number of documents returned:", docs.length);
-  return docs;
+  console.log("Number of documents returned:", docs.length);
+  return { docs, queryEmbedding: embedding };
 }
 
 module.exports = {
