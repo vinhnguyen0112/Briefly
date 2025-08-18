@@ -179,7 +179,8 @@ const updatePageById = async (req, res, next) => {
     if (req.sessionType === "auth" && req.session?.user_id) {
       const language = req.headers["accept-language"] || "";
       const pdfText = typeof pdf_content === "string" ? pdf_content : undefined;
-      const contentText = typeof page_content === "string" ? page_content : undefined;
+      const contentText =
+        typeof page_content === "string" ? page_content : undefined;
       ragService
         .upsertPage({
           userId: req.session.user_id,
@@ -224,7 +225,6 @@ const updatePageByUrl = async (req, res, next) => {
       });
     }
 
-    // Build updates
     const { title, page_content, pdf_content } = req.body;
     const updates = {};
     if (title) updates.title = title;
@@ -238,6 +238,25 @@ const updatePageByUrl = async (req, res, next) => {
       message: "Page updated successfully.",
       data: { affectedRows },
     });
+
+    // Clone of ragService upsert from updatePageById
+    if (req.sessionType === "auth" && req.session?.user_id) {
+      const language = req.headers["accept-language"] || "";
+      const pdfText = typeof pdf_content === "string" ? pdf_content : undefined;
+      const contentText =
+        typeof page_content === "string" ? page_content : undefined;
+      ragService
+        .upsertPage({
+          userId: req.session.user_id,
+          pageId: id,
+          pageUrl: normalizedPageUrl,
+          title,
+          content: contentText,
+          pdfContent: pdfText,
+          language,
+        })
+        .catch(() => {});
+    }
   } catch (err) {
     next(err);
   }

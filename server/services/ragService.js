@@ -1,6 +1,7 @@
 const { getClient } = require("../clients/chromaClient");
 const { OpenAI } = require("openai");
 const commonHelper = require("../helpers/commonHelper");
+const { ChromaClient } = require("chromadb");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
@@ -57,21 +58,48 @@ async function upsertPage({
   pdfContent,
   language,
 }) {
+  console.log("upsertPage called with:", {
+    userId,
+    pageId,
+    pageUrl,
+    title,
+    language,
+  });
+
   const collection = await getOrCreateUserCollection(userId);
+  console.log("Collection retrieved:", collection.name);
+
   const baseText = (content || "").trim();
   const pdfText = (pdfContent || "").trim();
   const fullText = [baseText, pdfText].filter(Boolean).join("\n\n");
+
+  console.log("Base text length:", baseText.length);
+  console.log("PDF text length:", pdfText.length);
+  console.log("Full text length:", fullText.length);
+
   const chunks = chunkText(fullText);
-  if (chunks.length === 0) return 0;
+  console.log("Number of chunks generated:", chunks.length);
+  if (chunks.length === 0) {
+    console.log("No chunks to upsert, exiting.");
+    return 0;
+  }
 
   try {
     await collection.delete({ where: { page_id: pageId } });
+    console.log(`Deleted existing chunks for page ${pageId}.`);
   } catch (error) {
-    console.error(`Failed to delete existing chunks for page ${pageId}:`, error);
+    console.error(
+      `Failed to delete existing chunks for page ${pageId}:`,
+      error
+    );
   }
 
   const embeddings = await embedTexts(chunks);
+  console.log("Generated embeddings:", embeddings.length);
+
   const ids = chunks.map((_, i) => `${pageId}:${i}`);
+  console.log("Generated IDs:", ids);
+
   const metadatas = chunks.map((_, i) => ({
     page_id: pageId,
     page_url: pageUrl,
@@ -79,8 +107,11 @@ async function upsertPage({
     chunk_index: i,
     lang: language || "",
   }));
+  console.log("Sample metadata:", metadatas[0]);
 
   await collection.add({ ids, documents: chunks, metadatas, embeddings });
+  console.log(`Inserted ${chunks.length} chunks into collection.`);
+
   return chunks.length;
 }
 
@@ -90,26 +121,61 @@ async function countPageChunks({ userId, pageId }) {
   return typeof res === "number" ? res : 0;
 }
 
-async function ensurePageIngested({ userId, pageId, pageUrl, title, content, pdfContent, language }) {
+async function ensurePageIngested({
+  userId,
+  pageId,
+  pageUrl,
+  title,
+  content,
+  pdfContent,
+  language,
+}) {
   const existing = await countPageChunks({ userId, pageId });
   if (existing > 0) return existing;
-  return upsertPage({ userId, pageId, pageUrl, title, content, pdfContent, language });
+  return upsertPage({
+    userId,
+    pageId,
+    pageUrl,
+    title,
+    content,
+    pdfContent,
+    language,
+  });
 }
 
 async function queryPage({ userId, pageId, query, topK = 6 }) {
+  console.log("queryPage called with:", { userId, pageId, query, topK });
+
   const collection = await getOrCreateUserCollection(userId);
+  console.log("Collection retrieved:", collection.name);
+
+  const allItems = await collection.get();
+  console.log("Collection item count:", allItems.ids?.length || 0);
+  console.dir(allItems, { depth: null }); // detailed structure if needed
+
   const [embedding] = await embedTexts([query]);
+  console.log("Embedding vector length:", embedding.length);
+
   const results = await collection.query({
     queryEmbeddings: [embedding],
     nResults: topK,
     where: { page_id: pageId },
     include: ["documents", "metadatas", "distances"],
   });
-  const docs = (results.documents?.[0] || []).map((doc, idx) => ({
-    text: doc,
-    meta: results.metadatas?.[0]?.[idx] || {},
-    distance: results.distances?.[0]?.[idx] || null,
-  }));
+  console.log("Raw query results:");
+  console.dir(results, { depth: null });
+
+  const docs = (results.documents?.[0] || []).map((doc, idx) => {
+    const mapped = {
+      text: doc,
+      meta: results.metadatas?.[0]?.[idx] || {},
+      distance: results.distances?.[0]?.[idx] || null,
+    };
+    console.log(`Mapped document ${idx + 1}:`, mapped);
+    return mapped;
+  });
+
+  console.log("Final number of documents returned:", docs.length);
   return docs;
 }
 
@@ -121,5 +187,3 @@ module.exports = {
   ensurePageIngested,
   queryPage,
 };
-
-

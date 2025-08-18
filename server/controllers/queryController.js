@@ -105,7 +105,9 @@ const handleUserQuery = async (req, res, next) => {
             },
             {
               role: "system",
-              content: `Context snippets from page ${pageRow.title || ""} (${pageRow.page_url}):\n\n${contextBlock}`,
+              content: `Context snippets from page ${pageRow.title || ""} (${
+                pageRow.page_url
+              }):\n\n${contextBlock}`,
             },
             messages[messages.length - 1],
           ];
