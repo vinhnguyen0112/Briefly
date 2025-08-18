@@ -5,3 +5,4 @@ server/.env.*
 .env
 docker/nginx/data/cache/*
 **/.env.*
+/chroma
