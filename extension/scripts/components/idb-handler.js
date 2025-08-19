@@ -2,6 +2,44 @@ const DB_NAME = "briefly_db";
 const DB_VERSION = 1;
 
 /**
+ * Save a caption entry to IndexedDB
+ * @param {Object} params
+ * @param {string} params.img_url
+ * @param {string} params.page_url
+ * @param {string} params.caption
+ * @returns {Promise<void>}
+ */
+async function saveCaption({ img_url, page_url, caption }) {
+  const { db } = await openIndexedDB();
+
+  const normImg = normalizeImageUrl(img_url);
+  const normPage = processUrl(page_url);
+
+  const id = await generateId(normPage, normImg);
+
+  const entry = {
+    id,
+    page_url: normPage,
+    img_url: normImg,
+    caption,
+    created_at: new Date(),
+  };
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("captions", "readwrite");
+    const store = tx.objectStore("captions");
+    const req = store.put(entry);
+    req.onsuccess = () => {
+      resolve();
+    };
+    req.onerror = (e) => {
+      console.error("[IDB] error saving caption:", e.target.error);
+      reject(e.target.error);
+    };
+  });
+}
+
+/**
  * Opens the IndexedDB and sets up object stores.
  * @returns {Promise<Object>} Database instance
  **/
@@ -41,6 +79,15 @@ function setupObjectStores(db) {
     chatsStore.createIndex("created_at", "created_at", { unique: false });
     chatsStore.createIndex("updated_at", "updated_at", { unique: false });
     chatsStore.createIndex("page_url", "page_url", { unique: false });
+  }
+
+  if (!db.objectStoreNames.contains("captions")) {
+    const captionsStore = db.createObjectStore("captions", {
+      keyPath: "id",
+    });
+    captionsStore.createIndex("page_url", "page_url", { unique: false });
+    captionsStore.createIndex("img_url", "img_url", { unique: false });
+    captionsStore.createIndex("created_at", "created_at", { unique: false });
   }
 
   console.log("Object stores created successfully");
@@ -373,8 +420,59 @@ async function clearChats() {
   });
 }
 
+function normalizeImageUrl(url) {
+  try {
+    const u = new URL(url, location.origin);
+    [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "fbclid",
+      "gclid",
+      "ver",
+      "cacheBust",
+    ].forEach((p) => u.searchParams.delete(p));
+    u.hash = "";
+    u.hostname = u.hostname.toLowerCase();
+    let s = u.toString();
+    if (s.endsWith("/")) s = s.slice(0, -1);
+    return s;
+  } catch (e) {
+    console.warn("Invalid image URL:", url);
+    return url;
+  }
+}
+
+function processUrl(url) {
+  try {
+    const u = new URL(url, location.origin);
+    u.search = "";
+    u.hash = "";
+    u.hostname = u.hostname.toLowerCase();
+    let s = u.toString();
+    if (s.endsWith("/")) s = s.slice(0, -1);
+    return s;
+  } catch {
+    return url;
+  }
+}
+
+async function generateId(page, img) {
+  const input = `${page}:${img}`;
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(input)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 // Add to the exported handler
 const idbHandler = {
+  saveCaption,
   openIndexedDB,
   upsertChat,
   getChatById,

@@ -224,7 +224,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     sendResponse({ success: true });
   } else if (message.action === "caption_results") {
-    const captions = message.captions.filter((c) => c && c.trim() !== "");
+    const captions = Array.isArray(message.captions)
+      ? message.captions.filter(
+          (c) => c && typeof c.caption === "string" && c.caption.trim() !== ""
+        )
+      : [];
     if (captions.length === 0) return;
 
     const iframe = document.getElementById("isal-sidebar-iframe");

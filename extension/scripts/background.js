@@ -785,8 +785,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         const captions = captionPairs.map((item) => item.caption);
         chrome.tabs.sendMessage(tabId, {
           action: "caption_results",
-          captions,
-          captionPairs,
+          captions: captionPairs,
         });
         console.log(`Tab ${tabId}: Sent ${captions.length} captions`);
         console.log(

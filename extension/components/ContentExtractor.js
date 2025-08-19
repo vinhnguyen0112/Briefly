@@ -147,7 +147,6 @@ function extractPageContent() {
         contentDivSelectors.join(", ")
       );
       if (contentDivs.length > 0) {
-        console.log("CocBot: Found", contentDivs.length, "content divs");
         for (const div of contentDivs) {
           if (isVisible(div) && hasSubstantialContent(div)) {
             mainContent += div.innerText + "\n\n";
@@ -244,8 +243,6 @@ function extractPageContent() {
       .replace(/\n\s*\n/g, "\n\n")
       .trim();
 
-    console.log("CocBot: Content extracted, length:", mainContent.length);
-
     // Extract images from meaningful containers
     const foundImages =
       extractImagesFromMeaningfulContainers(meaningfulContainers);
@@ -274,17 +271,12 @@ function extractPageContent() {
 
     // Send images for captioning if found (async, non-blocking)
     if (foundImages.length > 0) {
-      console.log(
-        `VH: Found ${foundImages.length} images, sending for captioning`
-      );
       chrome.runtime.sendMessage({
         action: "process_images",
         images: foundImages,
         content: mainContent,
       });
     }
-
-    console.log("CocBot: Content extraction complete");
     return result;
   } catch (error) {
     console.error("CocBot: Content extraction error:", error);
@@ -425,10 +417,6 @@ function extractImagesFromMeaningfulContainers(containers) {
       }
     }
   }
-
-  console.log(
-    `CocBot: Extracted ${foundImages.length} images from meaningful containers`
-  );
   return foundImages;
 }
 
