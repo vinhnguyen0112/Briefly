@@ -264,10 +264,7 @@ function extractPageContent() {
       imagesProcessing: foundImages.length > 0, // Flag to indicate images are being processed
     };
 
-    console.log(
-      `VH: "${pageMetadata.title}" - Found images for processing`,
-      foundImages
-    );
+    console.log(`Found images for processing`, foundImages);
 
     // Send images for captioning if found (async, non-blocking)
     if (foundImages.length > 0) {
@@ -292,6 +289,7 @@ function extractPageContent() {
       error: error.message,
       captions: [],
       imagesProcessing: false,
+      page_url: window.location.href,
     };
   }
 }

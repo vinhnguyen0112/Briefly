@@ -254,14 +254,6 @@ window.addEventListener("message", async (event) => {
         : [];
       state.pageContent.captions = prev.concat(incoming.map((c) => c.caption));
       state.pageContent.imagesProcessing = false;
-
-      console.log(
-        "VH: State updated: +",
-        incoming.length,
-        "captions (total:",
-        state.pageContent.captions.length,
-        ")"
-      );
     }
   }
 });

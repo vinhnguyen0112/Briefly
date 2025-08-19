@@ -770,14 +770,14 @@ export function handleContentMessage(message) {
       break;
 
     case "refresh_page_content":
-      console.log("VH: URL changed, requesting fresh content");
+      console.log("URL changed, requesting fresh content");
 
       // Reset content extraction state
       state.contentFetchAttempts = 0;
       state.pageContent = null;
 
       // Request fresh content
-      requestPageContent(false);
+      requestPageContent();
 
       break;
 

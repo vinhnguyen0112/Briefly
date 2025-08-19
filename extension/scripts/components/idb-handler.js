@@ -1,5 +1,92 @@
 const DB_NAME = "briefly_db";
 const DB_VERSION = 1;
+const CAPTIONS_MAX = 100;
+
+async function trimCaptionsIfNeeded(db) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction("captions", "readwrite");
+      const store = tx.objectStore("captions");
+
+      const countReq = store.count();
+      countReq.onsuccess = () => {
+        const count = countReq.result || 0;
+        if (count <= CAPTIONS_MAX) return resolve();
+
+        const needDelete = count - CAPTIONS_MAX;
+        const index = store.index("created_at");
+        let deleted = 0;
+
+        index.openCursor().onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor && deleted < needDelete) {
+            store.delete(cursor.primaryKey);
+            deleted++;
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+      };
+      countReq.onerror = (e) => reject(e.target.error);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+async function getCaptionByPageAndImage(page_url, img_url) {
+  const { db } = await openIndexedDB();
+
+  const normImg = normalizeImageUrl(img_url);
+  const normPage = processUrl(page_url);
+  const id = await generateId(normPage, normImg);
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("captions", "readonly");
+    const store = tx.objectStore("captions");
+    const req = store.get(id);
+    req.onsuccess = (e) => resolve(e.target.result || null);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function getCaptionsForImages(page_url, img_urls = []) {
+  const map = new Map();
+  if (!Array.isArray(img_urls) || img_urls.length === 0) return map;
+
+  const { db } = await openIndexedDB();
+  const normPage = processUrl(page_url);
+
+  // build ids
+  const normPairs = await Promise.all(
+    img_urls.map(async (raw) => {
+      const normImg = normalizeImageUrl(raw);
+      const id = await generateId(normPage, normImg);
+      return { raw, id };
+    })
+  );
+
+  // single-gets in parallel (đơn giản, giữ nguyên version DB)
+  await Promise.all(
+    normPairs.map(
+      ({ raw, id }) =>
+        new Promise((resolve) => {
+          const tx = db.transaction("captions", "readonly");
+          const store = tx.objectStore("captions");
+          const req = store.get(id);
+          req.onsuccess = (e) => {
+            const val = e.target.result;
+            if (val) map.set(raw, val);
+            resolve();
+          };
+          req.onerror = () => resolve();
+        })
+    )
+  );
+
+  return map;
+}
 
 /**
  * Save a caption entry to IndexedDB
@@ -14,7 +101,6 @@ async function saveCaption({ img_url, page_url, caption }) {
 
   const normImg = normalizeImageUrl(img_url);
   const normPage = processUrl(page_url);
-
   const id = await generateId(normPage, normImg);
 
   const entry = {
@@ -29,8 +115,14 @@ async function saveCaption({ img_url, page_url, caption }) {
     const tx = db.transaction("captions", "readwrite");
     const store = tx.objectStore("captions");
     const req = store.put(entry);
-    req.onsuccess = () => {
-      resolve();
+    req.onsuccess = async () => {
+      try {
+        await trimCaptionsIfNeeded(db);
+        resolve();
+      } catch (err) {
+        console.warn("[IDB] trim failed (ignored):", err);
+        resolve();
+      }
     };
     req.onerror = (e) => {
       console.error("[IDB] error saving caption:", e.target.error);
@@ -482,6 +574,8 @@ const idbHandler = {
   deleteChatById,
   getMessagesForChat,
   clearChats,
+  getCaptionByPageAndImage,
+  getCaptionsForImages,
 };
 
 export default idbHandler;

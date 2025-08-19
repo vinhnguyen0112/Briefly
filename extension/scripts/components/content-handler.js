@@ -18,7 +18,7 @@ import { formatPdfDate } from "./pdf-handler.js";
  *
  * @returns {Promise<Object>} Resolves with content (full or partial), or rejects on failure.
  */
-export function requestPageContent(forceReset = true) {
+export function requestPageContent() {
   return new Promise((resolve, reject) => {
     console.log("CocBot: Requesting page content");
 
@@ -31,7 +31,7 @@ export function requestPageContent(forceReset = true) {
     // Internal function that performs the actual extraction logic (with retry support)
     function tryFetch() {
       chrome.runtime.sendMessage(
-        { action: "extract_page_content", forceRefresh: true, forceReset },
+        { action: "extract_page_content", forceRefresh: true },
         (response) => {
           // No response from background script
           if (!response) {
@@ -206,7 +206,7 @@ function buildPageContextIndicator() {
       </svg>
     `;
     refreshBtn.addEventListener("click", () => {
-      requestPageContent(false).then(() => {
+      requestPageContent().then(() => {
         resetSuggestedQuestionsContainer();
         state.generatedQuestions = {};
       });
