@@ -18,6 +18,7 @@ const { redisHelper } = require("./helpers/redisHelper");
 const dbHelper = require("./helpers/dbHelper");
 const { getClient: getChromaClient } = require("./clients/chromaClient");
 const { getClient: getQdrantClient } = require("./clients/qdrantClient");
+const { initializeCollection } = require("./services/responseCachingService");
 
 const PORT = process.env.PORT || 3000;
 
@@ -29,8 +30,7 @@ async function startServer() {
     await dbHelper.getConnection();
     console.log("MariaDB connected successfully!");
 
-    // await getChromaClient();
-    // await getQdrantClient();
+    initializeCollection();
 
     app.listen(PORT, () => {
       console.log(`CocBot server running on port ${PORT}`);

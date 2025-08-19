@@ -1,4 +1,5 @@
 const { QdrantClient } = require("@qdrant/js-client-rest");
+const { initializeCollection } = require("../services/responseCachingService");
 
 let client;
 

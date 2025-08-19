@@ -58,25 +58,22 @@ const handleUserQuery = async (req, res, next) => {
       );
     }
 
-    // Try to find a cached response first (do not await if not found)
+    const isAuth = req.sessionType === "auth" && req.session?.id;
+
     let cachedResponse = null;
-    try {
+    if (isAuth) {
+      // Try to find a cached response first
       cachedResponse = await responseCachingService.searchSimilarResponseCache({
-        userId: req.session?.user_id || req.session?.id || "anon",
+        userId: req.session.user_id,
         query: messages[messages.length - 1]?.content || "",
         metadata: {
-          page_url: metadata.page_url,
-          language: metadata.language,
+          page_id: pageMeta.pageId,
         },
         topK: 3,
-        similarityThreshold: 0.92,
       });
-    } catch (err) {
-      // Log but don't block on cache errors
-      console.warn("Cache search error:", err);
     }
 
-    if (cachedResponse && cachedResponse.response) {
+    if (cachedResponse?.response) {
       return res.json({
         success: true,
         data: {
@@ -85,22 +82,22 @@ const handleUserQuery = async (req, res, next) => {
           model: "cached",
           cache_score: cachedResponse.score,
         },
-        anon_query_count:
-          req.sessionType === "anon" ? req.session.anon_query_count : undefined,
       });
     }
 
     let assistantMessage;
-    // Get stored summary
+    // Get stored summary (fast path for summarize event)
     if (metadata.event === "summarize") {
       assistantMessage = await getStoredPageSummary(
         pageMeta.pageId,
         metadata.language
       );
     }
+
     if (!assistantMessage) {
-      const isAuth = req.sessionType === "auth" && req.session?.user_id;
       let useRag = Boolean(metadata.use_rag);
+
+      // RAG handling
       if (!useRag && isAuth) {
         const pageRow = await Page.getById(pageMeta.pageId);
         const contentLen =
@@ -121,17 +118,18 @@ const handleUserQuery = async (req, res, next) => {
             pdfContent: pageRow.pdf_content,
             language: req.headers["accept-language"] || "",
           });
-          const { docs: contexts, queryEmbedding } = await ragService.queryPage(
-            {
-              userId: req.session.user_id,
-              pageId: pageMeta.pageId,
-              query: messages[messages.length - 1]?.content || "",
-              topK: 6,
-            }
-          );
+
+          const { docs: contexts } = await ragService.queryPage({
+            userId: req.session.user_id,
+            pageId: pageMeta.pageId,
+            query: messages[messages.length - 1]?.content || "",
+            topK: 6,
+          });
+
           const contextBlock = contexts
             .map((c) => `[#${c.meta.chunk_index}] ${c.text}`)
             .join("\n\n");
+
           const ragMessages = [
             messages[0],
             {
@@ -142,6 +140,7 @@ const handleUserQuery = async (req, res, next) => {
             },
             messages[messages.length - 1],
           ];
+
           assistantMessage = await generateAssistantResponse(
             ragMessages,
             metadata.max_tokens
@@ -157,21 +156,23 @@ const handleUserQuery = async (req, res, next) => {
       }
     }
 
-    // Store the response in cache (do not await)
-    responseCachingService
-      .storeResponseCache({
-        userId: req.session?.user_id || req.session?.id || "anon",
-        query: messages[messages.length - 1]?.content || "",
-        response: assistantMessage.message,
-        metadata: {
-          page_url: metadata.page_url,
-          language: metadata.language,
-        },
-      })
-      .catch((err) => {
-        // Log but don't block on cache errors
-        console.warn("Cache store error:", err);
-      });
+    // Response caching
+    if (isAuth) {
+      responseCachingService
+        .storeResponseCache({
+          userId: req.session.user_id,
+          query: messages[messages.length - 1]?.content || "",
+          response: assistantMessage.message,
+          metadata: {
+            page_id: pageMeta.pageId,
+            normalized_page_url: pageMeta.normalizedPageUrl,
+            language: metadata.language,
+          },
+        })
+        .catch((err) => {
+          console.warn("Cache store error:", err);
+        });
+    }
 
     let newCount = null;
     // Increase anon query count
@@ -181,7 +182,6 @@ const handleUserQuery = async (req, res, next) => {
       );
 
       if (affectedRows > 0) {
-        // Update cache
         newCount = req.session.anon_query_count + 1;
         await redisHelper.updateRecord("anon", req.session.id, {
           anon_query_count: newCount,
