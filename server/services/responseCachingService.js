@@ -1,30 +1,69 @@
-const { getClient } = require("../clients/qdrantClient");
 const { OpenAI } = require("openai");
 const { v4: uuidv4 } = require("uuid");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
+const QDRANT_URL = process.env.QDRANT_URL;
 const COLLECTION_NAME = "briefly_response_cache";
 const VECTOR_SIZE = 1536;
 
+// Helper for Qdrant API requests
+async function qdrantFetch(path, options = {}) {
+  const url = `${QDRANT_URL}${path}`;
+  const res = await fetch(url, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.QDRANT_API_KEY}`,
+    },
+    ...options,
+  });
+  if (!res.ok) {
+    const text = await res.text();
+    throw new Error(`[Qdrant] ${res.status} ${res.statusText}: ${text}`);
+  }
+  return res.json();
+}
+
 /**
- * Ensure the Qdrant collection exists
+ * Ensure the Qdrant collection exists, and apply payload indexes.
  */
 async function initializeCollection() {
-  const client = await getClient();
   try {
-    await client.getCollection(COLLECTION_NAME);
+    // Check if collection exists
+    await qdrantFetch(`/collections/${COLLECTION_NAME}`);
+    // If no error, collection exists
   } catch (err) {
-    if (err.response?.status === 404) {
-      console.log("Collection not found, creating...");
-      await client.createCollection(COLLECTION_NAME, {
-        vectors: {
-          size: VECTOR_SIZE,
-          distance: "Cosine",
-        },
+    if (String(err).includes("404")) {
+      console.log(`Collection "${COLLECTION_NAME}" not found, creating...`);
+      // Create collection
+      await qdrantFetch(`/collections/${COLLECTION_NAME}`, {
+        method: "PUT",
+        body: JSON.stringify({
+          vectors: {
+            size: VECTOR_SIZE,
+            distance: "Cosine",
+          },
+        }),
       });
+      // Create payload indexes
+      await qdrantFetch(`/collections/${COLLECTION_NAME}/index`, {
+        method: "PUT",
+        body: JSON.stringify({
+          field_name: "page_id",
+          field_schema: "keyword",
+        }),
+      });
+      await qdrantFetch(`/collections/${COLLECTION_NAME}/index`, {
+        method: "PUT",
+        body: JSON.stringify({
+          field_name: "user_id",
+          field_schema: "keyword",
+        }),
+      });
+      console.log("Indexes on page_id and user_id created.");
+    } else {
+      throw err;
     }
-    throw err;
   }
 }
 
@@ -47,7 +86,6 @@ async function embedQuery(text) {
  * @returns {Promise<string>} The cache entry ID
  */
 async function storeResponseCache({ userId, query, response, metadata = {} }) {
-  const client = await getClient();
   const embedding = await embedQuery(query);
   const id = uuidv4();
   const payload = {
@@ -59,14 +97,17 @@ async function storeResponseCache({ userId, query, response, metadata = {} }) {
   };
 
   try {
-    await client.upsert(COLLECTION_NAME, {
-      points: [
-        {
-          id,
-          vector: embedding,
-          payload,
-        },
-      ],
+    await qdrantFetch(`/collections/${COLLECTION_NAME}/points`, {
+      method: "PUT",
+      body: JSON.stringify({
+        points: [
+          {
+            id,
+            vector: embedding,
+            payload,
+          },
+        ],
+      }),
     });
   } catch (err) {
     console.error(`Failed to store response for user ${userId}:`, err);
@@ -82,7 +123,7 @@ async function storeResponseCache({ userId, query, response, metadata = {} }) {
  * @param {string} params.query
  * @param {Object} params.metadata
  * @param {number} [params.topK=3]
- * @param {number} [params.similarityThreshold=0.90] // cosine similarity (1.0 = identical)
+ * @param {number} [params.similarityThreshold]
  * @returns {Promise<{response: string, score: number, metadata: Object}|null>}
  */
 async function searchSimilarResponseCache({
@@ -90,9 +131,8 @@ async function searchSimilarResponseCache({
   query,
   metadata = {},
   topK = 3,
-  similarityThreshold = 0.7,
+  similarityThreshold = 0.8,
 }) {
-  const client = await getClient();
   const embedding = await embedQuery(query);
 
   const must = [{ key: "user_id", match: { value: userId } }];
@@ -107,18 +147,24 @@ async function searchSimilarResponseCache({
   const filter = { must };
 
   try {
-    const result = await client.search(COLLECTION_NAME, {
-      vector: embedding,
-      filter,
-      limit: topK,
-      with_payload: true,
-      with_vector: false,
-      score_threshold: similarityThreshold,
-    });
+    const result = await qdrantFetch(
+      `/collections/${COLLECTION_NAME}/points/search`,
+      {
+        method: "POST",
+        body: JSON.stringify({
+          vector: embedding,
+          filter,
+          limit: topK,
+          with_payload: true,
+          with_vector: false,
+          score_threshold: similarityThreshold,
+        }),
+      }
+    );
 
-    if (result && result.length > 0) {
+    if (result && result.result && result.result.length > 0) {
       console.log("Suitable records:");
-      result.forEach((r, idx) => {
+      result.result.forEach((r, idx) => {
         console.log(
           `  [${idx + 1}] ID=${r.id} | Score=${r.score.toFixed(4)} | Query="${
             r.payload?.query || "N/A"
@@ -126,7 +172,7 @@ async function searchSimilarResponseCache({
         );
       });
 
-      const best = result[0];
+      const best = result.result[0];
 
       return {
         response: best.payload.response,
