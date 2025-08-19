@@ -27,10 +27,13 @@ function chunkText(text, chunkSize = 2000, overlap = 200) {
 async function embedTexts(texts) {
   if (!texts || texts.length === 0) return [];
   try {
+    const start = performance.now();
     const resp = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input: texts,
     });
+    const end = performance.now();
+    console.log("Embed text took: ", end - start, " ms");
     return resp.data.map((d) => d.embedding);
   } catch (error) {
     console.error("OpenAI embedding error:", error);

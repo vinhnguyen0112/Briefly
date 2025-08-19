@@ -8,6 +8,7 @@ const PageSummary = require("../models/pageSummary");
 const AnonSession = require("../models/anonSession");
 const Page = require("../models/page");
 const ragService = require("../services/ragService");
+const responseCachingService = require("../services/responseCachingService");
 
 const limit = pLimit(5); // 5 concurrency
 const openaiLimit = pLimit(3); // 3 concurrent OpenAI requests
@@ -55,6 +56,38 @@ const handleUserQuery = async (req, res, next) => {
         ERROR_CODES.ANON_QUERY_LIMIT_REACHED,
         "Anonymous query limit reached"
       );
+    }
+
+    // Try to find a cached response first (do not await if not found)
+    let cachedResponse = null;
+    try {
+      cachedResponse = await responseCachingService.searchSimilarResponseCache({
+        userId: req.session?.user_id || req.session?.id || "anon",
+        query: messages[messages.length - 1]?.content || "",
+        metadata: {
+          page_url: metadata.page_url,
+          language: metadata.language,
+        },
+        topK: 3,
+        similarityThreshold: 0.92,
+      });
+    } catch (err) {
+      // Log but don't block on cache errors
+      console.warn("Cache search error:", err);
+    }
+
+    if (cachedResponse && cachedResponse.response) {
+      return res.json({
+        success: true,
+        data: {
+          message: cachedResponse.response,
+          usage: null,
+          model: "cached",
+          cache_score: cachedResponse.score,
+        },
+        anon_query_count:
+          req.sessionType === "anon" ? req.session.anon_query_count : undefined,
+      });
     }
 
     let assistantMessage;
@@ -123,6 +156,22 @@ const handleUserQuery = async (req, res, next) => {
         );
       }
     }
+
+    // Store the response in cache (do not await)
+    responseCachingService
+      .storeResponseCache({
+        userId: req.session?.user_id || req.session?.id || "anon",
+        query: messages[messages.length - 1]?.content || "",
+        response: assistantMessage.message,
+        metadata: {
+          page_url: metadata.page_url,
+          language: metadata.language,
+        },
+      })
+      .catch((err) => {
+        // Log but don't block on cache errors
+        console.warn("Cache store error:", err);
+      });
 
     let newCount = null;
     // Increase anon query count
