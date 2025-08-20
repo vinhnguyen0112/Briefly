@@ -117,6 +117,7 @@ const handleUserQuery = async (req, res, next) => {
             language: req.headers["accept-language"] || "",
           });
 
+          // Find relevant contexts
           const { docs: contexts } = await ragService.queryPage({
             userId: req.session.user_id,
             pageId: pageMeta.pageId,

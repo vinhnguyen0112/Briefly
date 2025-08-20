@@ -57,7 +57,7 @@ async function storeResponseCache({
     created_at: new Date().toISOString(),
     query,
     response,
-    ...metadata, // make sure metadata keys are also snake_case!
+    ...metadata,
   };
 
   try {
