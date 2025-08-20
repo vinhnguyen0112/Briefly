@@ -224,6 +224,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     sendResponse({ success: true });
   } else if (message.action === "caption_results") {
+    if (message.page_url && message.page_url !== location.href) {
+      console.warn("[Caption] Ignored stale result for:", message.page_url);
+      return;
+    }
+
     const captions = Array.isArray(message.captions)
       ? message.captions.filter(
           (c) => c && typeof c.caption === "string" && c.caption.trim() !== ""
@@ -237,6 +242,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         {
           action: "caption_update",
           captions: captions,
+          page_url: message.page_url,
         },
         "*"
       );

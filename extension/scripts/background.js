@@ -772,7 +772,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "process_images") {
     getUserSession().then((session) => {
-      if (!session && !session.id) {
+      if (!session || !session.id) {
         return sendResponse({
           success: false,
           error: { message: "Unauthorized" },
@@ -781,12 +781,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       const tabId = sender.tab?.id;
       const pageUrl = message.page_url || sender?.tab?.url || "";
+      if (!tabId) {
+        console.warn("[Background] Missing tabId for process_images");
+        return;
+      }
 
       handleCaptionImages(message.images, message.content, pageUrl)
         .then((captionPairs) => {
           chrome.tabs.sendMessage(tabId, {
             action: "caption_results",
             captions: captionPairs,
+            page_url: pageUrl, // avoid sending the late results
           });
         })
         .catch((error) => {
