@@ -68,7 +68,7 @@ export async function handleCaptionImages(imageUrls, content, pageUrl) {
 async function callCaptionApi(images, content) {
   try {
     const data = await sendRequest(
-      "https://dev-capstone-2025.coccoc.com/api/query/captionize",
+      "http://localhost:3000/api/query/captionize",
       {
         method: "POST",
         body: { sources: images, context: content },

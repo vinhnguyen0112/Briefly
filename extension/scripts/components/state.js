@@ -226,7 +226,7 @@ export async function saveConfig(config) {
 export async function getNotesForUrl(url, offset = 0, limit = 20) {
   try {
     const timestamp = Date.now();
-    const apiUrl = `https://dev-capstone-2025.coccoc.com/api/notes?page_url=${encodeURIComponent(
+    const apiUrl = `http://localhost:3000/api/notes?page_url=${encodeURIComponent(
       url
     )}&offset=${offset}&limit=${limit}&_t=${timestamp}`;
 
@@ -257,7 +257,7 @@ export async function getAllNotes(offset = 0, limit = 20) {
   try {
     // Add timestamp để tránh cache
     const timestamp = Date.now();
-    const apiUrl = `https://dev-capstone-2025.coccoc.com/api/notes/all?offset=${offset}&limit=${limit}&_t=${timestamp}`;
+    const apiUrl = `http://localhost:3000/api/notes/all?offset=${offset}&limit=${limit}&_t=${timestamp}`;
 
     const response = await sendRequest(apiUrl);
 
@@ -284,16 +284,13 @@ export async function getAllNotes(offset = 0, limit = 20) {
 
 export async function saveNote(note) {
   try {
-    const response = await sendRequest(
-      "https://dev-capstone-2025.coccoc.com/api/notes",
-      {
-        method: "POST",
-        body: {
-          page_url: note.url,
-          note: note.content,
-        },
-      }
-    );
+    const response = await sendRequest("http://localhost:3000/api/notes", {
+      method: "POST",
+      body: {
+        page_url: note.url,
+        note: note.content,
+      },
+    });
     return response.data.id;
   } catch (error) {
     console.error("Error saving note:", error);
@@ -304,7 +301,7 @@ export async function saveNote(note) {
 export async function updateNote(id, content) {
   try {
     const response = await sendRequest(
-      `https://dev-capstone-2025.coccoc.com/api/notes/${id}`,
+      `http://localhost:3000/api/notes/${id}`,
       {
         method: "PUT",
         body: {
@@ -322,7 +319,7 @@ export async function updateNote(id, content) {
 export async function deleteNote(id) {
   try {
     const response = await sendRequest(
-      `https://dev-capstone-2025.coccoc.com/api/notes/${id}`,
+      `http://localhost:3000/api/notes/${id}`,
       {
         method: "DELETE",
       }

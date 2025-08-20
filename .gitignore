@@ -1,7 +1,9 @@
 server/node_modules
 server/.env.*
+server/qdrant_storage
 .DS_Store
 .idea
 .env
 docker/nginx/data/cache/*
 **/.env.*
+chroma
