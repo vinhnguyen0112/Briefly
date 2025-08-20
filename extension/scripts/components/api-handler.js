@@ -472,7 +472,7 @@ export async function generateQuestionsFromContent(contentOverride = null) {
     contentSource.pdfContent = formattedPdfContent.slice(0, 5000);
   }
 
-  contentSource.pdfContent = contentSource.pdfContent.trim();
+  contentSource.pdfContent = contentSource.pdfContent?.trim();
 
   state.isGeneratingQuestions = true;
 
