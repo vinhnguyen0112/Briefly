@@ -16,9 +16,7 @@ dotenv.config({ path: envPath });
 const app = require("./app");
 const { redisHelper } = require("./helpers/redisHelper");
 const dbHelper = require("./helpers/dbHelper");
-const { getClient: getChromaClient } = require("./clients/chromaClient");
-const { getClient: getQdrantClient } = require("./clients/qdrantClient");
-const { initializeCollection } = require("./services/responseCachingService");
+const { initializeCapstoneCollections } = require("./clients/qdrantClient");
 
 const PORT = process.env.PORT || 3000;
 
@@ -30,7 +28,7 @@ async function startServer() {
     await dbHelper.getConnection();
     console.log("MariaDB connected successfully!");
 
-    initializeCollection();
+    initializeCapstoneCollections();
 
     app.listen(PORT, () => {
       console.log(`CocBot server running on port ${PORT}`);

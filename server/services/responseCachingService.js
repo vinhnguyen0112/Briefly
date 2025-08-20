@@ -1,71 +1,10 @@
 const { OpenAI } = require("openai");
 const { v4: uuidv4 } = require("uuid");
+const { qdrantFetch } = require("../clients/qdrantClient");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const QDRANT_URL = process.env.QDRANT_URL;
-const COLLECTION_NAME = "briefly_response_cache";
-const VECTOR_SIZE = 1536;
-
-// Helper for Qdrant API requests
-async function qdrantFetch(path, options = {}) {
-  const url = `${QDRANT_URL}${path}`;
-  const res = await fetch(url, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${process.env.QDRANT_API_KEY}`,
-    },
-    ...options,
-  });
-  if (!res.ok) {
-    const text = await res.text();
-    throw new Error(`[Qdrant] ${res.status} ${res.statusText}: ${text}`);
-  }
-  return res.json();
-}
-
-/**
- * Ensure the Qdrant collection exists, and apply payload indexes.
- */
-async function initializeCollection() {
-  try {
-    // Check if collection exists
-    await qdrantFetch(`/collections/${COLLECTION_NAME}`);
-    // If no error, collection exists
-  } catch (err) {
-    if (String(err).includes("404")) {
-      console.log(`Collection "${COLLECTION_NAME}" not found, creating...`);
-      // Create collection
-      await qdrantFetch(`/collections/${COLLECTION_NAME}`, {
-        method: "PUT",
-        body: JSON.stringify({
-          vectors: {
-            size: VECTOR_SIZE,
-            distance: "Cosine",
-          },
-        }),
-      });
-      // Create payload indexes
-      await qdrantFetch(`/collections/${COLLECTION_NAME}/index`, {
-        method: "PUT",
-        body: JSON.stringify({
-          field_name: "page_id",
-          field_schema: "keyword",
-        }),
-      });
-      await qdrantFetch(`/collections/${COLLECTION_NAME}/index`, {
-        method: "PUT",
-        body: JSON.stringify({
-          field_name: "user_id",
-          field_schema: "keyword",
-        }),
-      });
-      console.log("Indexes on page_id and user_id created.");
-    } else {
-      throw err;
-    }
-  }
-}
+const COLLECTION_NAME = "capstone2025_response";
 
 async function embedQuery(text) {
   if (!text) return null;
@@ -190,7 +129,6 @@ async function searchSimilarResponseCache({
 }
 
 module.exports = {
-  initializeCollection,
   storeResponseCache,
   searchSimilarResponseCache,
 };

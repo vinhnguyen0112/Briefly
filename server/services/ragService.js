@@ -1,13 +1,9 @@
-const { getClient } = require("../clients/chromaClient");
 const { OpenAI } = require("openai");
-const commonHelper = require("../helpers/commonHelper");
-const { ChromaClient } = require("chromadb");
+const { qdrantFetch } = require("../clients/qdrantClient");
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-function getUserCollectionName(userId) {
-  return `briefly_user_${userId}`;
-}
+const COLLECTION_NAME = "capstone2025_page";
 
 function chunkText(text, chunkSize = 2000, overlap = 200) {
   const chunks = [];
@@ -27,12 +23,12 @@ function chunkText(text, chunkSize = 2000, overlap = 200) {
 async function embedTexts(texts) {
   if (!texts || texts.length === 0) return [];
   try {
-    const start = performance.now();
+    const start = Date.now();
     const resp = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input: texts,
     });
-    const end = performance.now();
+    const end = Date.now();
     console.log("Embed text took: ", end - start, " ms");
     return resp.data.map((d) => d.embedding);
   } catch (error) {
@@ -41,17 +37,9 @@ async function embedTexts(texts) {
   }
 }
 
-async function getOrCreateUserCollection(userId) {
-  const client = await getClient();
-  const name = getUserCollectionName(userId);
-  try {
-    return await client.getOrCreateCollection({ name });
-  } catch (error) {
-    console.error(`Failed to get/create collection ${name}:`, error);
-    throw new Error(`ChromaDB collection error: ${error.message}`);
-  }
-}
-
+/**
+ * Upsert all page chunks for a user and page into the shared collection.
+ */
 async function upsertPage({
   userId,
   pageId,
@@ -69,9 +57,6 @@ async function upsertPage({
     language,
   });
 
-  const collection = await getOrCreateUserCollection(userId);
-  console.log("Collection retrieved:", collection.name);
-
   const baseText = (content || "").trim();
   const pdfText = (pdfContent || "").trim();
   const fullText = [baseText, pdfText].filter(Boolean).join("\n\n");
@@ -83,39 +68,76 @@ async function upsertPage({
     return 0;
   }
 
+  // Delete existing chunks for this user and page
   try {
-    await collection.delete({ where: { page_id: pageId } });
+    await qdrantFetch(`/collections/${COLLECTION_NAME}/points/delete`, {
+      method: "POST",
+      body: JSON.stringify({
+        filter: {
+          must: [
+            { key: "user_id", match: { value: userId } },
+            { key: "page_id", match: { value: pageId } },
+          ],
+        },
+      }),
+    });
   } catch (error) {
     console.error(
-      `Failed to delete existing chunks for page ${pageId}:`,
+      `Failed to delete existing chunks for user ${userId}, page ${pageId}:`,
       error
     );
   }
 
   const embeddings = await embedTexts(chunks);
-  const ids = chunks.map((_, i) => `${pageId}:${i}`);
+  const ids = chunks.map((_, i) => `${userId}:${pageId}:${i}`);
 
-  const metadatas = chunks.map((_, i) => ({
-    page_id: pageId,
-    page_url: pageUrl,
-    title: title || "",
-    chunk_index: i,
-    lang: language || "",
+  const points = chunks.map((chunk, i) => ({
+    id: ids[i],
+    vector: embeddings[i],
+    payload: {
+      user_id: userId,
+      page_id: pageId,
+      page_url: pageUrl,
+      title: title || "",
+      chunk_index: i,
+      lang: language || "",
+      content: chunk,
+    },
   }));
-  console.log("Sample metadata:", metadatas[0]);
 
-  await collection.add({ ids, documents: chunks, metadatas, embeddings });
+  await qdrantFetch(`/collections/${COLLECTION_NAME}/points`, {
+    method: "PUT",
+    body: JSON.stringify({ points }),
+  });
   console.log(`Inserted ${chunks.length} chunks into collection.`);
 
   return chunks.length;
 }
 
+/**
+ * Count the number of chunks for a user and page.
+ */
 async function countPageChunks({ userId, pageId }) {
-  const collection = await getOrCreateUserCollection(userId);
-  const res = await collection.count({ where: { page_id: pageId } });
-  return typeof res === "number" ? res : 0;
+  const result = await qdrantFetch(
+    `/collections/${COLLECTION_NAME}/points/count?exact=true`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        filter: {
+          must: [
+            { key: "user_id", match: { value: userId } },
+            { key: "page_id", match: { value: pageId } },
+          ],
+        },
+      }),
+    }
+  );
+  return result?.result?.count || 0;
 }
 
+/**
+ * Ensure a page is ingested for a user.
+ */
 async function ensurePageIngested({
   userId,
   pageId,
@@ -138,23 +160,35 @@ async function ensurePageIngested({
   });
 }
 
+/**
+ * Query for relevant page chunks for a user and page.
+ */
 async function queryPage({ userId, pageId, query, topK = 6 }) {
-  const collection = await getOrCreateUserCollection(userId);
-  console.log("Collection retrieved:", collection.name);
-
   const [embedding] = await embedTexts([query]);
-  const results = await collection.query({
-    queryEmbeddings: [embedding],
-    nResults: topK,
-    where: { page_id: pageId },
-    include: ["documents", "metadatas", "distances"],
-  });
+  const result = await qdrantFetch(
+    `/collections/${COLLECTION_NAME}/points/search`,
+    {
+      method: "POST",
+      body: JSON.stringify({
+        vector: embedding,
+        filter: {
+          must: [
+            { key: "user_id", match: { value: userId } },
+            { key: "page_id", match: { value: pageId } },
+          ],
+        },
+        limit: topK,
+        with_payload: true,
+        with_vector: false,
+      }),
+    }
+  );
 
-  const docs = (results.documents?.[0] || []).map((doc, idx) => {
+  const docs = (result.result || []).map((r, idx) => {
     const mapped = {
-      text: doc,
-      meta: results.metadatas?.[0]?.[idx] || {},
-      distance: results.distances?.[0]?.[idx] || null,
+      text: r.payload?.content || "",
+      meta: r.payload || {},
+      distance: r.score || null,
     };
     console.log(`Mapped document ${idx + 1}:`, mapped);
     return mapped;
@@ -167,8 +201,8 @@ async function queryPage({ userId, pageId, query, topK = 6 }) {
 module.exports = {
   chunkText,
   embedTexts,
-  getOrCreateUserCollection,
   upsertPage,
   ensurePageIngested,
   queryPage,
+  countPageChunks,
 };
