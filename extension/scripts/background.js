@@ -1,5 +1,6 @@
 import {
   getStoredPageUrl,
+  getUserSession,
   saveStoredPageUrl,
   saveUserSession,
   sendRequest,
@@ -770,22 +771,32 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "process_images") {
-    const tabId = sender.tab?.id;
-    const pageUrl = message.page_url || sender?.tab?.url || "";
-
-    handleCaptionImages(message.images, message.content, pageUrl)
-      .then((captionPairs) => {
-        chrome.tabs.sendMessage(tabId, {
-          action: "caption_results",
-          captions: captionPairs,
+    getUserSession().then((session) => {
+      if (!session && !session.id) {
+        return sendResponse({
+          success: false,
+          error: { message: "Unauthorized" },
         });
-      })
-      .catch((error) => {
-        console.error(
-          `[Background] Tab ${tabId}: Failed to handle captions`,
-          error
-        );
-      });
+      }
+
+      const tabId = sender.tab?.id;
+      const pageUrl = message.page_url || sender?.tab?.url || "";
+
+      handleCaptionImages(message.images, message.content, pageUrl)
+        .then((captionPairs) => {
+          chrome.tabs.sendMessage(tabId, {
+            action: "caption_results",
+            captions: captionPairs,
+          });
+        })
+        .catch((error) => {
+          console.error(
+            `[Background] Tab ${tabId}: Failed to handle captions`,
+            error
+          );
+        });
+    });
+
     return true;
   }
 
