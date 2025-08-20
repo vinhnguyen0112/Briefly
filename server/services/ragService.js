@@ -1,10 +1,13 @@
 const { OpenAI } = require("openai");
 const { qdrantFetch } = require("../clients/qdrantClient");
-
+const { v4: uuidv4 } = require("uuid");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const COLLECTION_NAME = "capstone2025_page";
 
+/**
+ * Chunk long text into overlapping parts
+ */
 function chunkText(text, chunkSize = 2000, overlap = 200) {
   const chunks = [];
   if (!text) return chunks;
@@ -20,6 +23,9 @@ function chunkText(text, chunkSize = 2000, overlap = 200) {
   return chunks;
 }
 
+/**
+ * Generate OpenAI embeddings
+ */
 async function embedTexts(texts) {
   if (!texts || texts.length === 0) return [];
   try {
@@ -38,7 +44,14 @@ async function embedTexts(texts) {
 }
 
 /**
- * Upsert all page chunks for a user and page into the shared collection.
+ * Build tenant_id from user_id and page_id
+ */
+function makeTenantId(userId, pageId) {
+  return `${userId}:${pageId}`;
+}
+
+/**
+ * Upsert all page chunks for a tenant (user+page) into the shared collection.
  */
 async function upsertPage({
   userId,
@@ -49,13 +62,7 @@ async function upsertPage({
   pdfContent,
   language,
 }) {
-  console.log("upsertPage called with:", {
-    userId,
-    pageId,
-    pageUrl,
-    title,
-    language,
-  });
+  const tenantId = makeTenantId(userId, pageId);
 
   const baseText = (content || "").trim();
   const pdfText = (pdfContent || "").trim();
@@ -68,34 +75,31 @@ async function upsertPage({
     return 0;
   }
 
-  // Delete existing chunks for this user and page
+  // Delete existing chunks for this tenant
   try {
     await qdrantFetch(`/collections/${COLLECTION_NAME}/points/delete`, {
       method: "POST",
       body: JSON.stringify({
         filter: {
-          must: [
-            { key: "user_id", match: { value: userId } },
-            { key: "page_id", match: { value: pageId } },
-          ],
+          must: [{ key: "tenant_id", match: { value: tenantId } }],
         },
       }),
     });
   } catch (error) {
     console.error(
-      `Failed to delete existing chunks for user ${userId}, page ${pageId}:`,
+      `Failed to delete existing chunks for tenant ${tenantId}:`,
       error
     );
   }
 
   const embeddings = await embedTexts(chunks);
-  const ids = chunks.map((_, i) => `${userId}:${pageId}:${i}`);
 
   const points = chunks.map((chunk, i) => ({
-    id: ids[i],
-    vector: embeddings[i],
+    id: uuidv4(),
+    vector: { default: embeddings[i] },
     payload: {
-      user_id: userId,
+      tenant_id: tenantId,
+      user_id: userId, // still keep separately for filters/analytics
       page_id: pageId,
       page_url: pageUrl,
       title: title || "",
@@ -115,19 +119,17 @@ async function upsertPage({
 }
 
 /**
- * Count the number of chunks for a user and page.
+ * Count the number of chunks for a tenant
  */
 async function countPageChunks({ userId, pageId }) {
+  const tenantId = makeTenantId(userId, pageId);
   const result = await qdrantFetch(
     `/collections/${COLLECTION_NAME}/points/count?exact=true`,
     {
       method: "POST",
       body: JSON.stringify({
         filter: {
-          must: [
-            { key: "user_id", match: { value: userId } },
-            { key: "page_id", match: { value: pageId } },
-          ],
+          must: [{ key: "tenant_id", match: { value: tenantId } }],
         },
       }),
     }
@@ -136,7 +138,7 @@ async function countPageChunks({ userId, pageId }) {
 }
 
 /**
- * Ensure a page is ingested for a user.
+ * Ensure a page is ingested for a tenant
  */
 async function ensurePageIngested({
   userId,
@@ -161,21 +163,20 @@ async function ensurePageIngested({
 }
 
 /**
- * Query for relevant page chunks for a user and page.
+ * Query for relevant page chunks for a tenant
  */
 async function queryPage({ userId, pageId, query, topK = 6 }) {
+  const tenantId = makeTenantId(userId, pageId);
   const [embedding] = await embedTexts([query]);
+
   const result = await qdrantFetch(
     `/collections/${COLLECTION_NAME}/points/search`,
     {
       method: "POST",
       body: JSON.stringify({
-        vector: embedding,
+        vector: { name: "default", vector: embedding },
         filter: {
-          must: [
-            { key: "user_id", match: { value: userId } },
-            { key: "page_id", match: { value: pageId } },
-          ],
+          must: [{ key: "tenant_id", match: { value: tenantId } }],
         },
         limit: topK,
         with_payload: true,

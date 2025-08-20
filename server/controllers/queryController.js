@@ -65,10 +65,8 @@ const handleUserQuery = async (req, res, next) => {
       // Try to find a cached response first
       cachedResponse = await responseCachingService.searchSimilarResponseCache({
         userId: req.session.user_id,
+        pageId: pageMeta.pageId,
         query: messages[messages.length - 1]?.content || "",
-        metadata: {
-          page_id: pageMeta.pageId,
-        },
         topK: 3,
       });
     }
@@ -161,10 +159,10 @@ const handleUserQuery = async (req, res, next) => {
       responseCachingService
         .storeResponseCache({
           userId: req.session.user_id,
+          page_id: pageMeta.pageId,
           query: messages[messages.length - 1]?.content || "",
           response: assistantMessage.message,
           metadata: {
-            page_id: pageMeta.pageId,
             normalized_page_url: pageMeta.normalizedPageUrl,
             language: metadata.language,
           },

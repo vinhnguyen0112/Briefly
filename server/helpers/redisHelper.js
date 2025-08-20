@@ -356,7 +356,6 @@ async function updateRecord(prefix, id, updates) {
   if (existing) {
     try {
       record = JSON.parse(existing);
-      console.log("Existing record:", record);
     } catch (e) {
       console.error("Failed to parse existing record:", e);
       record = {};
@@ -368,7 +367,6 @@ async function updateRecord(prefix, id, updates) {
 
   // Merge updates into existing record
   const updatedRecord = { ...record, ...updates };
-  console.log("Updated record:", updatedRecord);
 
   // Set with original TTL or default
   const setOptions = {};

@@ -40,10 +40,6 @@ async function ensureCollection(collectionName, vectorSize = 1536) {
               distance: "Cosine",
             },
           },
-          hnsw_config: {
-            payload_m: 16, // per-tenant indexing
-            m: 0, // disable global index
-          },
         }),
       });
 
