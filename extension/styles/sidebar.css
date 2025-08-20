@@ -168,6 +168,12 @@ body.sidebar-resizing * {
   color: var(--primary-foreground);
 }
 
+/* account popup */
+#account-popup {
+  min-width: fit-content;
+  max-width: fit-content;
+}
+
 /* CONFIG ELEMENTS STYLING */
 
 /* config button */
@@ -175,6 +181,7 @@ body.sidebar-resizing * {
   background-color: var(--muted);
   color: var(--muted-foreground);
   transition: background-color 0.2s, color 0.2s;
+  font-weight: 500;
 }
 
 #config-button:hover {
@@ -206,12 +213,6 @@ body.sidebar-resizing * {
   text-align: center;
 }
 
-.config-form {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
-}
-
 .form-group {
   display: flex;
   flex-direction: column;
@@ -227,7 +228,7 @@ body.sidebar-resizing * {
 .help-text {
   font-size: 0.75rem;
   color: var(--muted-color, #6b7280);
-  margin-top: 0.25rem;
+  margin-top: 0.5rem;
 }
 
 .slider-container {
@@ -264,17 +265,6 @@ body.sidebar-resizing * {
   background: var(--primary-hover, #3a76d8);
   transform: scale(1.1);
 }
-
-/* .slider-markers {
-  display: flex;
-  justify-content: space-between;
-  width: calc(100% - 16px);
-  font-size: 0.75rem;
-  color: var(--muted-color, #6b7280);
-  margin: 12px 8px 0 8px;
-  position: relative;
-  padding-top: 4px;
-} */
 
 .slider-markers {
   position: absolute;
@@ -414,6 +404,7 @@ body.sidebar-resizing * {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  margin-bottom: 12px;
 }
 
 .input-container {
@@ -753,8 +744,7 @@ body.sidebar-resizing * {
 #chat-screen {
   display: flex;
   flex-direction: column;
-  height: calc(100% - 48px);
-  /*TODO: Temporary fix for off-screened chatbar*/
+  height: 100%;
   width: 100%;
 }
 
@@ -1449,6 +1439,7 @@ input:checked + .slider:before {
   border-radius: var(--radius);
   cursor: pointer;
   transition: var(--primary) 0.2s ease, color 0.2s ease;
+  font-weight: 500;
 }
 
 .auth-button:hover {
@@ -1475,6 +1466,7 @@ input:checked + .slider:before {
 /* CHAT HISTORY */
 
 #chat-history-screen {
+  height: 100%;
   display: flex;
   flex-direction: column;
   background: var(--background);
@@ -1728,29 +1720,6 @@ input:checked + .slider:before {
   color: #fff;
 }
 
-.sidebar-toolbar .left-actions {
-  display: flex;
-  gap: 8px;
-}
-
-.sidebar-toolbar .left-actions button {
-  padding: 4px;
-  color: var(--muted-foreground);
-  border: none;
-  cursor: pointer !important;
-  pointer-events: auto !important;
-  transition: background-color 0.2s, color 0.2s;
-  padding: 6px;
-  border-radius: var(--radius);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.sidebar-toolbar .left-actions button:hover {
-  opacity: 0.8;
-}
-
 /* FEEDBACK */
 
 .feedback-button {
@@ -1923,11 +1892,6 @@ input:checked + .slider:before {
   cursor: not-allowed;
   opacity: 0.5;
   transition: opacity 0.2s;
-}
-
-#account-popup {
-  min-width: fit-content;
-  max-width: fit-content;
 }
 
 /* Loading spinner styling */
@@ -2495,4 +2459,9 @@ input:checked + .slider:before {
   100% {
     transform: rotate(360deg);
   }
+}
+
+/* Sign in alert popup */
+#sign-in-alert-popup .popup-message {
+  margin-bottom: 1rem;
 }

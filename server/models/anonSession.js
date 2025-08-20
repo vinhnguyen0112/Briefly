@@ -67,6 +67,21 @@ class AnonSession {
     const { affectedRows } = await dbHelper.executeQuery(query, [id]);
     return affectedRows;
   }
+
+  /**
+   * Increment the anon_query_count value.
+   * @param {String} id ID of the anonymous session
+   * @returns {Promise<number>} Number of affected rows
+   */
+  async increaseAnonQueryCount(id) {
+    const query = `
+      UPDATE anon_sessions 
+      SET anon_query_count = anon_query_count + 1
+      WHERE id = ?`;
+
+    const { affectedRows } = await dbHelper.executeQuery(query, [id]);
+    return affectedRows;
+  }
 }
 
 module.exports = new AnonSession();

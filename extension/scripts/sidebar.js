@@ -145,14 +145,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
   // get page content
   requestPageContent().then(() => {
-    getUserSession().then((session) => {
-      if (session && session.id) {
-        // Store page metadata if extraction was success
-        if (state.pageContent && state.pageContent.extractionSuccess) {
-          storePageMetadata();
-        }
-      }
-    });
+    // getUserSession().then((session) => {
+    //   if (session && session.id) {
+    //     // Store page metadata if extraction was success
+    //     if (state.pageContent && state.pageContent.extractionSuccess) {
+    //       console.log(
+    //         "requestPageContent completed sucessfully, storing page metadata"
+    //       );
+    //       storePageMetadata();
+    //     }
+    //   }
+    // });
   });
 
   // make sure content extraction is reliable
@@ -266,16 +269,11 @@ function storePageMetadata() {
     state.pdfContent?.status === "success"
       ? formatPdfContent(state.pdfContent)
       : null;
-  chrome.runtime.sendMessage(
-    {
-      action: "store_page_metadata",
-      page_url: state.pageContent.url,
-      title: state.pageContent.title,
-      page_content: state.pageContent.content,
-      pdf_content: pdfContent,
-    },
-    (response) => {
-      // Do sth here if needed
-    }
-  );
+  chrome.runtime.sendMessage({
+    action: "store_page_metadata",
+    page_url: state.pageContent.url,
+    title: state.pageContent.title,
+    page_content: state.pageContent.content,
+    pdf_content: pdfContent,
+  });
 }

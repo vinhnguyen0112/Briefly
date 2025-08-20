@@ -1,9 +1,8 @@
 import {
   state,
-  increaseAnonQueryCount,
-  getUserSession,
   resetCurrentChatState,
   sendRequest,
+  getUserSession,
 } from "./state.js";
 import {
   addMessageToChat,
@@ -12,7 +11,6 @@ import {
   showToast,
   updateMessageWithId,
 } from "./ui-handler.js";
-import { isSignInNeeded } from "./auth-handler.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { formatPdfContent } from "./pdf-handler.js";
@@ -33,7 +31,7 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
   // Check if user is online
   if (navigator.onLine === false) {
     showToast({
-      message: "You are offline. Please check your internet connection.",
+      dataI18n: "youAreOffline",
       type: "error",
       duration: 2000,
     });
@@ -47,18 +45,6 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
       message: "Page content is still being extracted. Please wait a moment.",
       role: "assistant",
     });
-  }
-
-  const notAllowed = await isSignInNeeded();
-  if (notAllowed) {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      if (tabs[0]) {
-        chrome.tabs.sendMessage(tabs[0].id, {
-          action: "sign_in_required",
-        });
-      }
-    });
-    return;
   }
 
   // Show user prompt with thinking indicator
@@ -123,16 +109,19 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
         state.currentChat.history = state.currentChat.history.slice(-6);
       }
 
-      // Persist and get real message IDs, then update the UI
-      persistChatAndMessages(
-        query,
-        assistantMessage,
-        response.model,
-        tempMessageId
-      );
+      const authSession = await getUserSession();
+      if (authSession && authSession.id) {
+        // Persist and get real message IDs, then update the UI
+        persistChatAndMessages(
+          query,
+          assistantMessage,
+          response.model,
+          tempMessageId
+        );
 
-      if (metadata.event === "summarize") {
-        persistPageSummary(assistantMessage);
+        if (metadata.event === "summarize") {
+          persistPageSummary(assistantMessage);
+        }
       }
 
       return { success: true, message: assistantMessage };
@@ -176,12 +165,6 @@ async function persistChatAndMessages(
   model,
   tempMessageId
 ) {
-  const userSession = await getUserSession();
-  if (!userSession || !userSession.id) {
-    await increaseAnonQueryCount();
-    return;
-  }
-
   const pageUrl = state.pageContent.url;
   const pageTitle = state.pageContent.title;
 
@@ -220,29 +203,21 @@ async function persistChatAndMessages(
       });
     }
 
-    const userMessageResult = await chatHandler.addMessage(chatId, {
-      role: "user",
-      content: userQuery,
-    });
+    // message pair
+    const messagePair = [
+      { role: "user", content: userQuery },
+      { role: "assistant", content: assistantMessage, model },
+    ];
+    const pairResult = await chatHandler.addMessagePair(chatId, messagePair);
 
-    const assistantMessageResult = await chatHandler.addMessage(chatId, {
-      role: "assistant",
-      content: assistantMessage,
-      model,
-    });
-
-    if (assistantMessageResult?.success && assistantMessageResult?.data?.id) {
-      updateMessageWithId(tempMessageId, assistantMessageResult.data.id);
+    if (pairResult?.success && Array.isArray(pairResult.data?.ids)) {
+      // Update tempMessageId with assistant message's real ID (second in pair)
+      updateMessageWithId(tempMessageId, pairResult.data.ids[1]);
     }
 
-    await idbHandler.addMessageToChat(chatId, {
-      role: "user",
-      content: userQuery,
-    });
-    await idbHandler.addMessageToChat(chatId, {
-      role: "assistant",
-      content: assistantMessage,
-    });
+    // Persist to local IndexedDB as before
+    await idbHandler.addMessageToChat(chatId, messagePair[0]);
+    await idbHandler.addMessageToChat(chatId, messagePair[1]);
 
     if (isNewChat && chat) {
       state.chatHistory.unshift(chat);
@@ -466,7 +441,7 @@ export async function generateQuestionsFromContent(contentOverride = null) {
   // Check internet connection
   if (!navigator.onLine) {
     showToast({
-      message: "You are offline. Please check your internet connection.",
+      dataI18n: "youAreOffline",
       type: "error",
       duration: 2000,
     });
@@ -502,6 +477,8 @@ export async function generateQuestionsFromContent(contentOverride = null) {
     const formattedPdfContent = formatPdfContent(state.pdfContent);
     contentSource.pdfContent = formattedPdfContent.slice(0, 5000);
   }
+
+  contentSource.pdfContent = contentSource.pdfContent.trim();
 
   state.isGeneratingQuestions = true;
 

@@ -58,17 +58,6 @@ export const isSessionValid = async (sessionId) => {
 };
 
 /**
- * Checks if the user needs to sign in to continue querying.
- * @returns {Promise<boolean>}
- */
-export const isSignInNeeded = async () => {
-  const { anon_query_count } = await getAnonSession();
-  const userSession = await getUserSession();
-  // User is unauthenticated & anon query count exceed 3
-  return anon_query_count >= 3 && !userSession;
-};
-
-/**
  * Signs the user out and clears the session.
  * @returns {Promise<void>}
  */

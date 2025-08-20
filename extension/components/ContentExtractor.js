@@ -8,80 +8,274 @@ window.isContentExtractorReady = function () {
   return typeof window.extractPageContent === "function";
 };
 
-const sendDetected = (pdfUrl) => {
-  // Send a message to the background script
+const sendDetected = (pdfUrl, detectionMethod = "unknown") => {
   chrome.runtime.sendMessage({
     action: "pdf_detected",
     pdf_url: pdfUrl,
     page_url: window.location.href,
+    detection_method: detectionMethod,
+    timestamp: Date.now(),
   });
 };
 
 /**
- * Detect for PDF contents on the page.
- * @returns {Promise<void>}
+ * Check if a URL looks like a PDF based on various patterns
  */
-async function detectPDF() {
-  // Detect if this is a PDF document
-  const url = window.location.href;
+const isPdfUrl = (url) => {
+  if (!url) return false;
 
-  // Check if the URL ends with .pdf or has a PDF content type
-  if (url.toLowerCase().endsWith(".pdf")) return sendDetected(url);
+  const cleanUrl = url.toLowerCase().split("?")[0].split("#")[0];
 
-  // Check if the content type is PDF
-  if (document.contentType === "application/pdf") return sendDetected(url);
+  // Direct PDF file extensions
+  if (cleanUrl.endsWith(".pdf")) return true;
 
-  // Check for <embed> or <object> tags with PDF content
-  const embeds = [...document.getElementsByTagName("embed")];
-  const objects = [...document.getElementsByTagName("object")];
+  // Common PDF viewer patterns
+  const pdfPatterns = [
+    /\/pdf\//i,
+    /\.pdf[?#]/i,
+    /pdfjs/i,
+    /pdf\.js/i,
+    /viewer\.html.*\.pdf/i,
+    /\/view\/pdf/i,
+    /\/download.*\.pdf/i,
+    /content-type.*application\/pdf/i,
+  ];
 
-  // Check if any embed or object has a PDF type
-  if (
-    embeds.find((e) => e.type?.includes("pdf")) ||
-    objects.find((o) => o.type?.includes("pdf"))
-  ) {
-    return sendDetected(url);
+  return pdfPatterns.some((pattern) => pattern.test(url));
+};
+
+/**
+ * Check content type via fetch HEAD request
+ */
+const checkContentType = async (url) => {
+  try {
+    const response = await fetch(url, {
+      method: "HEAD",
+      cache: "no-cache",
+    });
+    const contentType = response.headers.get("content-type");
+    return contentType && contentType.toLowerCase().includes("application/pdf");
+  } catch (e) {
+    return false;
   }
+};
 
-  // Check for <iframe> tags with PDF content
-  if (url.includes("viewer.html") && url.includes("file=")) {
-    try {
+/**
+ * Extract PDF URL from various viewer formats
+ */
+const extractPdfFromViewer = (url) => {
+  try {
+    // PDF.js viewer format: viewer.html?file=...
+    if (url.includes("viewer.html") && url.includes("file=")) {
       const params = new URLSearchParams(url.split("?")[1]);
       const file = params.get("file");
       if (file) {
-        const absoluteUrl = new URL(
-          decodeURIComponent(file),
-          window.location.origin
-        ).href;
-        return sendDetected(absoluteUrl);
+        return new URL(decodeURIComponent(file), window.location.origin).href;
       }
-    } catch (e) {
-      console.warn("Failed to extract PDF from viewer URL:", e);
-      return sendDetected(url);
+    }
+
+    // Google Drive viewer
+    const driveMatch = url.match(/drive\.google\.com\/file\/d\/([^\/]+)/);
+    if (driveMatch) {
+      return `https://drive.google.com/uc?export=download&id=${driveMatch[1]}`;
+    }
+
+    // Other common viewer patterns
+    const viewerPatterns = [
+      /[?&]url=([^&]+)/i,
+      /[?&]src=([^&]+)/i,
+      /[?&]document=([^&]+)/i,
+      /[?&]file=([^&]+)/i,
+    ];
+
+    for (const pattern of viewerPatterns) {
+      const match = url.match(pattern);
+      if (match) {
+        try {
+          const extractedUrl = decodeURIComponent(match[1]);
+          if (isPdfUrl(extractedUrl)) {
+            return new URL(extractedUrl, window.location.origin).href;
+          }
+        } catch (e) {
+          continue;
+        }
+      }
+    }
+  } catch (e) {
+    console.warn("Failed to extract PDF from viewer URL:", e);
+  }
+  return null;
+};
+
+/**
+ * Check for PDF content in DOM elements
+ */
+const checkDomElements = () => {
+  const elements = [
+    ...document.getElementsByTagName("embed"),
+    ...document.getElementsByTagName("object"),
+    ...document.getElementsByTagName("iframe"),
+  ];
+
+  for (const element of elements) {
+    // Check type attribute
+    const type = element.type || element.getAttribute("type") || "";
+    if (type.toLowerCase().includes("pdf")) {
+      const src =
+        element.src ||
+        element.data ||
+        element.getAttribute("src") ||
+        element.getAttribute("data");
+      if (src) {
+        const extractedPdf = extractPdfFromViewer(src) || src;
+        return {
+          url: extractedPdf,
+          method: `${element.tagName.toLowerCase()}_type`,
+        };
+      }
+    }
+
+    // Check src/data attributes for PDF patterns
+    const src =
+      element.src ||
+      element.data ||
+      element.getAttribute("src") ||
+      element.getAttribute("data") ||
+      "";
+    if (isPdfUrl(src)) {
+      const extractedPdf = extractPdfFromViewer(src) || src;
+      return {
+        url: extractedPdf,
+        method: `${element.tagName.toLowerCase()}_src`,
+      };
     }
   }
 
-  // Check for iframes that might contain PDF viewers
-  const iframes = [...document.getElementsByTagName("iframe")];
-  for (const iframe of iframes) {
-    const src = iframe.src || iframe.getAttribute("src") || "";
-    if (src.includes("viewer.html") && src.includes("file=")) {
-      try {
-        const params = new URLSearchParams(src.split("?")[1]);
-        const file = params.get("file");
-        if (file) {
-          const absoluteUrl = new URL(
-            decodeURIComponent(file),
-            window.location.origin
-          ).href;
-          return sendDetected(absoluteUrl);
-        }
-      } catch (e) {
-        console.warn("Failed to extract PDF from iframe viewer:", e);
-        return sendDetected(); // fallback if error
+  return null;
+};
+
+/**
+ * Check for PDF links and buttons
+ */
+const checkPdfLinks = () => {
+  const links = document.querySelectorAll(
+    "a[href], button[onclick], [data-pdf], [data-url]"
+  );
+
+  for (const link of links) {
+    const href =
+      link.href ||
+      link.getAttribute("href") ||
+      link.getAttribute("data-pdf") ||
+      link.getAttribute("data-url") ||
+      "";
+
+    if (isPdfUrl(href)) {
+      // Only report if the link is prominent (visible and reasonably sized)
+      const rect = link.getBoundingClientRect();
+      if (rect.width > 50 && rect.height > 20) {
+        return { url: href, method: "pdf_link" };
+      }
+    }
+
+    // Check onclick handlers for PDF patterns
+    const onclick = link.getAttribute("onclick") || "";
+    const pdfMatch = onclick.match(/['"]([^'"]*\.pdf[^'"]*)['"]/i);
+    if (pdfMatch) {
+      return {
+        url: new URL(pdfMatch[1], window.location.origin).href,
+        method: "onclick_pdf",
+      };
+    }
+  }
+
+  return null;
+};
+
+/**
+ * Check for canvas-based PDF renderers
+ */
+const checkCanvasRenderers = () => {
+  const canvases = document.getElementsByTagName("canvas");
+
+  // Look for multiple canvases which might indicate a PDF renderer
+  if (canvases.length > 2) {
+    // Check if there are PDF-related classes or IDs
+    for (const canvas of canvases) {
+      const className = canvas.className.toLowerCase();
+      const id = canvas.id.toLowerCase();
+
+      if (
+        className.includes("pdf") ||
+        id.includes("pdf") ||
+        canvas.closest('[class*="pdf"], [id*="pdf"]')
+      ) {
+        return { url: window.location.href, method: "canvas_pdf_renderer" };
       }
     }
   }
+
+  return null;
+};
+
+/**
+ * Main PDF detection function
+ */
+async function detectPDF() {
+  const url = window.location.href;
+
+  // 1. Check if current page is a PDF
+  if (url.toLowerCase().endsWith(".pdf")) {
+    return sendDetected(url, "url_extension");
+  }
+
+  // 2. Check document content type
+  if (document.contentType === "application/pdf") {
+    return sendDetected(url, "content_type");
+  }
+
+  // 3. Check for PDF viewer URLs
+  const extractedPdf = extractPdfFromViewer(url);
+  if (extractedPdf) {
+    return sendDetected(extractedPdf, "viewer_extraction");
+  }
+
+  // 4. Check DOM elements
+  const domResult = checkDomElements();
+  if (domResult) {
+    return sendDetected(domResult.url, domResult.method);
+  }
+
+  // 5. Check for prominent PDF links
+  const linkResult = checkPdfLinks();
+  if (linkResult) {
+    return sendDetected(linkResult.url, linkResult.method);
+  }
+
+  // 6. Check for canvas-based PDF renderers
+  const canvasResult = checkCanvasRenderers();
+  if (canvasResult) {
+    return sendDetected(canvasResult.url, canvasResult.method);
+  }
+
+  // 8. Additional async checks
+  setTimeout(async () => {
+    // Check if any suspicious URLs in the page might be PDFs
+    const suspiciousLinks = Array.from(
+      document.querySelectorAll(
+        'a[href*="download"], a[href*="view"], a[href*="file"]'
+      )
+    )
+      .map((a) => a.href)
+      .filter(isPdfUrl)
+      .slice(0, 3); // Limit to prevent too many requests
+
+    for (const suspiciousUrl of suspiciousLinks) {
+      if (await checkContentType(suspiciousUrl)) {
+        return sendDetected(suspiciousUrl, "async_content_type_check");
+      }
+    }
+  }, 1000);
 }
 
 // Boot up

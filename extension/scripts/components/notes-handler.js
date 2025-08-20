@@ -8,10 +8,10 @@ import {
   updateNote,
   deleteNote,
   resetNotesPaginationState,
+  getUserSession,
 } from "./state.js";
 import { translate, translateElement } from "./i18n.js";
 import { escapeHtml, showToast, updateToast } from "./ui-handler.js";
-import { isSignInNeeded } from "./auth-handler.js";
 
 let notesScrollListenerSetup = false;
 let currentScrollHandler = null;
@@ -505,51 +505,33 @@ function renderAllNotes(notes) {
   setupNotesInfiniteScroll();
 }
 
+let isSaving = false;
 /**
  * Processes note save requests with comprehensive validation and feedback
  * Handles both new note creation and existing note updates
  * Provides real-time user feedback through toast notifications
  */
 export async function handleSaveNote() {
-  const notAllowed = await isSignInNeeded();
-  if (notAllowed) {
-    showSignInAlertPopup();
+  if (isSaving) {
     return;
   }
+
+  isSaving = true;
 
   const content = elements.noteContent.value.trim();
 
   if (!content) {
-    showToast({
-      message:
-        state.language === "en"
-          ? "Please enter some content for your note"
-          : "Vui lòng nhập nội dung cho ghi chú",
-      type: "error",
-    });
+    isSaving = false;
     return;
   }
 
   if (state.isEditingNote && content === originalContent.trim()) {
-    showToast({
-      message:
-        state.language === "en"
-          ? "Please make some changes to update the note."
-          : "Vui lòng thực hiện thay đổi để cập nhật ghi chú.",
-      type: "warning",
-      duration: 3000,
-    });
+    isSaving = false;
     return;
   }
 
   const toastId = showToast({
-    message: state.isEditingNote
-      ? state.language === "en"
-        ? "Updating note..."
-        : "Đang cập nhật ghi chú..."
-      : state.language === "en"
-      ? "Creating note..."
-      : "Đang tạo ghi chú...",
+    dataI18n: state.isEditingNote ? "updating" : "creating",
     type: "loading",
     duration: null,
   });
@@ -561,12 +543,9 @@ export async function handleSaveNote() {
       updateNoteInPlace(state.currentEditingNoteId, content);
 
       updateToast(toastId, {
-        message:
-          state.language === "en"
-            ? "Note updated successfully!"
-            : "Đã cập nhật ghi chú thành công!",
+        dataI18n: "success",
         type: "success",
-        duration: 2000,
+        duration: 1000,
       });
     } else {
       const savedNoteId = await saveNote({
@@ -582,12 +561,9 @@ export async function handleSaveNote() {
       });
 
       updateToast(toastId, {
-        message:
-          state.language === "en"
-            ? "Note created successfully!"
-            : "Đã tạo ghi chú thành công!",
+        dataI18n: "success",
         type: "success",
-        duration: 2000,
+        duration: 1000,
       });
     }
 
@@ -595,13 +571,12 @@ export async function handleSaveNote() {
   } catch (error) {
     console.error("Error saving note:", error);
     updateToast(toastId, {
-      message:
-        state.language === "en"
-          ? "Failed to save note. Please try again."
-          : "Không thể lưu ghi chú. Vui lòng thử lại.",
+      dataI18n: "failed",
       type: "error",
-      duration: 3000,
+      duration: 1000,
     });
+  } finally {
+    isSaving = false;
   }
 }
 
@@ -680,8 +655,7 @@ async function confirmDeleteNote(noteId) {
   closeDeleteNoteModal();
 
   const toastId = showToast({
-    message:
-      state.language === "en" ? "Deleting note..." : "Đang xóa ghi chú...",
+    dataI18n: "deleting",
     type: "loading",
     duration: null,
   });
@@ -692,22 +666,16 @@ async function confirmDeleteNote(noteId) {
     removeNoteInPlace(noteId);
 
     updateToast(toastId, {
-      message:
-        state.language === "en"
-          ? "Note deleted successfully!"
-          : "Đã xóa ghi chú thành công!",
+      dataI18n: "success",
       type: "success",
-      duration: 2000,
+      duration: 1000,
     });
   } catch (error) {
     console.error("Error deleting note:", error);
     updateToast(toastId, {
-      message:
-        state.language === "en"
-          ? "Failed to delete note. Please try again."
-          : "Không thể xóa ghi chú. Vui lòng thử lại.",
+      dataI18n: "failed",
       type: "error",
-      duration: 3000,
+      duration: 1000,
     });
   }
 }
@@ -844,8 +812,8 @@ function createNoteItem(note, showUrl = false) {
  */
 export async function openNoteEditor(existingContent = "", noteUrl = null) {
   if (!existingContent) {
-    const notAllowed = await isSignInNeeded();
-    if (notAllowed) {
+    const authSession = await getUserSession();
+    if (!authSession || !authSession.id) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
           chrome.tabs.sendMessage(tabs[0].id, {

@@ -1,6 +1,5 @@
 // Global state object
 // Only persist in IDB when user click to view a chat
-
 export const state = {
   pageContent: null,
   chatContext: null,
@@ -137,15 +136,6 @@ export function saveAnonSession(data) {
     chrome.storage.local.set({ anon_session: { ...data, id: data.id } }, () =>
       resolve(data.id)
     );
-  });
-}
-
-// Increase anon query count for the current anon session
-export async function increaseAnonQueryCount() {
-  const anonSession = await getAnonSession();
-  await saveAnonSession({
-    ...anonSession,
-    anon_query_count: (anonSession.anon_query_count || 0) + 1,
   });
 }
 
@@ -453,7 +443,19 @@ export async function sendRequest(url, options = {}) {
     const userSession = await getUserSession();
     const anonSession = !userSession && (await getAnonSession());
     const sessionId = userSession?.id || anonSession?.id;
-    if (!sessionId) throw new Error("No active session found");
+    // No session found
+    if (!sessionId) {
+      return chrome.tabs.query(
+        { active: true, currentWindow: true },
+        (tabs) => {
+          if (tabs[0]) {
+            chrome.tabs.sendMessage(tabs[0].id, {
+              action: "sign_in_required",
+            });
+          }
+        }
+      );
+    }
     headers.set(
       "Authorization",
       `Bearer ${userSession ? `auth:${sessionId}` : `anon:${sessionId}`}`
@@ -492,6 +494,22 @@ export async function sendRequest(url, options = {}) {
           }
         });
       });
+    } else if (code === "UNAUTHENTICATED") {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            action: "sign_in_required",
+          });
+        }
+      });
+    } else if (code === "ANON_QUERY_LIMIT_REACHED") {
+      chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+        if (tabs[0]) {
+          chrome.tabs.sendMessage(tabs[0].id, {
+            action: "anon_query_limit_reached",
+          });
+        }
+      });
     } else {
       console.error(`Error ${code}: ${message}`);
     }
@@ -500,14 +518,15 @@ export async function sendRequest(url, options = {}) {
 
   const data = await response.json();
 
-  // If server assigned a new anonymous session, save it
-  if (
-    data.meta &&
-    data.meta.newAnonSessionAssigned &&
-    data.meta.newAnonSession
-  ) {
-    console.log("New anon session assigned, saving to storage...");
-    await saveAnonSession(data.meta.newAnonSession);
+  // If server increased anon_query_count, update it
+  if (data.anon_query_count) {
+    const anonSession = await getAnonSession();
+    if (anonSession && anonSession.id) {
+      await saveAnonSession({
+        id: anonSession.id,
+        anon_query_count: data.anon_query_count,
+      });
+    }
   }
 
   return data;

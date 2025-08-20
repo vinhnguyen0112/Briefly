@@ -9,6 +9,7 @@ const {
   createChatSchema,
   updateChatSchema,
   createMessageSchema,
+  createMessagePairSchema,
 } = require("../schemas/yupSchemas");
 
 router.use(requireAuthenticatedSession);
@@ -33,6 +34,13 @@ router
   .post(
     validateAndSanitizeBody(createMessageSchema),
     chatController.addMessage
+  );
+
+router
+  .route("/:chat_id/messages/pair")
+  .post(
+    validateAndSanitizeBody(createMessagePairSchema),
+    chatController.addMessagePair
   );
 
 module.exports = router;

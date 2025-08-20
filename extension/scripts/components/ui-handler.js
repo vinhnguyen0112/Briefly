@@ -44,11 +44,6 @@ export function closeAllScreensAndPanels() {
   }
   state.isNotesOpen = false;
 
-  const toolbar = document.querySelector(".sidebar-toolbar");
-  if (toolbar) {
-    toolbar.classList.remove("notes-open");
-  }
-
   // hide sign in alert
   if (elements.signInAlertOverlay) {
     elements.signInAlertOverlay.style.display = "none";
@@ -504,8 +499,7 @@ async function showFeedbackModal(messageId) {
     const comment = modal.querySelector(".feedback-reason-input").value.trim();
 
     const toastId = showToast({
-      message:
-        state.language === "en" ? "Submitting feedback" : "Đang gửi góp ý",
+      dataI18n: "submitting",
       type: "loading",
       duration: null,
     });
@@ -518,30 +512,23 @@ async function showFeedbackModal(messageId) {
 
       if (response.success) {
         updateToast(toastId, {
-          message:
-            state.language === "en" ? "Feedback submitted" : "Gửi thành công",
+          dataI18n: "success",
           type: "success",
-          duration: 2000,
+          duration: 1000,
         });
       } else {
         updateToast(toastId, {
-          message:
-            state.language === "en"
-              ? "Something went wrong, please try again later"
-              : "Đã xảy ra lỗi, vui lòng thử lại sau",
+          dataI18n: "failed",
           type: "error",
-          duration: 2000,
+          duration: 1000,
         });
       }
     } catch (err) {
       console.error(err);
       updateToast(toastId, {
-        message:
-          state.language === "en"
-            ? "Something went wrong, please try again later"
-            : "Đã xảy ra lỗi, vui lòng thử lại sau",
+        dataI18n: "failed",
         type: "error",
-        duration: 2000,
+        duration: 1000,
       });
     } finally {
       closeModal();
@@ -626,12 +613,12 @@ function renderStars() {
 /**
  * Show a dynamic toast notification
  * @param {Object} options
- * @param {string} options.message The main toast text
+ * @param {string} options.dataI18n The i18n key for the toast message
  * @param {'info'|'success'|'error'|'loading'} [options.type='info'] Toast category
  * @param {number|null} [options.duration] Duration in ms. If null, stays until removed manually
  * @returns {string} toastId Can be used to update/dismiss later
  */
-export function showToast({ message, type = "info", duration = 2000 }) {
+export function showToast({ dataI18n, type = "info", duration = 2000 }) {
   const toastId = `toast-${state.toastIdCounter++}`;
   const toast = document.createElement("div");
   toast.className = `toast toast-${type}`;
@@ -640,10 +627,13 @@ export function showToast({ message, type = "info", duration = 2000 }) {
   const icon = getToastIcon(type);
   toast.innerHTML = `
     <span class="toast-icon">${icon}</span>
-    <span class="toast-message">${message}</span>
+    <span class="toast-message" data-i18n="${dataI18n}"></span>
   `;
 
   document.body.appendChild(toast);
+
+  // Translate the toast message
+  translateElement(toast);
 
   if (duration !== null) {
     setTimeout(() => removeToast(toastId), duration);
@@ -656,23 +646,27 @@ export function showToast({ message, type = "info", duration = 2000 }) {
  * Update an existing toast by ID
  * @param {string} toastId
  * @param {Object} options
- * @param {string} [options.message]
+ * @param {string} [options.dataI18n] The i18n key for the toast message
  * @param {'info'|'success'|'error'|'loading'} [options.type]
  * @param {number|null} [options.duration] Reset or extend timeout
  */
-export function updateToast(toastId, { message, type, duration }) {
+export function updateToast(toastId, { dataI18n, type, duration }) {
   const toast = document.getElementById(toastId);
   if (!toast) return;
 
-  if (message) toast.querySelector(".toast-message").textContent = message;
+  if (dataI18n) {
+    const messageSpan = toast.querySelector(".toast-message");
+    messageSpan.setAttribute("data-i18n", dataI18n);
+  }
   if (type) {
     toast.className = `toast toast-${type}`;
     toast.querySelector(".toast-icon").innerHTML = getToastIcon(type);
   }
-
   if (duration !== undefined) {
     setTimeout(() => removeToast(toastId), duration);
   }
+
+  translateElement(toast);
 }
 
 /**
@@ -788,6 +782,9 @@ export function handleContentMessage(message) {
         message:
           "Your session has expired and you have been signed out for security reasons",
       });
+      break;
+    case "anon_query_limit_reached":
+      showSignInAlertPopup();
       break;
     case "sign_in_required":
       showSignInAlertPopup();
