@@ -165,17 +165,22 @@ function buildPageContextIndicator() {
     ? state.chatContext
     : state.pageContent;
 
+  // Loading state
   if (!context || context.extractionSuccess === false) {
     indicator.innerHTML = `
-      <span class="loading-dots">
-        Reading page context <span class="dot">.</span><span class="dot">.</span><span class="dot">.</span>
+      <span class="loading-dots" data-i18n="readingPageContext">
+        <span>Reading page context</span>
+        <span class="dot">.</span>
+        <span class="dot">.</span>
+        <span class="dot">.</span>
       </span>
     `;
     return indicator;
   }
 
+  // Error state
   if (context.error) {
-    indicator.innerHTML = `⚠️ Limited page context available`;
+    indicator.innerHTML = `<span data-i18n="limitedPageContextWarning">⚠️ Limited page context available</span>`;
     return indicator;
   }
 
@@ -209,8 +214,12 @@ function buildPageContextIndicator() {
     refreshBtn.dataset.i18nTitle = "refreshPageContext";
     refreshBtn.title = "Refresh Page Context";
     refreshBtn.innerHTML = `
-      <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
-        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
+      <svg class="w-6 h-6 text-gray-800 dark:text-white" aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+        viewBox="0 0 24 24">
+        <path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"
+          stroke-width="2"
+          d="M17.651 7.65a7.131 7.131 0 0 0-12.68 3.15M18.001 4v4h-4m-7.652 8.35a7.13 7.13 0 0 0 12.68-3.15M6 20v-4h4"/>
       </svg>
     `;
     refreshBtn.addEventListener("click", () => {
@@ -225,14 +234,15 @@ function buildPageContextIndicator() {
     const infoIcon = document.createElement("span");
     infoIcon.className = "context-info-icon";
     infoIcon.innerHTML = `
-      <svg class="w-5 h-5 text-gray-500" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24">
+      <svg class="w-5 h-5 text-gray-500" aria-hidden="true"
+        xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none"
+        viewBox="0 0 24 24">
         <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2" fill="none"/>
         <line x1="12" y1="8" x2="12" y2="8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
         <line x1="12" y1="12" x2="12" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
       </svg>
     `;
     infoIcon.setAttribute("data-i18n-title", "chatContinuedWithPageContext");
-
     indicator.appendChild(infoIcon);
   }
 

@@ -1,0 +1,13 @@
+{
+  "watch": ["server", "app.js", "index.js"],
+  "ignore": [
+    "node_modules",
+    "public",
+    "logs",
+    "*.log",
+    "*.sqlite",
+    ".cache",
+    "tmp"
+  ],
+  "ext": "js,json"
+}

@@ -37,10 +37,20 @@ async function executeQuery(query, params = []) {
     connection = await getConnection();
 
     console.log(`Executing query: ${query}`);
-    if (params.length > 0) console.log(`Params: ${params}`);
+
+    if (params.length > 0) {
+      const MAX_LEN = 100; // max chars per param before truncating
+      const safeParams = params.map((p) => {
+        const str = String(p);
+        return str.length > MAX_LEN
+          ? str.slice(0, MAX_LEN) + `... [truncated, length=${str.length}]`
+          : str;
+      });
+      console.log("Params:", safeParams);
+    }
 
     const [rowsOrOkPacket] = await connection.execute(query, params);
-    console.log("Query result: ", rowsOrOkPacket);
+    // console.log("Query result:", rowsOrOkPacket);
 
     return rowsOrOkPacket;
   } catch (error) {

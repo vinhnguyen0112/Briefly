@@ -6,8 +6,12 @@ const commonHelper = require("../helpers/commonHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const PageSummary = require("../models/pageSummary");
 const AnonSession = require("../models/anonSession");
+const Page = require("../models/page");
+const ragService = require("../services/ragService");
+const responseCachingService = require("../services/responseCachingService");
 
 const limit = pLimit(5); // 5 concurrency
+const openaiLimit = pLimit(3); // 3 concurrent OpenAI requests
 const ONE_DAY_MS = 24 * 60 * 60 * 1000; // 1 day in ms
 const FRESHNESS_BUFFER_MS = 5 * 60 * 1000; // 5 mins offset for clock drift
 const FRESHNESS_THRESHOLD = ONE_DAY_MS - FRESHNESS_BUFFER_MS;
@@ -54,21 +58,119 @@ const handleUserQuery = async (req, res, next) => {
       );
     }
 
+    const isAuth = req.sessionType === "auth" && req.session?.id;
+
+    let cachedResponse = null;
+    if (isAuth) {
+      // Try to find a cached response first
+      cachedResponse = await responseCachingService.searchSimilarResponseCache({
+        userId: req.session.user_id,
+        pageId: pageMeta.pageId,
+        query: messages[messages.length - 1]?.content || "",
+        topK: 3,
+      });
+    }
+
+    if (cachedResponse?.response) {
+      return res.json({
+        success: true,
+        data: {
+          message: cachedResponse.response,
+          usage: null,
+          model: "cached",
+          cache_score: cachedResponse.score,
+        },
+      });
+    }
+
     let assistantMessage;
-    // Get stored summary
+    // Get stored summary (fast path for summarize event)
     if (metadata.event === "summarize") {
       assistantMessage = await getStoredPageSummary(
         pageMeta.pageId,
         metadata.language
       );
     }
+
     if (!assistantMessage) {
-      // If not a summarize event or if no cached || stored summary
-      // Generate response
-      assistantMessage = await generateAssistantResponse(
-        messages,
-        metadata.max_tokens
-      );
+      let useRag = Boolean(metadata.use_rag);
+
+      // RAG handling
+      if (!useRag && isAuth) {
+        const pageRow = await Page.getById(pageMeta.pageId);
+        const contentLen =
+          (pageRow?.page_content?.length || 0) +
+          (pageRow?.pdf_content?.length || 0);
+        useRag = contentLen > 4000;
+      }
+
+      if (useRag && isAuth) {
+        const pageRow = await Page.getById(pageMeta.pageId);
+        if (pageRow) {
+          await ragService.ensurePageIngested({
+            userId: req.session.user_id,
+            pageId: pageMeta.pageId,
+            pageUrl: pageRow.page_url,
+            title: pageRow.title,
+            content: pageRow.page_content,
+            pdfContent: pageRow.pdf_content,
+            language: req.headers["accept-language"] || "",
+          });
+
+          // Find relevant contexts
+          const { docs: contexts } = await ragService.queryPage({
+            userId: req.session.user_id,
+            pageId: pageMeta.pageId,
+            query: messages[messages.length - 1]?.content || "",
+            topK: 6,
+          });
+
+          const contextBlock = contexts
+            .map((c) => `[#${c.meta.chunk_index}] ${c.text}`)
+            .join("\n\n");
+
+          const ragMessages = [
+            messages[0],
+            {
+              role: "system",
+              content: `Context snippets from page ${pageRow.title || ""} (${
+                pageRow.page_url
+              }):\n\n${contextBlock}`,
+            },
+            messages[messages.length - 1],
+          ];
+
+          assistantMessage = await generateAssistantResponse(
+            ragMessages,
+            metadata.max_tokens
+          );
+        }
+      }
+
+      if (!assistantMessage) {
+        assistantMessage = await generateAssistantResponse(
+          messages,
+          metadata.max_tokens
+        );
+      }
+    }
+
+    // Response caching
+    if (isAuth) {
+      responseCachingService
+        .storeResponseCache({
+          userId: req.session.user_id,
+          pageId: pageMeta.pageId,
+          query: messages[messages.length - 1]?.content || "",
+          response: assistantMessage.message,
+          metadata: {
+            normalized_page_url: pageMeta.normalizedPageUrl,
+            language: metadata.language,
+          },
+        })
+        .catch((err) => {
+          console.warn("Cache store error:", err);
+        });
     }
 
     let newCount = null;
@@ -79,7 +181,6 @@ const handleUserQuery = async (req, res, next) => {
       );
 
       if (affectedRows > 0) {
-        // Update cache
         newCount = req.session.anon_query_count + 1;
         await redisHelper.updateRecord("anon", req.session.id, {
           anon_query_count: newCount,
@@ -108,12 +209,14 @@ const handleUserQuery = async (req, res, next) => {
  * @returns {Promise<{message: string, usage: Object, model: string}>}
  */
 async function generateAssistantResponse(messages, max_tokens) {
-  const completion = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    temperature: 0.7,
-    max_tokens,
-    messages,
-  });
+  const completion = await openaiLimit(() =>
+    openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      temperature: 0.7,
+      max_tokens,
+      messages,
+    })
+  );
 
   if (
     !completion ||
@@ -255,12 +358,14 @@ Do not include anything else, not even a JSON wrapper object.`;
 
     const temperature = language === "vi" ? 0.3 : 0.7;
 
-    const completion = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [systemPrompt, contentPrompt],
-      temperature,
-      max_tokens: 500,
-    });
+    const completion = await openaiLimit(() =>
+      openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [systemPrompt, contentPrompt],
+        temperature,
+        max_tokens: 500,
+      })
+    );
 
     if (
       !completion ||
@@ -359,11 +464,13 @@ const captionize = async (req, res, next) => {
             },
           ];
 
-          const response = await openai.chat.completions.create({
-            model: "gpt-4o-mini",
-            messages,
-            temperature: 0.5,
-          });
+          const response = await openaiLimit(() =>
+            openai.chat.completions.create({
+              model: "gpt-4o-mini",
+              messages,
+              temperature: 0.5,
+            })
+          );
 
           const raw = response.choices?.[0]?.message?.content?.trim() || "";
           const clean = raw.replace(/^['"]+|['"]+$/g, "").split(/\r?\n/)[0];
