@@ -9,11 +9,7 @@ import {
   authenticateWithGoogle,
   signOut,
 } from "./components/auth-handler.js";
-import {
-  handleCaptionImages,
-  resetProcessedImages,
-  processedImagesByTab,
-} from "./components/caption-handler.js";
+import { handleCaptionImages } from "./components/caption-handler.js";
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 import * as pdfjs from "../../libs/pdfjs/pdf.mjs";
@@ -433,10 +429,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "extract_page_content") {
-    if (message.forceReset) {
-      resetProcessedImages();
-      console.log("VH: Forced reset caption cache");
-    }
     console.log(
       "VH: Received extract_page_content request",
       message.forceRefresh ? "(forced refresh)" : ""
@@ -780,19 +772,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "process_images") {
     const tabId = sender.tab?.id;
-    handleCaptionImages(message.images, message.content, tabId)
+    const pageUrl = message.page_url || sender?.tab?.url || "";
+
+    handleCaptionImages(message.images, message.content, pageUrl)
       .then((captionPairs) => {
-        const captions = captionPairs.map((item) => item.caption);
         chrome.tabs.sendMessage(tabId, {
           action: "caption_results",
-          captions,
-          captionPairs,
+          captions: captionPairs,
         });
-        console.log(`Tab ${tabId}: Sent ${captions.length} captions`);
-        console.log(
-          `Tab ${tabId}: Caption store:`,
-          processedImagesByTab[tabId]
-        );
       })
       .catch((error) => {
         console.error(

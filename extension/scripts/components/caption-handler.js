@@ -1,83 +1,71 @@
-export const processedImagesByTab = {};
-
 import { sendRequest } from "./state.js";
+import idbHandler from "./idb-handler.js";
 
-const MAX_TOTAL_CAPTIONS_PER_TAB = 100;
+export async function handleCaptionImages(imageUrls, content, pageUrl) {
+  if (!Array.isArray(imageUrls) || imageUrls.length === 0) return [];
 
-export async function handleCaptionImages(imageUrls, content, tabId) {
-  if (!processedImagesByTab[tabId]) processedImagesByTab[tabId] = {};
-  const store = processedImagesByTab[tabId];
-
-  const currentCaptionCount = Object.keys(store).length;
-
-  if (currentCaptionCount >= MAX_TOTAL_CAPTIONS_PER_TAB) {
+  let idbMap = new Map();
+  try {
+    idbMap = await idbHandler.getCaptionsForImages(pageUrl || "", imageUrls);
+  } catch (e) {
     console.warn(
-      `[Caption][limit] Tab ${tabId} has ${currentCaptionCount} captions (max: ${MAX_TOTAL_CAPTIONS_PER_TAB}). No more images will be extracted!`
+      "[Caption] IDB lookup failed, will call API for all images:",
+      e
     );
-    return Object.entries(store).map(([src, caption]) => ({ src, caption }));
   }
 
-  const imagesWithCaption = [];
-  const imagesToCaption = [];
+  const need = [];
+  const haveMap = new Map(); // Map<src, caption>
 
-  imageUrls.forEach((src) => {
-    if (store[src]) {
-      imagesWithCaption.push({ src, caption: store[src] });
+  for (const src of imageUrls) {
+    const entry = idbMap.get(src);
+    if (entry?.caption && entry.caption.trim()) {
+      haveMap.set(src, entry.caption);
     } else {
-      imagesToCaption.push(src);
-    }
-  });
-
-  const availableSlots = MAX_TOTAL_CAPTIONS_PER_TAB - currentCaptionCount;
-  const limitedImagesToCaption = imagesToCaption.slice(0, availableSlots);
-
-  const validCaptions = [...imagesWithCaption];
-  const retryList = [];
-
-  if (limitedImagesToCaption.length > 0) {
-    const captions = await callCaptionApi(limitedImagesToCaption, content);
-
-    captions.forEach((caption, index) => {
-      const src = limitedImagesToCaption[index];
-      if (caption && caption.trim()) {
-        store[src] = caption;
-        validCaptions.push({ src, caption });
-      } else {
-        retryList.push(src);
-      }
-    });
-
-    for (const imgSrc of retryList) {
-      let retryCount = 0;
-      let caption = null;
-
-      while (
-        retryCount < 1 &&
-        (!caption || caption.trim() === "") &&
-        Object.keys(store).length < MAX_TOTAL_CAPTIONS_PER_TAB
-      ) {
-        retryCount++;
-        const [retryCaption] = await callCaptionApi([imgSrc], content);
-        caption = retryCaption;
-      }
-      if (caption && caption.trim()) {
-        store[imgSrc] = caption;
-        validCaptions.push({ src: imgSrc, caption });
-      }
+      need.push(src);
     }
   }
+
+  let apiPairs = [];
+  if (need.length > 0) {
+    const captions = await callCaptionApi(need, content);
+
+    const retryTargets = [];
+    captions.forEach((cap, i) => {
+      if (!cap || !cap.trim()) retryTargets.push(need[i]);
+    });
+    if (retryTargets.length > 0) {
+      const retried = await Promise.all(
+        retryTargets.map(async (src) => {
+          const [cap] = await callCaptionApi([src], content);
+          return { src, caption: cap || "" };
+        })
+      );
+      const retryMap = new Map(retried.map((p) => [p.src, p.caption]));
+      apiPairs = need.map((src, i) => ({
+        src,
+        caption: retryMap.get(src) ?? (captions[i] || ""),
+      }));
+    } else {
+      apiPairs = need.map((src, i) => ({ src, caption: captions[i] || "" }));
+    }
+  }
+
+  const apiMap = new Map(apiPairs.map((p) => [p.src, p.caption]));
+  const result = imageUrls
+    .map((src) => {
+      const cap = haveMap.get(src) ?? apiMap.get(src) ?? "";
+      return cap ? { src, caption: cap } : null;
+    })
+    .filter(Boolean);
 
   console.log(
-    `[Caption] Tab ${tabId} summary: cache=${imagesWithCaption.length}, api=${
-      validCaptions.length - imagesWithCaption.length
-    }`
+    `[Caption] idb=${haveMap.size}, api=${apiPairs.length}, total=${result.length}`
   );
-  return validCaptions;
+  return result;
 }
 
 async function callCaptionApi(images, content) {
-  console.log("Sending to caption API:", { sources: images, content });
-
   try {
     const data = await sendRequest(
       "https://dev-capstone-2025.coccoc.com/api/query/captionize",
@@ -86,27 +74,13 @@ async function callCaptionApi(images, content) {
         body: { sources: images, context: content },
       }
     );
-
     if (data.success && data.data && Array.isArray(data.data.captions)) {
       return data.data.captions;
-    } else {
-      console.error("Invalid response structure:", data);
-      return images.map(() => null);
     }
+    console.error("Invalid response structure:", data);
+    return images.map(() => "");
   } catch (error) {
     console.error("Caption API error:", error);
-    return images.map(() => null);
-  }
-}
-
-export function resetProcessedImages(tabId) {
-  if (tabId) {
-    processedImagesByTab[tabId] = {};
-    console.log(`[Caption] Reset processed images for tab ${tabId}`);
-  } else {
-    Object.keys(processedImagesByTab).forEach(
-      (tid) => (processedImagesByTab[tid] = {})
-    );
-    console.log("[Caption] Reset processed images for all tabs");
+    return images.map(() => "");
   }
 }

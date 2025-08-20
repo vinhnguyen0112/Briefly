@@ -224,7 +224,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     sendResponse({ success: true });
   } else if (message.action === "caption_results") {
-    const captions = message.captions.filter((c) => c && c.trim() !== "");
+    const captions = Array.isArray(message.captions)
+      ? message.captions.filter(
+          (c) => c && typeof c.caption === "string" && c.caption.trim() !== ""
+        )
+      : [];
     if (captions.length === 0) return;
 
     const iframe = document.getElementById("isal-sidebar-iframe");
@@ -307,7 +311,7 @@ let lastUrl = location.href;
 let urlChangeTimer = null;
 
 function notifyUrlChange(source) {
-  console.log(`VH: URL change detected via ${source}`);
+  console.log(`URL change detected via ${source}`);
   const newUrl = location.href;
 
   // Clear previous timer
@@ -328,7 +332,7 @@ function tryNotifyWithProgression(targetUrl, source, attemptIndex) {
   urlChangeTimer = setTimeout(() => {
     // URL changed again, abort
     if (location.href !== targetUrl) {
-      console.log(`VH: URL changed again, aborting (${source})`);
+      console.log(`URL changed again, aborting (${source})`);
       return;
     }
 
@@ -357,7 +361,7 @@ function tryNotifyWithProgression(targetUrl, source, attemptIndex) {
       // Try again if not ready and have more attempts
       if (!isLastAttempt) {
         console.log(
-          `VH: Page not ready, trying again in ${delays[attemptIndex + 1]}ms`
+          `Page not ready, trying again in ${delays[attemptIndex + 1]}ms`
         );
         tryNotifyWithProgression(targetUrl, source, attemptIndex + 1);
       }
