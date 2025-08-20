@@ -35,10 +35,8 @@ async function ensureCollection(collectionName, vectorSize = 1536) {
         method: "PUT",
         body: JSON.stringify({
           vectors: {
-            default: {
-              size: vectorSize,
-              distance: "Cosine",
-            },
+            size: vectorSize,
+            distance: "Cosine",
           },
         }),
       });

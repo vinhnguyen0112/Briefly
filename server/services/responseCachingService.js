@@ -51,11 +51,13 @@ async function storeResponseCache({
   const tenantId = makeTenantId(userId, pageId);
 
   const payload = {
-    ...metadata,
     tenant_id: tenantId,
+    user_id: userId,
+    page_id: pageId,
     created_at: new Date().toISOString(),
     query,
     response,
+    ...metadata, // make sure metadata keys are also snake_case!
   };
 
   try {
@@ -65,7 +67,7 @@ async function storeResponseCache({
         points: [
           {
             id,
-            vector: { default: embedding },
+            vector: embedding,
             payload,
           },
         ],
@@ -108,10 +110,7 @@ async function searchSimilarResponseCache({
       {
         method: "POST",
         body: JSON.stringify({
-          vector: {
-            name: "default",
-            vector: embedding,
-          },
+          vector: embedding,
           filter,
           limit: topK,
           with_payload: true,

@@ -159,7 +159,7 @@ const handleUserQuery = async (req, res, next) => {
       responseCachingService
         .storeResponseCache({
           userId: req.session.user_id,
-          page_id: pageMeta.pageId,
+          pageId: pageMeta.pageId,
           query: messages[messages.length - 1]?.content || "",
           response: assistantMessage.message,
           metadata: {

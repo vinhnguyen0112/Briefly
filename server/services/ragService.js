@@ -96,7 +96,7 @@ async function upsertPage({
 
   const points = chunks.map((chunk, i) => ({
     id: uuidv4(),
-    vector: { default: embeddings[i] },
+    vector: embeddings[i],
     payload: {
       tenant_id: tenantId,
       user_id: userId, // still keep separately for filters/analytics
@@ -174,7 +174,7 @@ async function queryPage({ userId, pageId, query, topK = 6 }) {
     {
       method: "POST",
       body: JSON.stringify({
-        vector: { name: "default", vector: embedding },
+        vector: embedding,
         filter: {
           must: [{ key: "tenant_id", match: { value: tenantId } }],
         },
