@@ -65,17 +65,15 @@ const createPage = async (req, res, next) => {
       const language = req.headers["accept-language"] || "";
       const pdfText = typeof pdf_content === "string" ? pdf_content : "";
       const contentText = typeof page_content === "string" ? page_content : "";
-      ragService
-        .upsertPage({
-          userId: req.session.user_id,
-          pageId: id,
-          pageUrl: normalizedPageUrl,
-          title,
-          content: contentText,
-          pdfContent: pdfText,
-          language,
-        })
-        .catch(() => {});
+      await ragService.upsertPage({
+        userId: req.session.user_id,
+        pageId: id,
+        pageUrl: normalizedPageUrl,
+        title,
+        content: contentText,
+        pdfContent: pdfText,
+        language,
+      });
     }
   } catch (err) {
     next(err);
@@ -181,17 +179,15 @@ const updatePageById = async (req, res, next) => {
       const pdfText = typeof pdf_content === "string" ? pdf_content : undefined;
       const contentText =
         typeof page_content === "string" ? page_content : undefined;
-      ragService
-        .upsertPage({
-          userId: req.session.user_id,
-          pageId: id,
-          pageUrl: normalizedPageUrl,
-          title,
-          content: contentText,
-          pdfContent: pdfText,
-          language,
-        })
-        .catch(() => {});
+      await ragService.upsertPage({
+        userId: req.session.user_id,
+        pageId: id,
+        pageUrl: normalizedPageUrl,
+        title,
+        content: contentText,
+        pdfContent: pdfText,
+        language,
+      });
     }
   } catch (err) {
     next(err);
@@ -245,17 +241,15 @@ const updatePageByUrl = async (req, res, next) => {
       const pdfText = typeof pdf_content === "string" ? pdf_content : undefined;
       const contentText =
         typeof page_content === "string" ? page_content : undefined;
-      ragService
-        .upsertPage({
-          userId: req.session.user_id,
-          pageId: id,
-          pageUrl: normalizedPageUrl,
-          title,
-          content: contentText,
-          pdfContent: pdfText,
-          language,
-        })
-        .catch(() => {});
+      await ragService.upsertPage({
+        userId: req.session.user_id,
+        pageId: id,
+        pageUrl: normalizedPageUrl,
+        title,
+        content: contentText,
+        pdfContent: pdfText,
+        language,
+      });
     }
   } catch (err) {
     next(err);

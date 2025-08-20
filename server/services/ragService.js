@@ -61,6 +61,7 @@ async function upsertPage({
   content,
   pdfContent,
   language,
+  batchSize = 10, // configurable batch size
 }) {
   const tenantId = makeTenantId(userId, pageId);
 
@@ -92,6 +93,7 @@ async function upsertPage({
     );
   }
 
+  // Embed all chunks in one go (or you could also batch this if your embedder has limits)
   const embeddings = await embedTexts(chunks);
 
   const points = chunks.map((chunk, i) => ({
@@ -99,7 +101,7 @@ async function upsertPage({
     vector: embeddings[i],
     payload: {
       tenant_id: tenantId,
-      user_id: userId, // still keep separately for filters/analytics
+      user_id: userId,
       page_id: pageId,
       page_url: pageUrl,
       title: title || "",
@@ -109,12 +111,30 @@ async function upsertPage({
     },
   }));
 
-  await qdrantFetch(`/collections/${COLLECTION_NAME}/points`, {
-    method: "PUT",
-    body: JSON.stringify({ points }),
-  });
-  console.log(`Inserted ${chunks.length} chunks into collection.`);
+  // Batch insert into Qdrant
+  for (let i = 0; i < points.length; i += batchSize) {
+    const batch = points.slice(i, i + batchSize);
+    try {
+      await qdrantFetch(`/collections/${COLLECTION_NAME}/points`, {
+        method: "PUT",
+        body: JSON.stringify({ points: batch }),
+      });
+      console.log(
+        `Inserted batch ${Math.floor(i / batchSize) + 1} with ${
+          batch.length
+        } chunks.`
+      );
+    } catch (err) {
+      console.error(
+        `Failed to insert batch ${Math.floor(i / batchSize) + 1}:`,
+        err
+      );
+      // Optionally rethrow if you want to stop on first failure
+      // throw err;
+    }
+  }
 
+  console.log(`Inserted total ${chunks.length} chunks into collection.`);
   return chunks.length;
 }
 
