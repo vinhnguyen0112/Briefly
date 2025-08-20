@@ -368,7 +368,7 @@ const captionize = async (req, res, next) => {
           const raw = response.choices?.[0]?.message?.content?.trim() || "";
           const clean = raw.replace(/^['"]+|['"]+$/g, "").split(/\r?\n/)[0];
 
-          const result = {
+          return {
             caption: clean,
             usage: response.usage || {
               prompt_tokens: 0,
@@ -376,10 +376,6 @@ const captionize = async (req, res, next) => {
               total_tokens: 0,
             },
           };
-
-          console.log("Generated questions response: ", result);
-
-          return res.json(result);
         } catch (err) {
           console.error(`Caption error for image ${idx}:`, err);
           return {

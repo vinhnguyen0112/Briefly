@@ -284,9 +284,13 @@ async function detectPDF() {
   window.COCBOT_CONTENT_EXTRACTOR_READY = true;
 })();
 
+// ---------------- INTEGRATED CONTENT & IMAGE EXTRACTION ----------------
+
+const MAX_IMAGES_PER_PAGE = 10;
+
 // The main show - pull content from the page
 function extractPageContent() {
-  console.log("CocBot: Starting content extraction");
+  console.log("CocBot: Starting integrated content & image extraction");
 
   try {
     // Grab the basics
@@ -300,63 +304,97 @@ function extractPageContent() {
 
     console.log("CocBot: Metadata collected", pageMetadata);
 
-    // Get main content - try a few approaches
+    // Get main content and meaningful containers
     let mainContent = "";
+    let meaningfulContainers = [];
 
-    // 1. Try article elements first (common for blog posts, news articles)
-    const articles = document.querySelectorAll("article");
-    if (articles.length > 0) {
-      console.log("CocBot: Found", articles.length, "article elements");
-      for (const article of articles) {
-        if (isVisible(article)) {
-          mainContent += article.innerText + "\n\n";
-        }
-      }
-    }
-
-    // 2. Try main element
+    // 1. Try main element first (most semantic)
     const mainElements = document.querySelectorAll("main");
-    if (mainElements.length > 0 && mainContent.trim() === "") {
+    if (mainElements.length > 0) {
       console.log("CocBot: Found", mainElements.length, "main elements");
       for (const main of mainElements) {
-        if (isVisible(main)) {
+        if (isVisible(main) && hasSubstantialContent(main)) {
           mainContent += main.innerText + "\n\n";
+          meaningfulContainers.push(main);
         }
       }
     }
 
-    // 3. Check common content divs
+    // 2. Try content-specific divs (often more reliable than article)
     if (mainContent.trim() === "") {
       const contentDivSelectors = [
-        ".content",
-        ".article",
-        ".post",
-        ".post-content",
-        ".entry-content",
-        ".page-content",
-        ".main-content",
+        ".entry-content", // WordPress and other CMS khác
+        ".post-content", // Blog posts
+        ".article-content", // News articles
+        ".content", // Generic content
+        ".page-content", // Static pages
+        ".main-content", // Main content areas
         "#content",
+        "#main-content",
+        "#post-content",
         "#main",
-        "#article",
-        "#post",
+        ".container .content", // Nested content
+        ".wrapper .content",
       ];
 
       const contentDivs = document.querySelectorAll(
         contentDivSelectors.join(", ")
       );
       if (contentDivs.length > 0) {
-        console.log("CocBot: Found", contentDivs.length, "content divs");
         for (const div of contentDivs) {
-          if (isVisible(div)) {
+          if (isVisible(div) && hasSubstantialContent(div)) {
             mainContent += div.innerText + "\n\n";
+            meaningfulContainers.push(div);
           }
         }
       }
     }
 
-    // 4. Last resort - headings and paragraphs
+    // 3. Try article elements, but filter out small ones (likely thumbnails)
+    if (mainContent.trim() === "") {
+      const articles = document.querySelectorAll("article");
+      if (articles.length > 0) {
+        console.log("CocBot: Found", articles.length, "article elements");
+        // Sort articles by content length, take the longest ones
+        const substantialArticles = Array.from(articles)
+          .filter(
+            (article) => isVisible(article) && hasSubstantialContent(article)
+          )
+          .sort((a, b) => b.innerText.length - a.innerText.length);
+
+        for (const article of substantialArticles) {
+          mainContent += article.innerText + "\n\n";
+          meaningfulContainers.push(article);
+        }
+      }
+    }
+
+    // 4. Try other semantic containers
+    if (mainContent.trim() === "") {
+      const otherSelectors = [".article", ".post", "#article", "#post"];
+
+      const otherContainers = document.querySelectorAll(
+        otherSelectors.join(", ")
+      );
+      if (otherContainers.length > 0) {
+        console.log(
+          "CocBot: Found",
+          otherContainers.length,
+          "other containers"
+        );
+        for (const container of otherContainers) {
+          if (isVisible(container) && hasSubstantialContent(container)) {
+            mainContent += container.innerText + "\n\n";
+            meaningfulContainers.push(container);
+          }
+        }
+      }
+    }
+
+    // 5. Last resort - headings and paragraphs
     if (mainContent.trim() === "") {
       console.log("CocBot: Using headings and paragraphs for content");
+      meaningfulContainers.push(document.body);
 
       const headings = document.querySelectorAll("h1, h2, h3, h4, h5, h6");
       for (const heading of headings) {
@@ -380,10 +418,11 @@ function extractPageContent() {
       }
     }
 
-    // 5. Just take the whole body if nothing worked
+    // 6. Just take the whole body if nothing worked
     if (mainContent.trim() === "") {
       console.log("CocBot: Using body content as fallback");
       mainContent = document.body.innerText;
+      meaningfulContainers.push(document.body);
     }
 
     // Make sure we have something
@@ -398,7 +437,9 @@ function extractPageContent() {
       .replace(/\n\s*\n/g, "\n\n")
       .trim();
 
-    console.log("CocBot: Content extracted, length:", mainContent.length);
+    // Extract images from meaningful containers
+    const foundImages =
+      extractImagesFromMeaningfulContainers(meaningfulContainers);
 
     // See if there's any structured data
     let structuredData = null;
@@ -412,11 +453,21 @@ function extractPageContent() {
       ...pageMetadata,
       content: mainContent,
       structuredData: structuredData,
-      captions: collectedCaptions,
+      captions: [], // Empty initially - will be populated by caption results
       extractionSuccess: true,
+      imagesProcessing: foundImages.length > 0, // Flag to indicate images are being processed
     };
 
-    console.log("CocBot: Content extraction complete");
+    console.log(`Found images for processing`, foundImages);
+
+    // Send images for captioning if found (async, non-blocking)
+    if (foundImages.length > 0) {
+      chrome.runtime.sendMessage({
+        action: "process_images",
+        images: foundImages,
+        content: mainContent,
+      });
+    }
     return result;
   } catch (error) {
     console.error("CocBot: Content extraction error:", error);
@@ -430,174 +481,166 @@ function extractPageContent() {
       timestamp: new Date().toISOString(),
       extractionSuccess: false,
       error: error.message,
+      captions: [],
+      imagesProcessing: false,
+      page_url: window.location.href,
     };
   }
 }
 
-// ---------------- IMAGE EXTRACTION + AUTO SEND LOOP ----------------
+// Helper function to check if element has substantial content
+function hasSubstantialContent(element) {
+  const text = element.innerText || "";
+  const wordCount = text.trim().split(/\s+/).length;
 
-const sentImages = new Set();
-let totalImagesSent = 0;
-const MAX_IMAGES_PER_PAGE = 10;
-let contentContext = null;
+  // Consider substantial if:
+  // - Has more than 50 words, OR
+  // - Has multiple paragraphs/headings, OR
+  // - Contains article-like structure
+  const hasEnoughWords = wordCount > 50;
+  const hasMultipleParagraphs = element.querySelectorAll("p").length > 2;
+  const hasHeadings = element.querySelectorAll("h1,h2,h3,h4,h5,h6").length > 0;
+  const hasLists = element.querySelectorAll("ul, ol").length > 0;
+
+  return hasEnoughWords || hasMultipleParagraphs || hasHeadings || hasLists;
+}
+
+// Extract images only from containers that have meaningful content
+function extractImagesFromMeaningfulContainers(containers) {
+  if (!containers || containers.length === 0) return [];
+
+  const foundImages = [];
+  const imageSet = new Set();
+
+  for (const container of containers) {
+    const images = container.querySelectorAll("img");
+
+    for (const img of images) {
+      if (foundImages.length >= MAX_IMAGES_PER_PAGE) break;
+
+      // Expand data attributes for lazy loading + check alt attribute
+      let src =
+        img.currentSrc ||
+        img.src ||
+        img.getAttribute("data-src") ||
+        img.getAttribute("data-original") ||
+        img.getAttribute("data-lazy-src") ||
+        img.getAttribute("data-srcset") ||
+        img.getAttribute("data-background-image") ||
+        img.getAttribute("srcset") ||
+        // Add alt attribute check for special cases like uk-img
+        (img.getAttribute("alt") && img.getAttribute("alt").startsWith("http")
+          ? img.getAttribute("alt")
+          : null);
+
+      // Handle srcset format
+      if (src && src.includes(",")) {
+        src = src.split(",")[0].trim().split(" ")[0];
+      }
+
+      // Check for CSS background images if no src found
+      if (!src) {
+        const computedStyle = window.getComputedStyle(img);
+        const bgImage = computedStyle.backgroundImage;
+        if (bgImage && bgImage !== "none") {
+          const match = bgImage.match(/url\(["']?([^"')]+)["']?\)/);
+          if (match) src = match[1];
+        }
+      }
+
+      // Also check for uk-img specific behavior - wait for it to load
+      if (!src && img.hasAttribute("uk-img")) {
+        // uk-img might set src after initialization
+        const observer = new MutationObserver((mutations) => {
+          mutations.forEach((mutation) => {
+            if (
+              mutation.type === "attributes" &&
+              mutation.attributeName === "src"
+            ) {
+              const newSrc = img.src;
+              if (
+                newSrc &&
+                !imageSet.has(newSrc) &&
+                isSupportedImageFormat(newSrc)
+              ) {
+                imageSet.add(newSrc);
+                foundImages.push(newSrc);
+              }
+            }
+          });
+        });
+        observer.observe(img, { attributes: true });
+
+        // Disconnect after a short delay
+        setTimeout(() => observer.disconnect(), 2000);
+      }
+
+      if (!src || imageSet.has(src)) continue;
+      if (!isSupportedImageFormat(src)) continue;
+      if (isLogoOrIcon(img, src)) continue;
+      if (/ads\.|tracker\.|pixel\.|analytics\./i.test(src)) continue;
+
+      imageSet.add(src);
+      foundImages.push(src);
+    }
+
+    // Also check for CSS background images on divs/containers
+    const bgImageElements = container.querySelectorAll(
+      '[style*="background-image"], .hero-image, .featured-image'
+    );
+    for (const element of bgImageElements) {
+      if (foundImages.length >= MAX_IMAGES_PER_PAGE) break;
+
+      const computedStyle = window.getComputedStyle(element);
+      const bgImage = computedStyle.backgroundImage;
+      if (bgImage && bgImage !== "none") {
+        const match = bgImage.match(/url\(["']?([^"')]+)["']?\)/);
+        if (match) {
+          const src = match[1];
+          if (
+            !imageSet.has(src) &&
+            isSupportedImageFormat(src) &&
+            !isLogoOrIcon(element, src)
+          ) {
+            imageSet.add(src);
+            foundImages.push(src);
+          }
+        }
+      }
+    }
+  }
+  return foundImages;
+}
 
 function isSupportedImageFormat(src) {
   if (!src || src.startsWith("data:image")) return false;
   try {
-    const ext = new URL(src).pathname.split(".").pop().toLowerCase();
-    return ["jpg", "jpeg", "png"].includes(ext);
+    // Handle both relative and absolute URLs
+    const url = new URL(src, window.location.href);
+    const pathname = url.pathname.toLowerCase();
+    const ext = pathname.split(".").pop();
+    return ["jpg", "jpeg", "png", "webp", "gif"].includes(ext);
   } catch {
-    return false;
+    // Fallback for malformed URLs
+    return /\.(jpe?g|png|webp|gif)(\?|$)/i.test(src);
   }
 }
 
 function isLogoOrIcon(img, src) {
-  const width = img.naturalWidth || img.width;
-  const height = img.naturalHeight || img.height;
-  const isSmall = width < 300 || height < 300;
-  const isLogoFile = /\.(svg|logo)/i.test(src || "");
-  return isSmall || isLogoFile;
-}
+  const width = img.naturalWidth || img.width || 0;
+  const height = img.naturalHeight || img.height || 0;
 
-function extractAllImageSources() {
-  const mainSelectors = [
-    "article",
-    "main",
-    ".content",
-    ".article-feed",
-    ".article",
-    ".post",
-    ".post-content",
-    ".entry-content",
-    ".page-content",
-    ".main-content",
-    "#content",
-    "#main",
-    "#article",
-    "#post",
-  ];
+  // Consider small images as logos/icons
+  const isSmall = width < 250 || height < 250;
 
-  const excludedContainers = [
-    "header",
-    "footer",
-    "aside",
-    ".sidebar",
-    "#sidebar",
-    ".nav",
-    "#nav",
-    ".related-posts",
-    ".widget",
-  ];
+  // Check file name patterns
+  const isLogoFile = /\b(logo|icon|avatar|profile|favicon)\b/i.test(src || "");
 
-  const containers = [];
+  // Check alt text patterns
+  const altText = img.getAttribute("alt") || "";
+  const isLogoAlt = /\b(logo|icon|avatar)\b/i.test(altText);
 
-  for (const selector of mainSelectors) {
-    const foundList = document.querySelectorAll(selector);
-    for (const found of foundList) {
-      if (isVisible(found)) {
-        containers.push(found);
-      }
-    }
-  }
-
-  if (containers.length === 0) {
-    console.log("No visible main content containers found, using <body>");
-    containers.push(document.body);
-  }
-
-  const images = new Set();
-  for (const container of containers) {
-    const foundImages = container.querySelectorAll("img");
-    for (const img of foundImages) {
-      images.add(img);
-    }
-  }
-
-  const newImages = [];
-  for (const img of images) {
-    if (totalImagesSent >= MAX_IMAGES_PER_PAGE) break;
-    if (img.closest(excludedContainers.join(", "))) continue;
-
-    let src =
-      img.currentSrc ||
-      img.src ||
-      img.getAttribute("data-src") ||
-      img.getAttribute("srcset");
-    if (src && src.includes(",")) {
-      src = src.split(",")[0].trim().split(" ")[0];
-    }
-
-    if (!isSupportedImageFormat(src)) continue;
-    if (isLogoOrIcon(img, src)) continue;
-    if (/ads\.|tracker\.|pixel\./i.test(src)) continue;
-    if (sentImages.has(src)) continue;
-
-    sentImages.add(src);
-    newImages.push(src);
-    totalImagesSent++;
-  }
-
-  if (totalImagesSent >= MAX_IMAGES_PER_PAGE) {
-    console.log(
-      `⚠️ Reached image captioning limit: ${MAX_IMAGES_PER_PAGE} images`
-    );
-  }
-
-  console.log(
-    `📸 Final: Collected ${newImages.length} image(s) from main content`
-  );
-  return newImages;
-}
-
-let emptyCount = 0;
-const maxEmptyRounds = 5;
-
-async function autoSendImagesLoop(interval = 3000) {
-  while (emptyCount < maxEmptyRounds) {
-    const newImages = extractAllImageSources();
-    if (newImages.length > 0) {
-      console.log(`[Loop] Sending ${newImages.length} new images to API`);
-      chrome.runtime.sendMessage({
-        action: "process_images",
-        images: newImages,
-        content: contentContext,
-      });
-      emptyCount = 0;
-    } else {
-      console.log(
-        `💤 [Loop] No new images found (empty round ${emptyCount + 1})`
-      );
-      emptyCount++;
-    }
-    await new Promise((resolve) => setTimeout(resolve, interval));
-  }
-  console.log("[Loop] Stopping image loop after max empty rounds");
-  startMutationObserver();
-}
-
-function startMutationObserver() {
-  const observer = new MutationObserver(() => {
-    const newImages = extractAllImageSources();
-    if (newImages.length > 0) {
-      console.log(
-        `📸 [Observer] Sending ${newImages.length} new images to API`
-      );
-      chrome.runtime.sendMessage({
-        action: "process_images",
-        images: newImages,
-        content: contentContext,
-      });
-    }
-  });
-
-  observer.observe(document.body, {
-    childList: true,
-    subtree: true,
-    attributes: true,
-    attributeFilter: ["src", "data-src", "srcset"],
-  });
-
-  console.log("MutationObserver is now watching for new images");
+  return isSmall || isLogoFile || isLogoAlt;
 }
 
 function waitForDomReady(callback) {
@@ -612,12 +655,7 @@ function waitForDomReady(callback) {
 }
 
 waitForDomReady(() => {
-  detectPDF(); // detect if this is a PDF when DOM is ready
-  sentImages.clear();
-  totalImagesSent = 0;
-  const extracted = extractPageContent();
-  contentContext = extracted.content || "(no content)";
-  // autoSendImagesLoop(3000);
+  detectPDF(); // detect for PDFs when DOM is ready
 });
 
 // Can we see this element?
@@ -676,13 +714,11 @@ function extractStructuredData() {
       if (isVisible(table)) {
         const tableObj = { headers: [], rows: [] };
 
-        // headers
         const headers = table.querySelectorAll("th");
         for (const header of headers) {
           tableObj.headers.push(header.innerText.trim());
         }
 
-        // rows
         const rows = table.querySelectorAll("tr");
         for (const row of rows) {
           if (!row.querySelector("th")) {

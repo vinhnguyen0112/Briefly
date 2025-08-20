@@ -505,13 +505,10 @@ async function showFeedbackModal(messageId) {
     });
 
     try {
-      const response = await sendRequest(
-        `https://dev-capstone-2025.coccoc.com/api/feedback`,
-        {
-          method: "POST",
-          body: { stars, comment, message_id: parseInt(messageId) },
-        }
-      );
+      const response = await sendRequest(`http://localhost:3000/api/feedback`, {
+        method: "POST",
+        body: { stars, comment, message_id: parseInt(messageId) },
+      });
 
       if (response.success) {
         updateToast(toastId, {
@@ -764,7 +761,7 @@ export function handleContentMessage(message) {
       break;
 
     case "refresh_page_content":
-      console.log("CocBot: URL changed, requesting fresh content");
+      console.log("URL changed, requesting fresh content");
 
       // Reset content extraction state
       state.contentFetchAttempts = 0;

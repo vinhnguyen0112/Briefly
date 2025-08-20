@@ -1,5 +1,6 @@
 import {
   getStoredPageUrl,
+  getUserSession,
   saveStoredPageUrl,
   saveUserSession,
   sendRequest,
@@ -9,14 +10,11 @@ import {
   authenticateWithGoogle,
   signOut,
 } from "./components/auth-handler.js";
-import {
-  handleCaptionImages,
-  resetProcessedImages,
-} from "./components/caption-handler.js";
+import { handleCaptionImages } from "./components/caption-handler.js";
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 const CHAT_QUERY_LIMIT = 20;
 //  first install
@@ -432,7 +430,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
   if (message.action === "extract_page_content") {
     console.log(
-      "CocBot: Received extract_page_content request",
+      "VH: Received extract_page_content request",
       message.forceRefresh ? "(forced refresh)" : ""
     );
 
@@ -773,17 +771,37 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "process_images") {
-    resetProcessedImages();
-    handleCaptionImages(message.images, message.content)
-      .then((captions) => {
-        chrome.tabs.sendMessage(sender.tab.id, {
-          action: "caption_results",
-          captions: captions,
+    getUserSession().then((session) => {
+      if (!session || !session.id) {
+        return sendResponse({
+          success: false,
+          error: { message: "Unauthorized" },
         });
-      })
-      .catch((error) => {
-        console.error("Failed to handle captions", error);
-      });
+      }
+
+      const tabId = sender.tab?.id;
+      const pageUrl = message.page_url || sender?.tab?.url || "";
+      if (!tabId) {
+        console.warn("[Background] Missing tabId for process_images");
+        return;
+      }
+
+      handleCaptionImages(message.images, message.content, pageUrl)
+        .then((captionPairs) => {
+          chrome.tabs.sendMessage(tabId, {
+            action: "caption_results",
+            captions: captionPairs,
+            page_url: pageUrl, // avoid sending the late results
+          });
+        })
+        .catch((error) => {
+          console.error(
+            `[Background] Tab ${tabId}: Failed to handle captions`,
+            error
+          );
+        });
+    });
+
     return true;
   }
 

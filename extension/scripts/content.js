@@ -134,8 +134,6 @@ function toggleSidebar(forceState) {
   }
 }
 
-let collectedCaptions = [];
-let lastExtractedContent = null;
 function handleSidebarMessage(message) {
   console.log("CocBot: Received message from sidebar:", message.action);
 
@@ -151,7 +149,7 @@ function handleSidebarMessage(message) {
     case "get_page_content":
       console.log("CocBot: Extracting page content");
       try {
-        const pageContent = extractPageContent(); // Uses the global function
+        const pageContent = extractPageContent();
         console.log("CocBot: Content extracted successfully", {
           title: pageContent.title,
           url: pageContent.url,
@@ -177,7 +175,6 @@ function handleSidebarMessage(message) {
       break;
 
     case "sidebar_width_changed":
-      // Update container width to match sidebar
       const sidebarContainer = document.getElementById(
         "isal-sidebar-container"
       );
@@ -216,8 +213,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     // Only update if the sidebar is currently open
     if (iframe && container && container.classList.contains("active")) {
-      console.log("CocBot: Notifying sidebar to refresh content for new URL");
-
       iframe.contentWindow.postMessage(
         {
           action: "refresh_page_content",
@@ -229,17 +224,28 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
     sendResponse({ success: true });
   } else if (message.action === "caption_results") {
-    const captions = message.captions.filter((c) => c && c.trim() !== "");
+    if (message.page_url && message.page_url !== location.href) {
+      console.warn("[Caption] Ignored stale result for:", message.page_url);
+      return;
+    }
+
+    const captions = Array.isArray(message.captions)
+      ? message.captions.filter(
+          (c) => c && typeof c.caption === "string" && c.caption.trim() !== ""
+        )
+      : [];
     if (captions.length === 0) return;
 
-    collectedCaptions = collectedCaptions.concat(captions);
-
-    if (lastExtractedContent) {
-      lastExtractedContent.captions = collectedCaptions;
-      sendToSidebar(lastExtractedContent);
-    } else {
-      const pageContent = extractAndCachePageContent();
-      sendToSidebar(pageContent);
+    const iframe = document.getElementById("isal-sidebar-iframe");
+    if (iframe) {
+      iframe.contentWindow.postMessage(
+        {
+          action: "caption_update",
+          captions: captions,
+          page_url: message.page_url,
+        },
+        "*"
+      );
     }
   } else if (message.action === "auth_session_changed") {
     const iframe = document.getElementById("isal-sidebar-iframe");
@@ -324,88 +330,127 @@ if (document.readyState === "loading") {
   injectSidebar();
 }
 
-// Track URL changes in single-page applications (SPA) that use History API
+// Track URL changes in single-page applications (SPA)
 let lastUrl = location.href;
+let urlChangeTimer = null;
 
-// Set up an observer to detect URL changes
+function notifyUrlChange(source) {
+  console.log(`URL change detected via ${source}`);
+  const newUrl = location.href;
+
+  // Clear previous timer
+  if (urlChangeTimer) {
+    clearTimeout(urlChangeTimer);
+  }
+
+  // ✅ Simple progressive approach
+  tryNotifyWithProgression(newUrl, source, 0);
+  lastUrl = newUrl;
+}
+
+function tryNotifyWithProgression(targetUrl, source, attemptIndex) {
+  // Delays: try at 800ms, 2s, then 5s
+  const delays = [800, 2000, 5000];
+  const currentDelay = delays[attemptIndex] || 5000;
+
+  urlChangeTimer = setTimeout(() => {
+    // URL changed again, abort
+    if (location.href !== targetUrl) {
+      console.log(`URL changed again, aborting (${source})`);
+      return;
+    }
+
+    const iframe = document.getElementById("isal-sidebar-iframe");
+    const container = document.getElementById("isal-sidebar-container");
+
+    if (iframe && container && container.classList.contains("active")) {
+      // ✅ Quick readiness check
+      const isReady = quickReadinessCheck();
+      const isLastAttempt = attemptIndex >= delays.length - 1;
+
+      if (isReady || isLastAttempt) {
+        console.log(
+          `CocBot: Notifying sidebar to refresh content (${source}) after ${currentDelay}ms - Ready: ${isReady}, LastAttempt: ${isLastAttempt}`
+        );
+        iframe.contentWindow.postMessage(
+          {
+            action: "refresh_page_content",
+            url: targetUrl,
+          },
+          "*"
+        );
+        return;
+      }
+
+      // Try again if not ready and have more attempts
+      if (!isLastAttempt) {
+        console.log(
+          `Page not ready, trying again in ${delays[attemptIndex + 1]}ms`
+        );
+        tryNotifyWithProgression(targetUrl, source, attemptIndex + 1);
+      }
+    }
+  }, currentDelay);
+}
+
+// ✅ Simple readiness check
+function quickReadinessCheck() {
+  // Check 1: Has meaningful content
+  const hasContent = document.querySelector(
+    "main, article, .content, .entry-content, .post-content"
+  );
+  const hasText = document.querySelectorAll("p").length > 2;
+  const hasHeadings = document.querySelector("h1, h2, h3");
+
+  // Check 2: Not obviously loading
+  const hasLoading = document.querySelector(
+    '.loading, .spinner, [class*="loading"], [class*="spinner"]'
+  );
+
+  // Check 3: Basic DOM structure
+  const hasBasicStructure = document.querySelectorAll("div").length > 10;
+
+  const contentScore =
+    (hasContent ? 1 : 0) + (hasText ? 1 : 0) + (hasHeadings ? 1 : 0);
+  const notLoading = !hasLoading;
+  const structureOk = hasBasicStructure;
+
+  const isReady = contentScore >= 2 && notLoading && structureOk;
+  return isReady;
+}
+
+// ✅ Improved MutationObserver with debouncing
+let mutationTimer = null;
 const urlObserver = new MutationObserver(() => {
   if (lastUrl !== location.href) {
-    console.log("CocBot: URL change detected via History API navigation");
-    const newUrl = location.href;
-
-    // Handle URL change in the same way as a normal navigation
-    const iframe = document.getElementById("isal-sidebar-iframe");
-    const container = document.getElementById("isal-sidebar-container");
-
-    // Only update if the sidebar is currently open
-    if (iframe && container && container.classList.contains("active")) {
-      console.log(
-        "CocBot: Notifying sidebar to refresh content for new URL (SPA navigation)"
-      );
-
-      iframe.contentWindow.postMessage(
-        {
-          action: "refresh_page_content",
-          url: newUrl,
-        },
-        "*"
-      );
+    // Debounce rapid mutations
+    if (mutationTimer) {
+      clearTimeout(mutationTimer);
     }
 
-    lastUrl = newUrl;
+    mutationTimer = setTimeout(() => {
+      if (lastUrl !== location.href) {
+        notifyUrlChange("MutationObserver");
+      }
+    }, 100);
   }
 });
 
-// Start observing
-urlObserver.observe(document, { subtree: true, childList: true });
+urlObserver.observe(document, {
+  subtree: true,
+  childList: true,
+});
 
-// Also handle popstate events (back/forward navigation)
+// Method 2: Popstate events (back/forward navigation)
 window.addEventListener("popstate", () => {
   if (lastUrl !== location.href) {
-    console.log("CocBot: URL change detected via popstate event");
-    const newUrl = location.href;
-
-    // Handle URL change in the same way as a normal navigation
-    const iframe = document.getElementById("isal-sidebar-iframe");
-    const container = document.getElementById("isal-sidebar-container");
-
-    // Only update if the sidebar is currently open
-    if (iframe && container && container.classList.contains("active")) {
-      console.log(
-        "CocBot: Notifying sidebar to refresh content for popstate navigation"
-      );
-
-      iframe.contentWindow.postMessage(
-        {
-          action: "refresh_page_content",
-          url: newUrl,
-        },
-        "*"
-      );
-    }
-
-    lastUrl = newUrl;
+    notifyUrlChange("popstate event");
   }
 });
 
-function extractAndCachePageContent() {
-  const raw = extractPageContent();
-  lastExtractedContent = { ...raw, captions: collectedCaptions };
-  return lastExtractedContent;
-}
-
-function sendToSidebar(content) {
-  const iframe = document.getElementById("isal-sidebar-iframe");
-  if (iframe) {
-    iframe.contentWindow.postMessage(
-      {
-        action: "page_content",
-        content,
-      },
-      "*"
-    );
-    console.log("Sent updated page content to sidebar");
-  } else {
-    console.error("CocBot: Sidebar iframe not found");
+// Method 3: Polling backup (safety net for edge cases)
+setInterval(() => {
+  if (lastUrl !== location.href) {
+    notifyUrlChange("polling backup");
   }
-}
+}, 3000);

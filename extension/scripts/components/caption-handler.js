@@ -1,79 +1,86 @@
-const processedImages = new Set();
+import { sendRequest } from "./state.js";
+import idbHandler from "./idb-handler.js";
 
-export async function handleCaptionImages(imageUrls, content) {
-  const newImages = imageUrls.filter((img) => !processedImages.has(img));
+export async function handleCaptionImages(imageUrls, content, pageUrl) {
+  if (!Array.isArray(imageUrls) || imageUrls.length === 0) return [];
 
-  if (newImages.length === 0) {
-    console.log("All images already captioned, skipping.");
-    return [];
+  let idbMap = new Map();
+  try {
+    idbMap = await idbHandler.getCaptionsForImages(pageUrl || "", imageUrls);
+  } catch (e) {
+    console.warn(
+      "[Caption] IDB lookup failed, will call API for all images:",
+      e
+    );
   }
 
-  newImages.forEach((img) => processedImages.add(img));
+  const need = [];
+  const haveMap = new Map(); // Map<src, caption>
 
-  let captions = await callCaptionApi(newImages, content);
-
-  const validCaptions = [];
-  const retryList = [];
-
-  captions.forEach((caption, index) => {
-    const src = newImages[index];
-    if (caption && caption.trim()) {
-      validCaptions.push({ src, caption });
+  for (const src of imageUrls) {
+    const entry = idbMap.get(src);
+    if (entry?.caption && entry.caption.trim()) {
+      haveMap.set(src, entry.caption);
     } else {
-      retryList.push(src);
-    }
-  });
-
-  for (const imgSrc of retryList) {
-    let retryCount = 0;
-    let caption = null;
-    while (retryCount < 3 && (!caption || caption.trim() === "")) {
-      const [retryCaption] = await callCaptionApi([imgSrc], content);
-      caption = retryCaption;
-      retryCount++;
-    }
-    if (caption && caption.trim()) {
-      validCaptions.push({ src: imgSrc, caption });
+      need.push(src);
     }
   }
 
-  return validCaptions.map((item) => item.caption);
+  let apiPairs = [];
+  if (need.length > 0) {
+    const captions = await callCaptionApi(need, content);
+
+    const retryTargets = [];
+    captions.forEach((cap, i) => {
+      if (!cap || !cap.trim()) retryTargets.push(need[i]);
+    });
+    if (retryTargets.length > 0) {
+      const retried = await Promise.all(
+        retryTargets.map(async (src) => {
+          const [cap] = await callCaptionApi([src], content);
+          return { src, caption: cap || "" };
+        })
+      );
+      const retryMap = new Map(retried.map((p) => [p.src, p.caption]));
+      apiPairs = need.map((src, i) => ({
+        src,
+        caption: retryMap.get(src) ?? (captions[i] || ""),
+      }));
+    } else {
+      apiPairs = need.map((src, i) => ({ src, caption: captions[i] || "" }));
+    }
+  }
+
+  const apiMap = new Map(apiPairs.map((p) => [p.src, p.caption]));
+  const result = imageUrls
+    .map((src) => {
+      const cap = haveMap.get(src) ?? apiMap.get(src) ?? "";
+      return cap ? { src, caption: cap } : null;
+    })
+    .filter(Boolean);
+
+  console.log(
+    `[Caption] idb=${haveMap.size}, api=${apiPairs.length}, total=${result.length}`
+  );
+  return result;
 }
 
 async function callCaptionApi(images, content) {
-  console.log("Sending to caption API:", { sources: images, content });
-
   try {
-    const response = await fetch(
-      "https://dev-capstone-2025.coccoc.com/api/query/captionize",
+    const data = await sendRequest(
+      "http://localhost:3000/api/query/captionize",
       {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ sources: images, context: content }),
+        body: { sources: images, context: content },
       }
     );
-
-    if (!response.ok) {
-      return images.map(() => null);
+    if (data.success && data.data && Array.isArray(data.data.captions)) {
+      return data.data.captions;
     }
-
-    const data = await response.json();
-    return Array.isArray(data.captions)
-      ? data.captions
-      : images.map(() => null);
+    console.error("Invalid response structure:", data);
+    return images.map(() => "");
   } catch (error) {
-    return images.map(() => null);
+    console.error("Caption API error:", error);
+    return images.map(() => "");
   }
-}
-
-export function resetProcessedImages() {
-  console.log(
-    "Resetting processedImages set. Before reset:",
-    Array.from(processedImages)
-  );
-  processedImages.clear();
-  console.log(
-    "After reset, processedImages set is now:",
-    Array.from(processedImages)
-  );
 }

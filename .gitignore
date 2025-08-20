@@ -1,6 +1,6 @@
 server/node_modules
 server/.env.*
-server/qdrant_storage
+server/gdrant_storage
 .DS_Store
 .idea
 .env
