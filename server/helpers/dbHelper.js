@@ -75,6 +75,19 @@ async function executeQuery(query, params = []) {
   }
 }
 
+function inferOperationFromQuery(query) {
+  const q = String(query || "")
+    .trim()
+    .toUpperCase();
+  if (q.startsWith("SELECT")) return "select";
+  if (q.startsWith("INSERT")) return "insert";
+  if (q.startsWith("UPDATE")) return "update";
+  if (q.startsWith("DELETE")) return "delete";
+  if (q.startsWith("REPLACE")) return "replace";
+  if (q.startsWith("WITH")) return "select";
+  return "other";
+}
+
 /**
  * Close the connection pool
  */
