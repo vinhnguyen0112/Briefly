@@ -15,7 +15,7 @@ import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { formatPdfContent } from "./pdf-handler.js";
 
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -270,7 +270,7 @@ export async function callOpenAI(messages, metadata) {
     },
   });
 
-  // console.log("Query response: ", res);
+  console.log("Query response: ", res);
 
   return {
     success: res.success,
@@ -390,18 +390,12 @@ function generateContextMessage(pageContent) {
     content = "",
     captions = [],
     extractionSuccess = true,
-    imagesProcessing = false,
     pdfContent = null,
   } = pageContent;
 
   if (!extractionSuccess) {
     message.content +=
       "Note: Limited page content extracted. I'll work with what's available.\n\n";
-  }
-
-  if (imagesProcessing && captions.length === 0) {
-    message.content +=
-      "Note: Images are currently being processed for captions.\n\n";
   }
 
   message.content += `Title: ${title}\nURL: ${url}\n\n`;

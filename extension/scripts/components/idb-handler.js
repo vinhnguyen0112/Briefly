@@ -1,135 +1,5 @@
 const DB_NAME = "briefly_db";
 const DB_VERSION = 1;
-const CAPTIONS_MAX = 100;
-
-async function trimCaptionsIfNeeded(db) {
-  return new Promise((resolve, reject) => {
-    try {
-      const tx = db.transaction("captions", "readwrite");
-      const store = tx.objectStore("captions");
-
-      const countReq = store.count();
-      countReq.onsuccess = () => {
-        const count = countReq.result || 0;
-        if (count <= CAPTIONS_MAX) return resolve();
-
-        const needDelete = count - CAPTIONS_MAX;
-        const index = store.index("created_at");
-        let deleted = 0;
-
-        index.openCursor().onsuccess = (e) => {
-          const cursor = e.target.result;
-          if (cursor && deleted < needDelete) {
-            store.delete(cursor.primaryKey);
-            deleted++;
-            cursor.continue();
-          } else {
-            resolve();
-          }
-        };
-      };
-      countReq.onerror = (e) => reject(e.target.error);
-    } catch (err) {
-      reject(err);
-    }
-  });
-}
-
-async function getCaptionByPageAndImage(page_url, img_url) {
-  const { db } = await openIndexedDB();
-
-  const normImg = normalizeImageUrl(img_url);
-  const normPage = processUrl(page_url);
-  const id = await generateId(normPage, normImg);
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("captions", "readonly");
-    const store = tx.objectStore("captions");
-    const req = store.get(id);
-    req.onsuccess = (e) => resolve(e.target.result || null);
-    req.onerror = (e) => reject(e.target.error);
-  });
-}
-
-async function getCaptionsForImages(page_url, img_urls = []) {
-  const map = new Map();
-  if (!Array.isArray(img_urls) || img_urls.length === 0) return map;
-
-  const { db } = await openIndexedDB();
-  const normPage = processUrl(page_url);
-
-  // build ids
-  const normPairs = await Promise.all(
-    img_urls.map(async (raw) => {
-      const normImg = normalizeImageUrl(raw);
-      const id = await generateId(normPage, normImg);
-      return { raw, id };
-    })
-  );
-
-  // single-gets in parallel (đơn giản, giữ nguyên version DB)
-  await Promise.all(
-    normPairs.map(
-      ({ raw, id }) =>
-        new Promise((resolve) => {
-          const tx = db.transaction("captions", "readonly");
-          const store = tx.objectStore("captions");
-          const req = store.get(id);
-          req.onsuccess = (e) => {
-            const val = e.target.result;
-            if (val) map.set(raw, val);
-            resolve();
-          };
-          req.onerror = () => resolve();
-        })
-    )
-  );
-
-  return map;
-}
-
-/**
- * Save a caption entry to IndexedDB
- * @param {Object} params
- * @param {string} params.img_url
- * @param {string} params.page_url
- * @param {string} params.caption
- * @returns {Promise<void>}
- */
-async function saveCaption({ img_url, page_url, caption }) {
-  const { db } = await openIndexedDB();
-
-  const normImg = normalizeImageUrl(img_url);
-  const normPage = processUrl(page_url);
-  const id = await generateId(normPage, normImg);
-
-  const entry = {
-    id,
-    page_url: normPage,
-    img_url: normImg,
-    caption,
-    created_at: new Date(),
-  };
-
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction("captions", "readwrite");
-    const store = tx.objectStore("captions");
-    const req = store.put(entry);
-    req.onsuccess = async () => {
-      try {
-        await trimCaptionsIfNeeded(db);
-        resolve();
-      } catch (err) {
-        console.warn("[IDB] trim failed (ignored):", err);
-        resolve();
-      }
-    };
-    req.onerror = (e) => {
-      console.error("[IDB] error saving caption:", e.target.error);
-      reject(e.target.error);
-    };
-  });
-}
 
 /**
  * Opens the IndexedDB and sets up object stores.
@@ -147,7 +17,7 @@ async function openIndexedDB() {
 
     request.onsuccess = (event) => {
       const db = event.target.result;
-      // console.log(`IndexedDB '${DB_NAME}' opened successfully`);
+      console.log(`IndexedDB '${DB_NAME}' opened successfully`);
       resolve({ db });
     };
 
@@ -171,15 +41,6 @@ function setupObjectStores(db) {
     chatsStore.createIndex("created_at", "created_at", { unique: false });
     chatsStore.createIndex("updated_at", "updated_at", { unique: false });
     chatsStore.createIndex("page_url", "page_url", { unique: false });
-  }
-
-  if (!db.objectStoreNames.contains("captions")) {
-    const captionsStore = db.createObjectStore("captions", {
-      keyPath: "id",
-    });
-    captionsStore.createIndex("page_url", "page_url", { unique: false });
-    captionsStore.createIndex("img_url", "img_url", { unique: false });
-    captionsStore.createIndex("created_at", "created_at", { unique: false });
   }
 
   console.log("Object stores created successfully");
@@ -512,59 +373,8 @@ async function clearChats() {
   });
 }
 
-function normalizeImageUrl(url) {
-  try {
-    const u = new URL(url, location.origin);
-    [
-      "utm_source",
-      "utm_medium",
-      "utm_campaign",
-      "utm_term",
-      "utm_content",
-      "fbclid",
-      "gclid",
-      "ver",
-      "cacheBust",
-    ].forEach((p) => u.searchParams.delete(p));
-    u.hash = "";
-    u.hostname = u.hostname.toLowerCase();
-    let s = u.toString();
-    if (s.endsWith("/")) s = s.slice(0, -1);
-    return s;
-  } catch (e) {
-    console.warn("Invalid image URL:", url);
-    return url;
-  }
-}
-
-function processUrl(url) {
-  try {
-    const u = new URL(url, location.origin);
-    u.search = "";
-    u.hash = "";
-    u.hostname = u.hostname.toLowerCase();
-    let s = u.toString();
-    if (s.endsWith("/")) s = s.slice(0, -1);
-    return s;
-  } catch {
-    return url;
-  }
-}
-
-async function generateId(page, img) {
-  const input = `${page}:${img}`;
-  const buf = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(input)
-  );
-  return Array.from(new Uint8Array(buf))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 // Add to the exported handler
 const idbHandler = {
-  saveCaption,
   openIndexedDB,
   upsertChat,
   getChatById,
@@ -574,8 +384,6 @@ const idbHandler = {
   deleteChatById,
   getMessagesForChat,
   clearChats,
-  getCaptionByPageAndImage,
-  getCaptionsForImages,
 };
 
 export default idbHandler;
