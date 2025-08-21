@@ -4,6 +4,7 @@ const morgan = require("morgan");
 const fs = require("fs");
 const yaml = require("js-yaml");
 const swaggerUi = require("swagger-ui-express");
+const { register, httpRequestsTotal, httpRequestDurationSeconds } = require("./utils/metrics");
 
 const authRoutes = require("./routes/authRoutes");
 const anonRoutes = require("./routes/anonRoutes");
@@ -27,6 +28,33 @@ app.use(cors());
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 app.set("trust proxy", true);
+
+// HTTP metrics middleware
+app.use((req, res, next) => {
+  const start = Date.now();
+  const route = req.route?.path || req.path || "unknown";
+  
+  res.on("finish", () => {
+    const duration = (Date.now() - start) / 1000;
+    const status = res.statusCode.toString();
+    
+    httpRequestsTotal.inc({
+      method: req.method,
+      route,
+      status,
+    });
+    
+    httpRequestDurationSeconds.observe(
+      {
+        method: req.method,
+        route,
+      },
+      duration
+    );
+  });
+  
+  next();
+});
 
 // swagger, only available in development environment
 if (
@@ -53,6 +81,16 @@ app.use("/api/notes", noteRoutes);
 // health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "ok", message: "CocBot API is running" });
+});
+
+// prometheus metrics endpoint
+app.get("/metrics", async (req, res) => {
+  try {
+    res.set("Content-Type", register.contentType);
+    res.end(await register.metrics());
+  } catch (err) {
+    res.status(500).end("metrics_error");
+  }
 });
 
 // Global error handler

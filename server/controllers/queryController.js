@@ -6,6 +6,10 @@ const commonHelper = require("../helpers/commonHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const PageSummary = require("../models/pageSummary");
 const AnonSession = require("../models/anonSession");
+const {
+  llmRequestsTotal,
+  llmRequestDurationSeconds,
+} = require("../utils/metrics");
 const Page = require("../models/page");
 const ragService = require("../services/ragService");
 const responseCachingService = require("../services/responseCachingService");
@@ -209,32 +213,57 @@ const handleUserQuery = async (req, res, next) => {
  * @returns {Promise<{message: string, usage: Object, model: string}>}
  */
 async function generateAssistantResponse(messages, max_tokens) {
-  const completion = await openaiLimit(() =>
-    openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      temperature: 0.7,
-      max_tokens,
-      messages,
-    })
-  );
-
-  if (
-    !completion ||
-    !completion.choices ||
-    !completion.choices[0] ||
-    !completion.choices[0].message
-  ) {
-    throw new AppError(
-      ERROR_CODES.EXTERNAL_SERVICE_ERROR,
-      "Invalid OpenAI response"
+  const model = "gpt-4o-mini";
+  const endpoint = "chat.completions";
+  const timer = llmRequestDurationSeconds.startTimer({
+    provider: "openai",
+    model,
+    endpoint,
+  });
+  try {
+    const completion = await openaiLimit(() =>
+      openai.chat.completions.create({
+        model,
+        temperature: 0.7,
+        max_tokens,
+        messages,
+      })
     );
-  }
+    llmRequestsTotal.inc({
+      provider: "openai",
+      model,
+      endpoint,
+      status: "success",
+    });
+    timer();
 
-  return {
-    message: completion.choices[0].message.content,
-    usage: completion.usage,
-    model: completion.model,
-  };
+    if (
+      !completion ||
+      !completion.choices ||
+      !completion.choices[0] ||
+      !completion.choices[0].message
+    ) {
+      throw new AppError(
+        ERROR_CODES.EXTERNAL_SERVICE_ERROR,
+        "Invalid OpenAI response"
+      );
+    }
+
+    return {
+      message: completion.choices[0].message.content,
+      usage: completion.usage,
+      model: completion.model,
+    };
+  } catch (err) {
+    llmRequestsTotal.inc({
+      provider: "openai",
+      model,
+      endpoint,
+      status: "error",
+    });
+    timer();
+    throw err;
+  }
 }
 
 /**
@@ -358,14 +387,40 @@ Do not include anything else, not even a JSON wrapper object.`;
 
     const temperature = language === "vi" ? 0.3 : 0.7;
 
-    const completion = await openaiLimit(() =>
-      openai.chat.completions.create({
-        model: "gpt-4o-mini",
-        messages: [systemPrompt, contentPrompt],
-        temperature,
-        max_tokens: 500,
-      })
-    );
+    const model = "gpt-4o-mini";
+    const endpoint = "chat.completions";
+    const timer = llmRequestDurationSeconds.startTimer({
+      provider: "openai",
+      model,
+      endpoint,
+    });
+    let completion;
+    try {
+      completion = await openaiLimit(() =>
+        openai.chat.completions.create({
+          model,
+          messages: [systemPrompt, contentPrompt],
+          temperature,
+          max_tokens: 500,
+        })
+      );
+      llmRequestsTotal.inc({
+        provider: "openai",
+        model,
+        endpoint,
+        status: "success",
+      });
+    } catch (e) {
+      llmRequestsTotal.inc({
+        provider: "openai",
+        model,
+        endpoint,
+        status: "error",
+      });
+      throw e;
+    } finally {
+      timer();
+    }
 
     if (
       !completion ||
@@ -464,13 +519,39 @@ const captionize = async (req, res, next) => {
             },
           ];
 
-          const response = await openaiLimit(() =>
-            openai.chat.completions.create({
-              model: "gpt-4o-mini",
-              messages,
-              temperature: 0.5,
-            })
-          );
+          const model = "gpt-4o-mini";
+          const endpoint = "chat.completions";
+          const timer = llmRequestDurationSeconds.startTimer({
+            provider: "openai",
+            model,
+            endpoint,
+          });
+          let response;
+          try {
+            response = await openaiLimit(() =>
+              openai.chat.completions.create({
+                model,
+                messages,
+                temperature: 0.5,
+              })
+            );
+            llmRequestsTotal.inc({
+              provider: "openai",
+              model,
+              endpoint,
+              status: "success",
+            });
+          } catch (e) {
+            llmRequestsTotal.inc({
+              provider: "openai",
+              model,
+              endpoint,
+              status: "error",
+            });
+            throw e;
+          } finally {
+            timer();
+          }
 
           const raw = response.choices?.[0]?.message?.content?.trim() || "";
           const clean = raw.replace(/^['"]+|['"]+$/g, "").split(/\r?\n/)[0];

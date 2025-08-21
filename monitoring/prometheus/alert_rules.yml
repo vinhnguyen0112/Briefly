@@ -1,0 +1,108 @@
+groups:
+  - name: cocbot_alerts
+    rules:
+      # Service availability
+      - alert: CocBotAPIDown
+        expr: up{job="cocbot-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "CocBot API is down"
+          description: "CocBot API has been down for more than 1 minute"
+
+      # High error rates
+      - alert: HighHTTPErrorRate
+        expr: rate(http_requests_total{status=~"5.."}[5m]) / rate(http_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High HTTP error rate"
+          description: "HTTP error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      # Database issues
+      - alert: HighDatabaseErrorRate
+        expr: rate(db_query_errors_total[5m]) / rate(db_queries_total[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High database error rate"
+          description: "Database error rate is {{ $value | humanizePercentage }} over the last 5 minutes"
+
+      - alert: SlowDatabaseQueries
+        expr: histogram_quantile(0.95, rate(db_query_duration_seconds_bucket[5m])) > 1
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow database queries"
+          description: "95th percentile of database query duration is {{ $value }}s"
+
+      # RAG service issues
+      - alert: RAGOperationFailures
+        expr: rate(rag_operations_total{status="error"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "RAG operation failures"
+          description: "RAG operations are failing at {{ $value }} errors per second"
+
+      - alert: ChromaDBErrors
+        expr: rate(chroma_operations_total{status="error"}[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "ChromaDB operation errors"
+          description: "ChromaDB operations are failing at {{ $value }} errors per second"
+
+      # OpenAI API issues
+      - alert: OpenAIAPIErrors
+        expr: rate(llm_requests_total{provider="openai",status="error"}[5m]) > 0.1
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "OpenAI API errors"
+          description: "OpenAI API requests are failing at {{ $value }} errors per second"
+
+      - alert: SlowOpenAIRequests
+        expr: histogram_quantile(0.95, rate(llm_request_duration_seconds_bucket{provider="openai"}[5m])) > 30
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Slow OpenAI API requests"
+          description: "95th percentile of OpenAI request duration is {{ $value }}s"
+
+      # Resource usage
+      - alert: HighMemoryUsage
+        expr: process_resident_memory_bytes / 1024 / 1024 > 512
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High memory usage"
+          description: "Process memory usage is {{ $value }}MB"
+
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_seconds_total[5m]) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}%"
+
+      # Request latency
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m])) > 5
+        for: 3m
+        labels:
+          severity: warning
+        annotations:
+          summary: "High request latency"
+          description: "95th percentile request latency is {{ $value }}s"
