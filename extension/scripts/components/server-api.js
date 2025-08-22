@@ -1,5 +1,5 @@
 // API handler for communicating with the backend server
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "https://capstone-2025.coccoc.com";
 
 // Check server health
 export async function checkServerStatus() {
