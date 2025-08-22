@@ -3,6 +3,7 @@ const { ERROR_CODES } = require("../errors");
 const commonHelper = require("../helpers/commonHelper");
 const Page = require("../models/page");
 const { redisHelper } = require("../helpers/redisHelper");
+const ragService = require("../services/ragService");
 
 const PAGE_FRESHNESS_MS = 7 * 24 * 60 * 60 * 1000; // 7 days in milliseconds
 /**
@@ -59,6 +60,21 @@ const createPage = async (req, res, next) => {
       message: "Page record is fresh and available",
       data: { id, expired },
     });
+
+    if (req.sessionType === "auth" && req.session?.user_id) {
+      const language = req.headers["accept-language"] || "";
+      const pdfText = typeof pdf_content === "string" ? pdf_content : "";
+      const contentText = typeof page_content === "string" ? page_content : "";
+      await ragService.upsertPage({
+        userId: req.session.user_id,
+        pageId: id,
+        pageUrl: normalizedPageUrl,
+        title,
+        content: contentText,
+        pdfContent: pdfText,
+        language,
+      });
+    }
   } catch (err) {
     next(err);
   }
@@ -157,6 +173,22 @@ const updatePageById = async (req, res, next) => {
       message: "Page updated successfully.",
       data: { affectedRows },
     });
+
+    if (req.sessionType === "auth" && req.session?.user_id) {
+      const language = req.headers["accept-language"] || "";
+      const pdfText = typeof pdf_content === "string" ? pdf_content : undefined;
+      const contentText =
+        typeof page_content === "string" ? page_content : undefined;
+      await ragService.upsertPage({
+        userId: req.session.user_id,
+        pageId: id,
+        pageUrl: normalizedPageUrl,
+        title,
+        content: contentText,
+        pdfContent: pdfText,
+        language,
+      });
+    }
   } catch (err) {
     next(err);
   }
@@ -189,7 +221,6 @@ const updatePageByUrl = async (req, res, next) => {
       });
     }
 
-    // Build updates
     const { title, page_content, pdf_content } = req.body;
     const updates = {};
     if (title) updates.title = title;
@@ -203,6 +234,23 @@ const updatePageByUrl = async (req, res, next) => {
       message: "Page updated successfully.",
       data: { affectedRows },
     });
+
+    // Clone of ragService upsert from updatePageById
+    if (req.sessionType === "auth" && req.session?.user_id) {
+      const language = req.headers["accept-language"] || "";
+      const pdfText = typeof pdf_content === "string" ? pdf_content : undefined;
+      const contentText =
+        typeof page_content === "string" ? page_content : undefined;
+      await ragService.upsertPage({
+        userId: req.session.user_id,
+        pageId: id,
+        pageUrl: normalizedPageUrl,
+        title,
+        content: contentText,
+        pdfContent: pdfText,
+        language,
+      });
+    }
   } catch (err) {
     next(err);
   }

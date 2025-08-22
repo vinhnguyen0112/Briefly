@@ -1,4 +1,9 @@
 const mysql = require("mysql2/promise");
+const {
+  dbQueriesTotal,
+  dbQueryErrorsTotal,
+  dbQueryDurationSeconds,
+} = require("../utils/metrics");
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,
@@ -37,18 +42,50 @@ async function executeQuery(query, params = []) {
     connection = await getConnection();
 
     console.log(`Executing query: ${query}`);
-    if (params.length > 0) console.log(`Params: ${params}`);
 
+    if (params.length > 0) {
+      const MAX_LEN = 100; // max chars per param before truncating
+      const safeParams = params.map((p) => {
+        const str = String(p);
+        return str.length > MAX_LEN
+          ? str.slice(0, MAX_LEN) + `... [truncated, length=${str.length}]`
+          : str;
+      });
+      console.log("Params:", safeParams);
+    }
+
+    const operation = inferOperationFromQuery(query);
+    const endTimer = dbQueryDurationSeconds.startTimer({ operation });
+    dbQueriesTotal.inc({ operation });
     const [rowsOrOkPacket] = await connection.execute(query, params);
+    endTimer();
     console.log("Query result: ", rowsOrOkPacket);
+    // console.log("Query result:", rowsOrOkPacket);
 
     return rowsOrOkPacket;
   } catch (error) {
+    try {
+      const operation = inferOperationFromQuery(query);
+      dbQueryErrorsTotal.inc({ operation });
+    } catch (_) {}
     console.error("Error executing query:", error);
     throw error;
   } finally {
     if (connection) connection.release();
   }
+}
+
+function inferOperationFromQuery(query) {
+  const q = String(query || "")
+    .trim()
+    .toUpperCase();
+  if (q.startsWith("SELECT")) return "select";
+  if (q.startsWith("INSERT")) return "insert";
+  if (q.startsWith("UPDATE")) return "update";
+  if (q.startsWith("DELETE")) return "delete";
+  if (q.startsWith("REPLACE")) return "replace";
+  if (q.startsWith("WITH")) return "select";
+  return "other";
 }
 
 /**

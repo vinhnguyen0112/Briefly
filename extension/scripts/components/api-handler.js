@@ -15,7 +15,7 @@ import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { formatPdfContent } from "./pdf-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -262,11 +262,18 @@ export async function callOpenAI(messages, metadata) {
     : state.pageContent?.url || window.location.href;
   metadata.language = state.language || "en";
 
+  const contentLen =
+    (state.isUsingChatContext
+      ? (state.chatContext?.content || "").length
+      : (state.pageContent?.content || "").length) +
+    (state.pdfContent?.content ? formatPdfContent(state.pdfContent).length : 0);
+  const useRag = contentLen > 4000;
+
   const res = await sendRequest(`${SERVER_URL}/api/query/ask`, {
     method: "POST",
     body: {
       messages,
-      metadata,
+      metadata: { ...metadata, use_rag: useRag },
     },
   });
 
