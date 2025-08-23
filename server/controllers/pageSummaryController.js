@@ -1,6 +1,7 @@
 const commonHelper = require("../helpers/commonHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const PageSummary = require("../models/pageSummary");
+const metricsService = require("../services/metricsService");
 
 exports.createSummary = async (req, res, next) => {
   try {
@@ -21,6 +22,8 @@ exports.createSummary = async (req, res, next) => {
       summary,
     });
 
+    metricsService.recordBusinessOperation('page_summary_created', 'success');
+
     res.status(200).json({
       success: true,
       message:
@@ -30,6 +33,7 @@ exports.createSummary = async (req, res, next) => {
       data: { id: insertId, affectedRows },
     });
   } catch (err) {
+    metricsService.recordBusinessOperation('page_summary_created', 'error');
     next(err);
   }
 };

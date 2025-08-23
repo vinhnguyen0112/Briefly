@@ -1,6 +1,7 @@
 const redis = require("redis");
 const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
+const metricsService = require("../services/metricsService");
 
 // Redis initialization
 let client;
@@ -38,6 +39,26 @@ const applyPrefix = (key) => {
   const prefix = process.env.REDIS_PREFIX ? process.env.REDIS_PREFIX + ":" : "";
   return `${prefix}${key}`;
 };
+
+/**
+ * Wrapper for Redis operations with metrics
+ * @param {string} operation - The Redis operation name
+ * @param {Function} fn - The Redis operation function
+ * @returns {Promise} The result of the operation
+ */
+async function withMetrics(operation, fn) {
+  const startTime = Date.now();
+  try {
+    const result = await fn();
+    const duration = (Date.now() - startTime) / 1000;
+    metricsService.recordRedisOperation(operation, 'success', duration);
+    return result;
+  } catch (error) {
+    const duration = (Date.now() - startTime) / 1000;
+    metricsService.recordRedisOperation(operation, 'error', duration);
+    throw error;
+  }
+}
 
 // SESSION MANAGEMENT
 
@@ -105,6 +126,7 @@ function computeTTL(sessionData) {
   }
   return sessionTTL;
 }
+
 
 /**
  * Creates a session (auth or anon) in Redis.

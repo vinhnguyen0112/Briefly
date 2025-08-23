@@ -4,7 +4,11 @@ const morgan = require("morgan");
 const fs = require("fs");
 const yaml = require("js-yaml");
 const swaggerUi = require("swagger-ui-express");
+<<<<<<< Updated upstream
 const { register, httpRequestsTotal, httpRequestDurationSeconds } = require("./utils/metrics");
+=======
+const { metricsMiddleware } = require("./middlewares/metricsMiddleware");
+>>>>>>> Stashed changes
 
 const authRoutes = require("./routes/authRoutes");
 const anonRoutes = require("./routes/anonRoutes");
@@ -16,6 +20,7 @@ const queryRoutes = require("./routes/queryRoutes");
 const pageRoutes = require("./routes/pageRoutes");
 const pageSummaryRoutes = require("./routes/pageSummaryRoutes");
 const healthCheckRoutes = require("./routes/healthCheckRoutes");
+const metricsRoutes = require("./routes/metricsRoutes");
 const {
   extractClientIp,
   extractVisitorId,
@@ -29,6 +34,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 app.set("trust proxy", true);
 
+<<<<<<< Updated upstream
 // HTTP metrics middleware
 app.use((req, res, next) => {
   const start = Date.now();
@@ -55,6 +61,9 @@ app.use((req, res, next) => {
   
   next();
 });
+=======
+app.use(metricsMiddleware);
+>>>>>>> Stashed changes
 
 // swagger, only available in development environment
 if (
@@ -77,6 +86,8 @@ app.use("/api/pages", pageRoutes);
 app.use("/api/page-summaries", pageSummaryRoutes);
 app.use("/status", healthCheckRoutes);
 app.use("/api/notes", noteRoutes);
+
+app.use(metricsRoutes);
 
 // health check
 app.get("/api/health", (req, res) => {
