@@ -1,13 +1,5 @@
 const mysql = require("mysql2/promise");
-<<<<<<< Updated upstream
-const {
-  dbQueriesTotal,
-  dbQueryErrorsTotal,
-  dbQueryDurationSeconds,
-} = require("../utils/metrics");
-=======
 const metricsService = require("../services/metricsService");
->>>>>>> Stashed changes
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,
@@ -45,10 +37,10 @@ async function executeQuery(query, params = []) {
   const startTime = Date.now();
   const operation = extractOperation(query);
   const table = extractTable(query);
-  
+
   try {
     connection = await getConnection();
-    
+
     metricsService.setActiveDbConnections(pool.pool._allConnections.length);
 
     console.log(`Executing query: ${query}`);
@@ -73,20 +65,13 @@ async function executeQuery(query, params = []) {
     // console.log("Query result:", rowsOrOkPacket);
 
     const duration = (Date.now() - startTime) / 1000;
-    metricsService.recordDbQuery(operation, table, 'success', duration);
+    metricsService.recordDbQuery(operation, table, "success", duration);
 
     return rowsOrOkPacket;
   } catch (error) {
-<<<<<<< Updated upstream
-    try {
-      const operation = inferOperationFromQuery(query);
-      dbQueryErrorsTotal.inc({ operation });
-    } catch (_) {}
-=======
     const duration = (Date.now() - startTime) / 1000;
-    metricsService.recordDbQuery(operation, table, 'error', duration);
-    
->>>>>>> Stashed changes
+    metricsService.recordDbQuery(operation, table, "error", duration);
+
     console.error("Error executing query:", error);
     throw error;
   } finally {
@@ -114,14 +99,14 @@ function inferOperationFromQuery(query) {
  */
 function extractOperation(query) {
   const trimmed = query.trim().toLowerCase();
-  if (trimmed.startsWith('select')) return 'SELECT';
-  if (trimmed.startsWith('insert')) return 'INSERT';
-  if (trimmed.startsWith('update')) return 'UPDATE';
-  if (trimmed.startsWith('delete')) return 'DELETE';
-  if (trimmed.startsWith('create')) return 'CREATE';
-  if (trimmed.startsWith('drop')) return 'DROP';
-  if (trimmed.startsWith('alter')) return 'ALTER';
-  return 'OTHER';
+  if (trimmed.startsWith("select")) return "SELECT";
+  if (trimmed.startsWith("insert")) return "INSERT";
+  if (trimmed.startsWith("update")) return "UPDATE";
+  if (trimmed.startsWith("delete")) return "DELETE";
+  if (trimmed.startsWith("create")) return "CREATE";
+  if (trimmed.startsWith("drop")) return "DROP";
+  if (trimmed.startsWith("alter")) return "ALTER";
+  return "OTHER";
 }
 
 /**
@@ -131,20 +116,20 @@ function extractOperation(query) {
  */
 function extractTable(query) {
   const trimmed = query.trim().toLowerCase();
-  
+
   const patterns = [
     /(?:from|into|update|join)\s+`?(\w+)`?/i,
     /(?:table)\s+`?(\w+)`?/i,
   ];
-  
+
   for (const pattern of patterns) {
     const match = trimmed.match(pattern);
     if (match) {
       return match[1];
     }
   }
-  
-  return 'unknown';
+
+  return "unknown";
 }
 
 /**

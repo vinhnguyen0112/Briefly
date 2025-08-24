@@ -6,5 +6,6 @@ server/qdrant_storage
 .idea
 .env
 docker/nginx/data/cache/*
+docker/qdrant/data/cache/*
 **/.env.*
 chroma

@@ -4,11 +4,7 @@ const morgan = require("morgan");
 const fs = require("fs");
 const yaml = require("js-yaml");
 const swaggerUi = require("swagger-ui-express");
-<<<<<<< Updated upstream
-const { register, httpRequestsTotal, httpRequestDurationSeconds } = require("./utils/metrics");
-=======
 const { metricsMiddleware } = require("./middlewares/metricsMiddleware");
->>>>>>> Stashed changes
 
 const authRoutes = require("./routes/authRoutes");
 const anonRoutes = require("./routes/anonRoutes");
@@ -34,36 +30,7 @@ app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
 app.set("trust proxy", true);
 
-<<<<<<< Updated upstream
-// HTTP metrics middleware
-app.use((req, res, next) => {
-  const start = Date.now();
-  const route = req.route?.path || req.path || "unknown";
-  
-  res.on("finish", () => {
-    const duration = (Date.now() - start) / 1000;
-    const status = res.statusCode.toString();
-    
-    httpRequestsTotal.inc({
-      method: req.method,
-      route,
-      status,
-    });
-    
-    httpRequestDurationSeconds.observe(
-      {
-        method: req.method,
-        route,
-      },
-      duration
-    );
-  });
-  
-  next();
-});
-=======
 app.use(metricsMiddleware);
->>>>>>> Stashed changes
 
 // swagger, only available in development environment
 if (
