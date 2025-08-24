@@ -4,6 +4,8 @@ const {
   dbQueryErrorsTotal,
   dbQueryDurationSeconds,
 } = require("../utils/metrics");
+const path = require("path");
+const fs = require("fs");
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,
@@ -89,6 +91,16 @@ function inferOperationFromQuery(query) {
 }
 
 /**
+ * Load SQLs from the input file
+ * @param {String} filename
+ * @returns {String}
+ */
+function loadSql(filename) {
+  const filePath = path.join(process.cwd(), "sql", "feedback", filename);
+  return fs.readFileSync(filePath, "utf-8");
+}
+
+/**
  * Close the connection pool
  */
 async function closePool() {
@@ -101,6 +113,7 @@ async function closePool() {
 }
 
 const dbHelper = {
+  loadSql,
   getConnection,
   executeQuery,
   closePool,
