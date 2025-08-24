@@ -1,13 +1,14 @@
+const { getClient } = require("../clients/chromaClient");
 const { OpenAI } = require("openai");
-const { qdrantFetch } = require("../clients/qdrantClient");
-const { v4: uuidv4 } = require("uuid");
+const commonHelper = require("../helpers/commonHelper");
+const metricsService = require("./metricsService");
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const COLLECTION_NAME = "capstone2025_page";
+function getUserCollectionName(userId) {
+  return `briefly_user_${userId}`;
+}
 
-/**
- * Chunk long text into overlapping parts
- */
 function chunkText(text, chunkSize = 2000, overlap = 200) {
   const chunks = [];
   if (!text) return chunks;
@@ -23,36 +24,38 @@ function chunkText(text, chunkSize = 2000, overlap = 200) {
   return chunks;
 }
 
-/**
- * Generate OpenAI embeddings
- */
 async function embedTexts(texts) {
   if (!texts || texts.length === 0) return [];
+  const startTime = Date.now();
   try {
-    const start = Date.now();
     const resp = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input: texts,
     });
-    const end = Date.now();
-    console.log("Embed text took: ", end - start, " ms");
+    const duration = (Date.now() - startTime) / 1000;
+    metricsService.recordOpenAIRequest("text-embedding-3-small", "embeddings", "success", duration);
+    metricsService.recordRagOperation("embeddings", "success", duration);
     return resp.data.map((d) => d.embedding);
   } catch (error) {
+    const duration = (Date.now() - startTime) / 1000;
+    metricsService.recordOpenAIRequest("text-embedding-3-small", "embeddings", "error", duration);
+    metricsService.recordRagOperation("embeddings", "error", duration);
     console.error("OpenAI embedding error:", error);
     throw new Error(`Failed to generate embeddings: ${error.message}`);
   }
 }
 
-/**
- * Build tenant_id from user_id and page_id
- */
-function makeTenantId(userId, pageId) {
-  return `${userId}:${pageId}`;
+async function getOrCreateUserCollection(userId) {
+  const client = await getClient();
+  const name = getUserCollectionName(userId);
+  try {
+    return await client.getOrCreateCollection({ name });
+  } catch (error) {
+    console.error(`Failed to get/create collection ${name}:`, error);
+    throw new Error(`ChromaDB collection error: ${error.message}`);
+  }
 }
 
-/**
- * Upsert all page chunks for a tenant (user+page) into the shared collection.
- */
 async function upsertPage({
   userId,
   pageId,
@@ -61,169 +64,70 @@ async function upsertPage({
   content,
   pdfContent,
   language,
-  batchSize = 10, // configurable batch size
 }) {
-  const tenantId = makeTenantId(userId, pageId);
-
+  const collection = await getOrCreateUserCollection(userId);
   const baseText = (content || "").trim();
   const pdfText = (pdfContent || "").trim();
   const fullText = [baseText, pdfText].filter(Boolean).join("\n\n");
-
   const chunks = chunkText(fullText);
-  console.log("Number of chunks generated:", chunks.length);
-  if (chunks.length === 0) {
-    console.log("No chunks to upsert, exiting.");
-    return 0;
-  }
+  if (chunks.length === 0) return 0;
 
-  // Delete existing chunks for this tenant
   try {
-    await qdrantFetch(`/collections/${COLLECTION_NAME}/points/delete`, {
-      method: "POST",
-      body: JSON.stringify({
-        filter: {
-          must: [{ key: "tenant_id", match: { value: tenantId } }],
-        },
-      }),
-    });
+    await collection.delete({ where: { page_id: pageId } });
   } catch (error) {
-    console.error(
-      `Failed to delete existing chunks for tenant ${tenantId}:`,
-      error
-    );
+    console.error(`Failed to delete existing chunks for page ${pageId}:`, error);
   }
 
-  // Embed all chunks in one go (or you could also batch this if your embedder has limits)
   const embeddings = await embedTexts(chunks);
-
-  const points = chunks.map((chunk, i) => ({
-    id: uuidv4(),
-    vector: embeddings[i],
-    payload: {
-      tenant_id: tenantId,
-      user_id: userId,
-      page_id: pageId,
-      page_url: pageUrl,
-      title: title || "",
-      chunk_index: i,
-      lang: language || "",
-      content: chunk,
-    },
+  const ids = chunks.map((_, i) => `${pageId}:${i}`);
+  const metadatas = chunks.map((_, i) => ({
+    page_id: pageId,
+    page_url: pageUrl,
+    title: title || "",
+    chunk_index: i,
+    lang: language || "",
   }));
 
-  // Batch insert into Qdrant
-  for (let i = 0; i < points.length; i += batchSize) {
-    const batch = points.slice(i, i + batchSize);
-    try {
-      await qdrantFetch(`/collections/${COLLECTION_NAME}/points`, {
-        method: "PUT",
-        body: JSON.stringify({ points: batch }),
-      });
-      console.log(
-        `Inserted batch ${Math.floor(i / batchSize) + 1} with ${
-          batch.length
-        } chunks.`
-      );
-    } catch (err) {
-      console.error(
-        `Failed to insert batch ${Math.floor(i / batchSize) + 1}:`,
-        err
-      );
-      // Optionally rethrow if you want to stop on first failure
-      // throw err;
-    }
-  }
-
-  console.log(`Inserted total ${chunks.length} chunks into collection.`);
+  await collection.add({ ids, documents: chunks, metadatas, embeddings });
   return chunks.length;
 }
 
-/**
- * Count the number of chunks for a tenant
- */
 async function countPageChunks({ userId, pageId }) {
-  const tenantId = makeTenantId(userId, pageId);
-  const result = await qdrantFetch(
-    `/collections/${COLLECTION_NAME}/points/count?exact=true`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        filter: {
-          must: [{ key: "tenant_id", match: { value: tenantId } }],
-        },
-      }),
-    }
-  );
-  return result?.result?.count || 0;
+  const collection = await getOrCreateUserCollection(userId);
+  const res = await collection.count({ where: { page_id: pageId } });
+  return typeof res === "number" ? res : 0;
 }
 
-/**
- * Ensure a page is ingested for a tenant
- */
-async function ensurePageIngested({
-  userId,
-  pageId,
-  pageUrl,
-  title,
-  content,
-  pdfContent,
-  language,
-}) {
+async function ensurePageIngested({ userId, pageId, pageUrl, title, content, pdfContent, language }) {
   const existing = await countPageChunks({ userId, pageId });
   if (existing > 0) return existing;
-  return upsertPage({
-    userId,
-    pageId,
-    pageUrl,
-    title,
-    content,
-    pdfContent,
-    language,
-  });
+  return upsertPage({ userId, pageId, pageUrl, title, content, pdfContent, language });
 }
 
-/**
- * Query for relevant page chunks for a tenant
- */
 async function queryPage({ userId, pageId, query, topK = 6 }) {
-  const tenantId = makeTenantId(userId, pageId);
+  const collection = await getOrCreateUserCollection(userId);
   const [embedding] = await embedTexts([query]);
-
-  const result = await qdrantFetch(
-    `/collections/${COLLECTION_NAME}/points/search`,
-    {
-      method: "POST",
-      body: JSON.stringify({
-        vector: embedding,
-        filter: {
-          must: [{ key: "tenant_id", match: { value: tenantId } }],
-        },
-        limit: topK,
-        with_payload: true,
-        with_vector: false,
-      }),
-    }
-  );
-
-  const docs = (result.result || []).map((r, idx) => {
-    const mapped = {
-      text: r.payload?.content || "",
-      meta: r.payload || {},
-      distance: r.score || null,
-    };
-    console.log(`Mapped document ${idx + 1}:`, mapped);
-    return mapped;
+  const results = await collection.query({
+    queryEmbeddings: [embedding],
+    nResults: topK,
+    where: { page_id: pageId },
+    include: ["documents", "metadatas", "distances"],
   });
-
-  console.log("Number of documents returned:", docs.length);
-  return { docs, queryEmbedding: embedding };
+  const docs = (results.documents?.[0] || []).map((doc, idx) => ({
+    text: doc,
+    meta: results.metadatas?.[0]?.[idx] || {},
+    distance: results.distances?.[0]?.[idx] || null,
+  }));
+  return docs;
 }
 
 module.exports = {
   chunkText,
   embedTexts,
+  getOrCreateUserCollection,
   upsertPage,
   ensurePageIngested,
   queryPage,
-  countPageChunks,
 };
+
+
