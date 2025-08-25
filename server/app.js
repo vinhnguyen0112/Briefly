@@ -10,7 +10,6 @@ const authRoutes = require("./routes/authRoutes");
 const anonRoutes = require("./routes/anonRoutes");
 const chatRoutes = require("./routes/chatRoutes");
 const noteRoutes = require("./routes/noteRoutes");
-const testRoutes = require("./routes/testRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const queryRoutes = require("./routes/queryRoutes");
 const pageRoutes = require("./routes/pageRoutes");
@@ -43,7 +42,6 @@ if (
 
 // routes
 app.use("/api", extractClientIp, extractVisitorId);
-app.use("/api/test", testRoutes);
 app.use("/api/auth", authRoutes);
 app.use("/api/anon", anonRoutes);
 app.use("/api/chats", chatRoutes);

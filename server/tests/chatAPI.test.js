@@ -5,6 +5,7 @@ const app = require("../app");
 const { redisHelper } = require("../helpers/redisHelper");
 const { v4: uuiv4 } = require("uuid");
 const Chat = require("../models/chat");
+const commonHelper = require("../helpers/commonHelper");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
 
@@ -143,13 +144,28 @@ describe("POST /chats", () => {
 });
 
 describe("GET /chats", () => {
-  // Bulk insert 30 chats for testing
+  // TODO: Use sth else here
   beforeAll(async () => {
-    await supertest(app)
-      .post("/api/test/bulk-insert-chats")
-      .set("Authorization", authHeader)
-      .send({})
-      .expect(200);
+    // await supertest(app)
+    //   .post("/api/test/bulk-insert-chats")
+    //   .set("Authorization", authHeader)
+    //   .send({})
+    //   .expect(200);
+
+    const chats = [];
+    const count = 30;
+    for (let i = 0; i < count; i++) {
+      const pageUrl = `https://example.com/page${i + 1}`;
+      chats.push({
+        id: crypto.randomUUID(),
+        user_id: jestVariables.userId,
+        page_id: commonHelper.generateHash(pageUrl),
+        page_url: pageUrl,
+        title: `Test Chat #${i + 1}`,
+      });
+    }
+
+    await Chat.bulkInsert(chats);
   });
 
   it("Should get all chats of first page", async () => {

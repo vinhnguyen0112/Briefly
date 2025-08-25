@@ -1,5 +1,6 @@
 const mysql = require("mysql2/promise");
 const metricsService = require("../services/metricsService");
+const { dbQueryDurationSeconds, dbQueriesTotal } = require("../utils/metrics");
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,

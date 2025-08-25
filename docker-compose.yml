@@ -17,8 +17,8 @@ services:
     env_file:
       - .env
       - ./server/.env
-    depends_on:
-      - redis-cluster
+    # depends_on:
+    #   - redis
   #        command: ["sleep", "10000"]
 
   nginx:
@@ -34,18 +34,18 @@ services:
     networks:
       - default
 
-  redis-cluster:
-    container_name: ${APP_NAME}-redis
-    image: redis:latest
-    ports:
-      - "6379"
-    networks:
-      - default
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 3
+  # redis:
+  #   container_name: ${APP_NAME}-redis
+  #   image: redis:latest
+  #   ports:
+  #     - "6379"
+  #   networks:
+  #     - default
+  #   healthcheck:
+  #     test: ["CMD", "redis-cli", "ping"]
+  #     interval: 10s
+  #     timeout: 5s
+  #     retries: 3
   # qdrant:
   #   image: qdrant/qdrant:latest
   #   container_name: ${APP_NAME}-qdrant
