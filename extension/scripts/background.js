@@ -685,7 +685,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "clear_chat_history") {
-    // TODO: Run clear chats from IndexedDB in parallel as well
     chatHandler.deleteAllChatsOfCurrentUser().then((response) => {
       sendResponse({ success: response.success });
     });
