@@ -506,7 +506,7 @@ async function showFeedbackModal(messageId) {
 
     try {
       const response = await sendRequest(
-        `https://capstone-2025.coccoc.com/api/feedback`,
+        `https://dev-capstone-2025.coccoc.com/api/feedback`,
         {
           method: "POST",
           body: { stars, comment, message_id: parseInt(messageId) },

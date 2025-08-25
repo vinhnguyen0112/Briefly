@@ -45,7 +45,7 @@ async function callCaptionApi(images, content) {
 
   try {
     const response = await fetch(
-      "https://capstone-2025.coccoc.com/api/query/captionize",
+      "https://dev-capstone-2025.coccoc.com/api/query/captionize",
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
