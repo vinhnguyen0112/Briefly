@@ -12,19 +12,22 @@ alerting:
             - alertmanager:9093
 
 scrape_configs:
+  # Prometheus itself
   - job_name: "prometheus"
     static_configs:
-      - targets: ["localhost:9090"] #needs to change for prod
+      - targets: ["prometheus:9090"]
 
+  # Your app (cocbot-api)
   - job_name: "cocbot-api"
     static_configs:
-      - targets: ["capstone2025-app:3000"] #needs to change for prod
+      - targets: ["dev-capstone-2025.coccoc.com"]
     metrics_path: "/metrics"
     scrape_interval: 10s
     scrape_timeout: 5s
     scheme: http
 
+  # Node exporter
   - job_name: "node-exporter"
     static_configs:
-      - targets: ["node-exporter:9100"] #needs to change for prod
+      - targets: ["node-exporter:9100"]
     scrape_interval: 15s

@@ -1,6 +1,7 @@
 const { OpenAI } = require("openai");
 const { qdrantFetch } = require("../clients/qdrantClient");
 const { v4: uuidv4 } = require("uuid");
+const metricsService = require("./metricsService");
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const COLLECTION_NAME = "capstone2025_page";
@@ -24,20 +25,37 @@ function chunkText(text, chunkSize = 2000, overlap = 200) {
 }
 
 /**
- * Generate OpenAI embeddings
+ * Generate OpenAI embeddings (with monitoring)
  */
 async function embedTexts(texts) {
   if (!texts || texts.length === 0) return [];
+  const startTime = Date.now();
   try {
-    const start = Date.now();
     const resp = await openai.embeddings.create({
       model: "text-embedding-3-small",
       input: texts,
     });
-    const end = Date.now();
-    console.log("Embed text took: ", end - start, " ms");
+    const duration = (Date.now() - startTime) / 1000;
+
+    // record metrics
+    metricsService.recordOpenAIRequest(
+      "text-embedding-3-small",
+      "embeddings",
+      "success",
+      duration
+    );
+    metricsService.recordRagOperation("embeddings", "success", duration);
+
     return resp.data.map((d) => d.embedding);
   } catch (error) {
+    const duration = (Date.now() - startTime) / 1000;
+    metricsService.recordOpenAIRequest(
+      "text-embedding-3-small",
+      "embeddings",
+      "error",
+      duration
+    );
+    metricsService.recordRagOperation("embeddings", "error", duration);
     console.error("OpenAI embedding error:", error);
     throw new Error(`Failed to generate embeddings: ${error.message}`);
   }
@@ -61,20 +79,15 @@ async function upsertPage({
   content,
   pdfContent,
   language,
-  batchSize = 10, // configurable batch size
+  batchSize = 10,
 }) {
   const tenantId = makeTenantId(userId, pageId);
-
   const baseText = (content || "").trim();
   const pdfText = (pdfContent || "").trim();
   const fullText = [baseText, pdfText].filter(Boolean).join("\n\n");
 
   const chunks = chunkText(fullText);
-  console.log("Number of chunks generated:", chunks.length);
-  if (chunks.length === 0) {
-    console.log("No chunks to upsert, exiting.");
-    return 0;
-  }
+  if (chunks.length === 0) return 0;
 
   // Delete existing chunks for this tenant
   try {
@@ -87,13 +100,9 @@ async function upsertPage({
       }),
     });
   } catch (error) {
-    console.error(
-      `Failed to delete existing chunks for tenant ${tenantId}:`,
-      error
-    );
+    console.error(`Failed to delete existing chunks for tenant ${tenantId}:`, error);
   }
 
-  // Embed all chunks in one go (or you could also batch this if your embedder has limits)
   const embeddings = await embedTexts(chunks);
 
   const points = chunks.map((chunk, i) => ({
@@ -111,7 +120,8 @@ async function upsertPage({
     },
   }));
 
-  // Batch insert into Qdrant
+  const startTime = Date.now();
+  let totalInserted = 0;
   for (let i = 0; i < points.length; i += batchSize) {
     const batch = points.slice(i, i + batchSize);
     try {
@@ -119,23 +129,16 @@ async function upsertPage({
         method: "PUT",
         body: JSON.stringify({ points: batch }),
       });
-      console.log(
-        `Inserted batch ${Math.floor(i / batchSize) + 1} with ${
-          batch.length
-        } chunks.`
-      );
+      totalInserted += batch.length;
     } catch (err) {
-      console.error(
-        `Failed to insert batch ${Math.floor(i / batchSize) + 1}:`,
-        err
-      );
-      // Optionally rethrow if you want to stop on first failure
-      // throw err;
+      console.error(`Failed to insert batch ${Math.floor(i / batchSize) + 1}:`, err);
     }
   }
 
-  console.log(`Inserted total ${chunks.length} chunks into collection.`);
-  return chunks.length;
+  const duration = (Date.now() - startTime) / 1000;
+  metricsService.recordRagOperation("upsertPage", "success", duration);
+
+  return totalInserted;
 }
 
 /**
@@ -160,26 +163,10 @@ async function countPageChunks({ userId, pageId }) {
 /**
  * Ensure a page is ingested for a tenant
  */
-async function ensurePageIngested({
-  userId,
-  pageId,
-  pageUrl,
-  title,
-  content,
-  pdfContent,
-  language,
-}) {
+async function ensurePageIngested({ userId, pageId, pageUrl, title, content, pdfContent, language }) {
   const existing = await countPageChunks({ userId, pageId });
   if (existing > 0) return existing;
-  return upsertPage({
-    userId,
-    pageId,
-    pageUrl,
-    title,
-    content,
-    pdfContent,
-    language,
-  });
+  return upsertPage({ userId, pageId, pageUrl, title, content, pdfContent, language });
 }
 
 /**
@@ -189,6 +176,7 @@ async function queryPage({ userId, pageId, query, topK = 6 }) {
   const tenantId = makeTenantId(userId, pageId);
   const [embedding] = await embedTexts([query]);
 
+  const startTime = Date.now();
   const result = await qdrantFetch(
     `/collections/${COLLECTION_NAME}/points/search`,
     {
@@ -204,18 +192,15 @@ async function queryPage({ userId, pageId, query, topK = 6 }) {
       }),
     }
   );
+  const duration = (Date.now() - startTime) / 1000;
+  metricsService.recordRagOperation("queryPage", "success", duration);
 
-  const docs = (result.result || []).map((r, idx) => {
-    const mapped = {
-      text: r.payload?.content || "",
-      meta: r.payload || {},
-      distance: r.score || null,
-    };
-    console.log(`Mapped document ${idx + 1}:`, mapped);
-    return mapped;
-  });
+  const docs = (result.result || []).map((r, idx) => ({
+    text: r.payload?.content || "",
+    meta: r.payload || {},
+    distance: r.score || null,
+  }));
 
-  console.log("Number of documents returned:", docs.length);
   return { docs, queryEmbedding: embedding };
 }
 

@@ -1,9 +1,8 @@
 const mysql = require("mysql2/promise");
-const {
-  dbQueriesTotal,
-  dbQueryErrorsTotal,
-  dbQueryDurationSeconds,
-} = require("../utils/metrics");
+const metricsService = require("../services/metricsService");
+const { dbQueryDurationSeconds, dbQueriesTotal } = require("../utils/metrics");
+const path = require("path");
+const fs = require("fs");
 
 const pool = mysql.createPool({
   host: process.env.MYSQL_HOST,
@@ -38,8 +37,14 @@ async function getConnection() {
  */
 async function executeQuery(query, params = []) {
   let connection;
+  const startTime = Date.now();
+  const operation = extractOperation(query);
+  const table = extractTable(query);
+
   try {
     connection = await getConnection();
+
+    metricsService.setActiveDbConnections(pool.pool._allConnections.length);
 
     console.log(`Executing query: ${query}`);
 
@@ -62,12 +67,14 @@ async function executeQuery(query, params = []) {
     console.log("Query result: ", rowsOrOkPacket);
     // console.log("Query result:", rowsOrOkPacket);
 
+    const duration = (Date.now() - startTime) / 1000;
+    metricsService.recordDbQuery(operation, table, "success", duration);
+
     return rowsOrOkPacket;
   } catch (error) {
-    try {
-      const operation = inferOperationFromQuery(query);
-      dbQueryErrorsTotal.inc({ operation });
-    } catch (_) {}
+    const duration = (Date.now() - startTime) / 1000;
+    metricsService.recordDbQuery(operation, table, "error", duration);
+
     console.error("Error executing query:", error);
     throw error;
   } finally {
@@ -89,6 +96,56 @@ function inferOperationFromQuery(query) {
 }
 
 /**
+ * Extract operation type from SQL query
+ * @param {string} query - The SQL query
+ * @returns {string} The operation type
+ */
+function extractOperation(query) {
+  const trimmed = query.trim().toLowerCase();
+  if (trimmed.startsWith("select")) return "SELECT";
+  if (trimmed.startsWith("insert")) return "INSERT";
+  if (trimmed.startsWith("update")) return "UPDATE";
+  if (trimmed.startsWith("delete")) return "DELETE";
+  if (trimmed.startsWith("create")) return "CREATE";
+  if (trimmed.startsWith("drop")) return "DROP";
+  if (trimmed.startsWith("alter")) return "ALTER";
+  return "OTHER";
+}
+
+/**
+ * Extract table name from SQL query
+ * @param {string} query - The SQL query
+ * @returns {string} The table name
+ */
+function extractTable(query) {
+  const trimmed = query.trim().toLowerCase();
+
+  const patterns = [
+    /(?:from|into|update|join)\s+`?(\w+)`?/i,
+    /(?:table)\s+`?(\w+)`?/i,
+  ];
+
+  for (const pattern of patterns) {
+    const match = trimmed.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return "unknown";
+}
+
+/**
+ * Load SQLs from the input file
+ * @param {String} filename
+ * @returns {String}
+ */
+function loadSql(filename) {
+  const filePath = path.join(process.cwd(), "sql", "feedback", filename);
+  return fs.readFileSync(filePath, "utf-8");
+}
+
+/**
  * Close the connection pool
  */
 async function closePool() {
@@ -101,6 +158,7 @@ async function closePool() {
 }
 
 const dbHelper = {
+  loadSql,
   getConnection,
   executeQuery,
   closePool,
