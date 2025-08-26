@@ -3,8 +3,8 @@ const Feedback = require("../models/feedback");
 const { loadSql, getConnection } = require("../helpers/dbHelper");
 
 // Load SQLs
-const sqlSelectMessage = loadSql("select_message_role_chat_id.sql");
-const sqlCheckOwnership = loadSql("check_user_owns_chat.sql");
+const sqlSelectMessage = loadSql("/feedbacks/select_message_role_chat_id.sql");
+const sqlCheckOwnership = loadSql("/feedbacks/check_user_owns_chat.sql");
 
 /**
  * Submit feedback from an authenticated user for a message.

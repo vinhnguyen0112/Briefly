@@ -141,7 +141,7 @@ function extractTable(query) {
  * @returns {String}
  */
 function loadSql(filename) {
-  const filePath = path.join(process.cwd(), "sql", "feedback", filename);
+  const filePath = path.join(process.cwd(), "sql", filename);
   return fs.readFileSync(filePath, "utf-8");
 }
 
