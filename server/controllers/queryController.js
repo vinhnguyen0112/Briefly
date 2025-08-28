@@ -289,6 +289,7 @@ async function getStoredPageSummary(pageId, language) {
 
   // Try to get from database
   const stored = await PageSummary.getByPageIdAndLanguage(pageId, language);
+  console.log("Stored summary: ", stored);
   if (stored?.summary) {
     const createdAt = new Date(stored.created_at);
     const now = Date.now();
@@ -310,7 +311,10 @@ async function getStoredPageSummary(pageId, language) {
     }
 
     // Otherwise, delete expired summary
-    await PageSummary.deleteById(stored.id);
+    await PageSummary.deleteByPageIdAndLanguage(
+      stored.page_id,
+      stored.language
+    );
   }
 
   return null;
