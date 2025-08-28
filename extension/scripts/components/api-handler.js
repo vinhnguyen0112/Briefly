@@ -15,7 +15,7 @@ import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
 import { formatPdfContent } from "./pdf-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 /**
  * Generate response for query by sending a request to the backend server
@@ -118,10 +118,6 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
           response.model,
           tempMessageId
         );
-
-        if (metadata.event === "summarize") {
-          persistPageSummary(assistantMessage);
-        }
       }
 
       return { success: true, message: assistantMessage };
@@ -225,24 +221,6 @@ async function persistChatAndMessages(
   } catch (error) {
     console.error("Failed to persist messages:", error);
   }
-}
-
-/**
- * Persist page summary
- * @param {String} assistantMessage
- */
-async function persistPageSummary(assistantMessage) {
-  const isChatContext = state.isUsingChatContext;
-  const contentSource = isChatContext ? state.chatContext : state.pageContent;
-
-  if (!contentSource) return;
-
-  chrome.runtime.sendMessage({
-    action: "store_page_summary",
-    page_url: contentSource.url,
-    summary: assistantMessage,
-    language: state.language,
-  });
 }
 
 /**

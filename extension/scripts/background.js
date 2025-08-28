@@ -16,7 +16,7 @@ import {
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 
-const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+const SERVER_URL = "http://localhost:3000";
 
 const CHAT_QUERY_LIMIT = 20;
 //  first install
@@ -729,28 +729,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       })
       .catch((err) => {
         console.error("Failed to store PDF content:", err);
-        sendResponse({ success: false });
-      });
-
-    return true;
-  }
-
-  if (message.action === "store_page_summary") {
-    sendRequest(`${SERVER_URL}/api/page-summaries`, {
-      method: "POST",
-      body: {
-        page_url: message.page_url,
-        language: message.language,
-        summary: message.summary,
-      },
-      withVisitorId: false,
-    })
-      .then((response) => {
-        console.log("store_page_summary response: ", response);
-        sendResponse({ success: response.success });
-      })
-      .catch((err) => {
-        console.error("Failed to store summary:", err);
         sendResponse({ success: false });
       });
 
