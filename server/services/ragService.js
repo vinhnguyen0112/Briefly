@@ -6,6 +6,21 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 const COLLECTION_NAME = "capstone2025_page";
 
 /**
+ * Check if binary quantization is enabled and rescoring should be used
+ */
+function shouldUseRescoring() {
+  // Validate environment variables to prevent runtime errors
+  const binaryQuantEnabled = process.env.QDRANT_ENABLE_BINARY_QUANTIZATION;
+  const rescoringEnabled = process.env.QDRANT_ENABLE_RESCORING;
+  
+  // Only enable if explicitly set to 'true' (avoid truthy strings like 'false', '0', etc)
+  const quantizationEnabled = binaryQuantEnabled === 'true';
+  const rescoringAllowed = rescoringEnabled !== 'false'; // Default to true unless explicitly disabled
+  
+  return quantizationEnabled && rescoringAllowed;
+}
+
+/**
  * Chunk long text into overlapping parts
  */
 function chunkText(text, chunkSize = 2000, overlap = 200) {
@@ -183,37 +198,54 @@ async function ensurePageIngested({
 }
 
 /**
- * Query for relevant page chunks for a tenant
+ * Query for relevant page chunks for a tenant with optional rescoring for binary quantization
  */
-async function queryPage({ userId, pageId, query, topK = 6 }) {
+async function queryPage({ userId, pageId, query, topK = 6, useRescoring = null }) {
   const tenantId = makeTenantId(userId, pageId);
   const [embedding] = await embedTexts([query]);
+  
+  // Auto-detect rescoring if not explicitly set
+  if (useRescoring === null) {
+    useRescoring = shouldUseRescoring();
+  }
 
+  // Build search parameters with optional rescoring for binary quantization
+  const searchParams = {
+    vector: embedding,
+    filter: {
+      must: [{ key: "tenant_id", match: { value: tenantId } }],
+    },
+    limit: topK,
+    with_payload: true,
+    with_vector: false,
+  };
+
+  // Add rescoring parameter for binary quantization
+  if (useRescoring) {
+    searchParams.rescore = {
+      rescore: true,
+      rescore_query: {
+        vector: embedding,
+        limit: topK * 2, // Oversampling for better recall
+      }
+    };
+    console.log("Using Qdrant native rescoring for binary quantization");
+  }
+
+  // Perform search with Qdrant (with or without rescoring)
   const result = await qdrantFetch(
     `/collections/${COLLECTION_NAME}/points/search`,
     {
       method: "POST",
-      body: JSON.stringify({
-        vector: embedding,
-        filter: {
-          must: [{ key: "tenant_id", match: { value: tenantId } }],
-        },
-        limit: topK,
-        with_payload: true,
-        with_vector: false,
-      }),
+      body: JSON.stringify(searchParams),
     }
   );
 
-  const docs = (result.result || []).map((r, idx) => {
-    const mapped = {
-      text: r.payload?.content || "",
-      meta: r.payload || {},
-      distance: r.score || null,
-    };
-    console.log(`Mapped document ${idx + 1}:`, mapped);
-    return mapped;
-  });
+  const docs = (result.result || []).map((r, idx) => ({
+    text: r.payload?.content || "",
+    meta: r.payload || {},
+    distance: r.score || null,
+  }));
 
   console.log("Number of documents returned:", docs.length);
   return { docs, queryEmbedding: embedding };
@@ -226,4 +258,5 @@ module.exports = {
   ensurePageIngested,
   queryPage,
   countPageChunks,
+  shouldUseRescoring,
 };
