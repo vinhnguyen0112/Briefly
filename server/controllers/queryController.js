@@ -65,15 +65,15 @@ const handleUserQuery = async (req, res, next) => {
     const isAuth = req.sessionType === "auth" && req.session?.id;
 
     let cachedResponse = null;
-    // if (isAuth) {
-    //   // Try to find a cached response first
-    //   cachedResponse = await responseCachingService.searchSimilarResponseCache({
-    //     userId: req.session.user_id,
-    //     pageId: pageMeta.pageId,
-    //     query: messages[messages.length - 1]?.content || "",
-    //     topK: 3,
-    //   });
-    // }
+    if (isAuth) {
+      // Try to find a cached response first
+      cachedResponse = await responseCachingService.searchSimilarResponseCache({
+        userId: req.session.user_id,
+        pageId: pageMeta.pageId,
+        query: messages[messages.length - 1]?.content || "",
+        topK: 3,
+      });
+    }
 
     if (cachedResponse?.response) {
       return res.json({
