@@ -33,18 +33,6 @@ class PageSummary {
   }
 
   /**
-   * Delete summary by id.
-   * @param {number} id
-   * @returns {Promise<number>} Number of affected rows
-   */
-  async deleteById(id) {
-    const query = `DELETE FROM page_summaries WHERE id = ?`;
-    const { affectedRows } = await dbHelper.executeQuery(query, [id]);
-
-    return affectedRows;
-  }
-
-  /**
    * Delete summary by page_id and language.
    * @param {String} page_id
    * @param {String} language
