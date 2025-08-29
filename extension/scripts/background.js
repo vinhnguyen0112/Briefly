@@ -701,7 +701,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         page_content: message.page_content,
         pdf_content: message.pdf_content,
       },
-      withVisitorId: false,
     })
       .then((response) => {
         console.log("store_page_metadata response: ", response);
@@ -721,7 +720,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       body: {
         pdf_content: message.pdf_content,
       },
-      withVisitorId: false,
     })
       .then((response) => {
         console.log("store_pdf_content response: ", response);

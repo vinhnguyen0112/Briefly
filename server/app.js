@@ -15,10 +15,6 @@ const queryRoutes = require("./routes/queryRoutes");
 const pageRoutes = require("./routes/pageRoutes");
 const healthCheckRoutes = require("./routes/healthCheckRoutes");
 const metricsRoutes = require("./routes/metricsRoutes");
-const {
-  extractClientIp,
-  extractVisitorId,
-} = require("./middlewares/commonMiddlewares");
 const { globalErrorHandler } = require("./middlewares/errorMiddleware");
 
 const app = express();
@@ -40,7 +36,6 @@ if (
 }
 
 // routes
-app.use("/api", extractClientIp, extractVisitorId);
 app.use("/api/auth", authRoutes);
 app.use("/api/anon", anonRoutes);
 app.use("/api/chats", chatRoutes);

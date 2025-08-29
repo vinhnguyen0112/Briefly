@@ -10,9 +10,12 @@ export async function getFingerprint() {
 }
 
 // Requests a new anon session from the server
-async function requestAnonSession() {
+async function requestAnonSession(visitorId) {
   const response = await sendRequest("http://localhost:3000/api/anon", {
     method: "POST",
+    headers: {
+      visitor: visitorId,
+    },
     withSession: false,
   });
 

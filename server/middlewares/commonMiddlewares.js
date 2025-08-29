@@ -4,33 +4,6 @@ const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 
 /**
- * Express middleware to extract the client's IP address.
- * Sets req.clientIp to the detected IP.
- * @param {Object} req -
- * @param {Object} res -
- * @param {Function} next -
- */
-function extractClientIp(req, res, next) {
-  let ip = req.ip || "";
-  if (ip.includes(",")) ip = ip.split(",")[0].trim();
-  req.clientIp = ip;
-  return next();
-}
-
-/**
- * Express middleware to extract the visitor ID from the request headers.
- * Sets req.visitorId to the value of the "visitor" header.
- * @param {Object} req -
- * @param {Object} res -
- * @param {Function} next -
- */
-function extractVisitorId(req, res, next) {
-  const visitorId = req.headers["visitor"];
-  req.visitorId = visitorId;
-  return next();
-}
-
-/**
  * Returns a middleware that first validate the request body
  * by stripping off unknown keys and remove null or undefined values
  * @param {Schema} schema 'yup' schema
@@ -47,4 +20,4 @@ function validateAndSanitizeBody(schema) {
   };
 }
 
-module.exports = { extractClientIp, extractVisitorId, validateAndSanitizeBody };
+module.exports = { validateAndSanitizeBody };

@@ -34,7 +34,7 @@ import {
 import { switchLanguage, translateElement } from "./i18n.js";
 import idbHandler from "./idb-handler.js";
 import chatHandler from "./chat-handler.js";
-import { updateContentStatus } from "./content-handler.js";
+import { updateContentStatus, updatePdfStatus } from "./content-handler.js";
 
 export function setupEventListeners() {
   elements.closeSidebarButton.addEventListener("click", () => {
@@ -495,6 +495,7 @@ function clearChatHistoryEventHandler() {
       // Reset current chat
       clearMessagesFromMessageContainer();
       resetCurrentChatState();
+      updateContentStatus();
 
       updateToast(toastId, {
         dataI18n: "success",

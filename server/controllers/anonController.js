@@ -10,18 +10,15 @@ const { ERROR_CODES } = require("../errors");
  * @returns {Promise<Object>} The session data object.
  */
 async function findOrCreateAnonSession(sessionId) {
-  // Try to get session from cache
   const cached = await redisHelper.getSession(sessionId, "anon");
   if (cached) {
     console.log(`Cache hit for sessionId: ${sessionId}`);
     return { id: sessionId, anon_query_count: cached.anon_query_count || 0 };
   }
 
-  // Try to get session from DB
   console.log(`Cache miss. Checking DB for sessionId: ${sessionId}`);
   let session = await AnonSession.getById(sessionId);
 
-  // If not found in DB, create new session
   if (!session) {
     console.log(
       `No session in DB. Creating new session for sessionId: ${sessionId}`
@@ -34,7 +31,6 @@ async function findOrCreateAnonSession(sessionId) {
     anon_query_count: session.anon_query_count,
   };
 
-  // Always update cache
   await redisHelper.createSession(
     {
       id: sessionId,
@@ -56,7 +52,10 @@ async function findOrCreateAnonSession(sessionId) {
  */
 const handleAnonSession = async (req, res, next) => {
   try {
-    const { visitorId, clientIp } = req;
+    // Extract visitorId from header and clientIp from req.ip
+    const visitorId = req.headers["visitor"];
+    let clientIp = req.ip || "";
+    if (clientIp.includes(",")) clientIp = clientIp.split(",")[0].trim();
 
     if (!visitorId) {
       throw new AppError(ERROR_CODES.INVALID_INPUT, "Visitor Id not found");

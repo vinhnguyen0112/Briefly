@@ -5,8 +5,6 @@ import {
   clearUserSession,
   getAnonSession,
   state,
-  getVisitorId,
-  setVisitorId,
   getUserSession,
 } from "./components/state.js";
 import {
@@ -61,16 +59,6 @@ document.addEventListener("DOMContentLoaded", () => {
       console.log("Forcing user to sign out");
       clearUserSession();
     });
-
-  // Get user fingerprint
-  getVisitorId().then((visitorId) => {
-    if (!visitorId) {
-      console.log("CocBot: No visitorId found, generating a new one");
-      getFingerprint().then((fp) => {
-        setVisitorId(fp);
-      });
-    }
-  });
 
   // Set up anonymous session if not exists
   getAnonSession().then((anonSession) => {

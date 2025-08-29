@@ -167,34 +167,6 @@ export async function clearUserSession() {
   });
 }
 
-// Visitor ID management
-export async function getVisitorId() {
-  return new Promise((resolve) => {
-    chrome.storage.local.get(["visitor_id"], (result) => {
-      console.log(`Cocbot: Gotten visitor ID: `, result.visitor_id);
-      resolve(result.visitor_id);
-    });
-  });
-}
-
-export async function setVisitorId(id) {
-  return new Promise((resolve) => {
-    chrome.storage.local.set({ visitor_id: id }, () => {
-      console.log("CocBot: Visitor ID saved", data);
-      resolve(true);
-    });
-  });
-}
-
-export async function removeVisitorId() {
-  return new Promise((resolve) => {
-    chrome.storage.local.remove("visitor_id", () => {
-      console.log("CocBot: Visitor ID removed");
-      resolve(true);
-    });
-  });
-}
-
 // Config management
 export async function getConfig() {
   return new Promise((resolve) => {
@@ -418,21 +390,19 @@ export function resetPaginationState() {
 /**
  * A helper function to send a request with session or visitor ID attached as headers.
  *
- * Session and visitor ID is attached in headers by default.
+ * Session token is send by default.
  *
  * @param {string} url The endpoint URL
  * @param {Object} options Fetch options with custom flags
  * @param {String} [options.method] HTTP method
  * @param {Object|FormData} [options.body] Request payload
  * @param {Object} [options.headers] Additional headers
- * @param {boolean} [options.withSession] Whether to include session in headers
- * @param {boolean} [options.withVisitorId] Whether to include visitor ID in headers
+ * @param {boolean} [options.withSession] Whether to include session token in headers
  * @returns {Promise<Object>} Parsed JSON response
  */
 export async function sendRequest(url, options = {}) {
   const {
     withSession = true,
-    withVisitorId = true,
     headers: customHeaders,
     ...fetchOptions
   } = options;
@@ -460,11 +430,6 @@ export async function sendRequest(url, options = {}) {
       "Authorization",
       `Bearer ${userSession ? `auth:${sessionId}` : `anon:${sessionId}`}`
     );
-  }
-
-  if (withVisitorId) {
-    const visitorId = await getVisitorId();
-    headers.set("Visitor", visitorId);
   }
 
   // JSON encoding

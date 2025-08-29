@@ -46,7 +46,6 @@ async function storeResponseCache({
     metadata,
     created_at: new Date().toISOString(),
   });
-  // Set TTL, e.g., 1 day (customize as needed)
   await redisHelper.client.set(key, value, { EX: 60 * 60 * 24 });
 }
 
