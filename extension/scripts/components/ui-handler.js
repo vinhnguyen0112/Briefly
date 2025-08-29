@@ -505,13 +505,10 @@ async function showFeedbackModal(messageId) {
     });
 
     try {
-      const response = await sendRequest(
-        `https://dev-capstone-2025.coccoc.com/api/feedback`,
-        {
-          method: "POST",
-          body: { stars, comment, message_id: parseInt(messageId) },
-        }
-      );
+      const response = await sendRequest(`http://localhost:3000/api/feedback`, {
+        method: "POST",
+        body: { stars, comment, message_id: parseInt(messageId) },
+      });
 
       if (response.success) {
         updateToast(toastId, {
@@ -958,6 +955,9 @@ export function configureChatHistoryElementsOnAuthState(isAuth) {
             <div id="chat-history-empty" style="display: none">
               <p data-i18n="noChats">No chat history yet.</p>
             </div>
+            <div id="chat-history-fail" style="display: none">
+              <p data-i18n="fetchChatHistoryFail">No chat history yet.</p>
+            </div>
           </div>
       `;
 
@@ -971,6 +971,8 @@ export function configureChatHistoryElementsOnAuthState(isAuth) {
       elements.chatHistoryEmpty = chatHistoryScreen.querySelector(
         "#chat-history-empty"
       );
+      elements.chatHistoryFail =
+        chatHistoryScreen.querySelector("#chat-history-fail");
     }
 
     // Inject chat history button if not present

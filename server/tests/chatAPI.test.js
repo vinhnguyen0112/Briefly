@@ -144,14 +144,7 @@ describe("POST /chats", () => {
 });
 
 describe("GET /chats", () => {
-  // TODO: Use sth else here
   beforeAll(async () => {
-    // await supertest(app)
-    //   .post("/api/test/bulk-insert-chats")
-    //   .set("Authorization", authHeader)
-    //   .send({})
-    //   .expect(200);
-
     const chats = [];
     const count = 30;
     for (let i = 0; i < count; i++) {

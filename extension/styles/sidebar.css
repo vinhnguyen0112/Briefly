@@ -1224,19 +1224,6 @@ body.sidebar-resizing * {
   padding: 16px;
 }
 
-.note-editor-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.note-editor-header h4 {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0;
-}
-
 #note-content {
   flex: 1;
   padding: 12px;
@@ -1554,7 +1541,13 @@ input:checked + .slider:before {
 #chat-history-empty {
   text-align: center;
   color: var(--muted-foreground);
-  margin-top: 40px;
+  margin-top: 2rem;
+}
+
+#chat-history-fail {
+  text-align: center;
+  color: red;
+  margin-top: 2rem;
 }
 
 /* Chat history actions button*/
@@ -2135,8 +2128,7 @@ input:checked + .slider:before {
 /* Note editor header */
 .note-editor-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
   margin-bottom: 12px;
   padding-bottom: 8px;
   border-bottom: 1px solid var(--border);
@@ -2146,6 +2138,12 @@ input:checked + .slider:before {
   margin: 0;
   font-size: 16px;
   font-weight: 600;
+}
+
+.note-editor-header-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .note-editor-url {

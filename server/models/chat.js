@@ -64,24 +64,17 @@ class Chat {
    * @returns {Promise<Array>} - An array of chats
    */
   async getPaginated({ user_id, offset = 0, limit = 20 }) {
-    let query = "SELECT * FROM chats";
-    const conditions = [];
-    const values = [];
+    const query = `
+    SELECT * 
+    FROM chats
+    WHERE user_id = ? 
+    AND is_deleted = FALSE
+    ORDER BY updated_at DESC
+    LIMIT ? OFFSET ?
+  `;
 
-    if (user_id) {
-      conditions.push("user_id = ?");
-      values.push(user_id);
-    }
-
-    if (conditions.length > 0) {
-      query += " WHERE " + conditions.join(" AND ");
-    }
-
-    query += " ORDER BY created_at DESC LIMIT ? OFFSET ?";
-    values.push(limit, offset);
-
-    const rows = await dbHelper.executeQuery(query, values);
-    return rows;
+    const values = [user_id, limit, offset];
+    return dbHelper.executeQuery(query, values);
   }
 
   /**
@@ -110,18 +103,23 @@ class Chat {
   }
 
   /**
-   * Delete a chat
-   * @param {String} id ID of the chat
+   * Soft delete a chat by ID
+   * @param {String} id - ID of the chat
    * @returns {Promise<number>} Number of affected rows
    */
   async deleteById(id) {
-    const query = "DELETE FROM chats WHERE id = ?";
+    const query = "UPDATE chats SET is_deleted = TRUE WHERE id = ?";
     const { affectedRows } = await dbHelper.executeQuery(query, [id]);
     return affectedRows;
   }
 
+  /**
+   * Soft delete all chats of a user
+   * @param {String} userId - ID of the user
+   * @returns {Promise<number>} Number of affected rows
+   */
   async deleteByUserId(userId) {
-    let query = "DELETE FROM chats WHERE user_id = ?";
+    const query = "UPDATE chats SET is_deleted = TRUE WHERE user_id = ?";
     const { affectedRows } = await dbHelper.executeQuery(query, [userId]);
     return affectedRows;
   }

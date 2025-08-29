@@ -85,4 +85,5 @@ export const elements = {
   // Non-dynamic chat history elements
   chatHistoryList: document.getElementById("chat-history-list"),
   chatHistoryEmpty: document.getElementById("chat-history-empty"),
+  chatHistoryFail: document.getElementById("chat-history-fail"),
 };
