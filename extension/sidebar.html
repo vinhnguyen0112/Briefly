@@ -289,27 +289,36 @@
           <!-- Note editor (remains the same) -->
           <div id="note-editor" style="display: none">
             <div class="note-editor-header">
-              <h4 id="note-editor-title" data-i18n="editNote">Edit Note</h4>
-              <div class="note-editor-url" id="note-editor-url"></div>
-              <button
-                id="close-editor-button"
-                class="icon-button"
-                data-i18n-title="close"
-                title="Close Editor"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width="16"
-                  height="16"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="2"
+              <div class="note-editor-header-top">
+                <h4 id="note-editor-title" data-i18n="editNote">Add Note</h4>
+                <button
+                  id="close-editor-button"
+                  class="icon-button"
+                  data-i18n-title="close"
+                  title="Close"
                 >
-                  <path d="M18 6L6 18M6 6l12 12" />
-                </svg>
-              </button>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                  >
+                    <path d="M18 6L6 18M6 6l12 12"></path>
+                  </svg>
+                </button>
+              </div>
+              <div
+                class="note-editor-url"
+                id="note-editor-url"
+                title="https://kenh14.vn/anh-dep-sang-nay-cac-chien-si-lam-nhiem-vu-a80-loi-nuoc-day-xe-diu-dan-qua-doan-ngap-sau-o-ha-noi-215250826095449229.chn"
+              >
+                https://kenh14.vn/anh-dep-sang-nay-cac-chien-si-lam-nhiem-vu-a80-loi-nuoc-day-xe-diu-dan-qua-doan-ngap-sau-o-ha-noi-215250826095449229.chn
+              </div>
             </div>
+
             <textarea
               id="note-content"
               data-i18n-placeholder="writeNote"
@@ -411,6 +420,9 @@
             <div id="chat-history-list"></div>
             <div id="chat-history-empty" style="display: none">
               <p data-i18n="noChats">No chat history yet.</p>
+            </div>
+            <div id="chat-history-fail" style="display: none">
+              <p data-i18n="fetchChatHistoryFail">No chat history yet.</p>
             </div>
           </div>
         </div>

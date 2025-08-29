@@ -2,10 +2,6 @@ const { v4: uuidv4 } = require("uuid");
 const Feedback = require("../models/feedback");
 const { loadSql, getConnection } = require("../helpers/dbHelper");
 
-// Load SQLs
-const sqlSelectMessage = loadSql("/feedbacks/select_message_role_chat_id.sql");
-const sqlCheckOwnership = loadSql("/feedbacks/check_user_owns_chat.sql");
-
 /**
  * Submit feedback from an authenticated user for a message.
  * @param {Object} req
@@ -13,6 +9,20 @@ const sqlCheckOwnership = loadSql("/feedbacks/check_user_owns_chat.sql");
  * @param {Function} next
  */
 const submitFeedback = async (req, res, next) => {
+  // sql
+  const sqlSelectMessage = `
+  SELECT m.role, m.chat_id
+  FROM messages m
+  WHERE m.id = ?;
+  `;
+  const sqlCheckOwnership = `
+  SELECT c.id
+  FROM users u
+  JOIN chats c ON u.id = c.user_id
+  WHERE u.id = ?
+    AND c.id = ?;
+  `;
+
   try {
     const id = uuidv4();
     const { message_id, content } = req.body;

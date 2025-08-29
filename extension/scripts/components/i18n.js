@@ -126,6 +126,8 @@ const translations = {
     updating: "Updating",
     creating: "Creating",
     submitting: "Submitting",
+
+    fetchChatHistoryFail: "Cannot load chat history, please try again.",
   },
 
   vi: {
@@ -253,6 +255,9 @@ const translations = {
     updating: "Đang cập nhật",
     creating: "Đang tạo",
     submitting: "Đang gửi",
+
+    fetchChatHistoryFail:
+      "Không thể tải lịch sử trò chuyện, vui lòng thử lại sau.",
   },
 };
 

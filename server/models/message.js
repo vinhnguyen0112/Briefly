@@ -71,7 +71,11 @@ class Message {
    * @returns {Promise<Array>} Array of messages
    */
   async getByChatId(chat_id) {
-    const query = "SELECT * FROM messages WHERE chat_id = ? ORDER BY id ASC";
+    const query = `
+      SELECT * 
+      FROM messages 
+      WHERE chat_id = ? 
+      ORDER BY id ASC`;
     const rows = dbHelper.executeQuery(query, [chat_id]);
     return rows;
   }

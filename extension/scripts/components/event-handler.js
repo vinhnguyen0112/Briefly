@@ -544,10 +544,9 @@ function chatHistoryScrollEventHandler(e) {
 }
 
 /**
- * Fetches chat history for the current page and updates UI.
+ * Fetches chat history for the current page and render the UI
  */
 function fetchChatHistory() {
-  console.log("Fetching chat history");
   state.pagination.isFetching = true;
 
   const { chatHistoryList } = elements;
@@ -561,7 +560,9 @@ function fetchChatHistory() {
     (response) => {
       if (!response || !response.success) {
         console.error("Failed to fetch chat history:", response.error);
+        elements.chatHistoryFail.style.display = "block";
       } else {
+        elements.chatHistoryFail.style.display = "none";
         mergeFetchedChats(response.chats);
         state.pagination.hasMore = response.hasMore;
 
@@ -576,27 +577,19 @@ function fetchChatHistory() {
 
 /**
  * Merges fetched chats into the current chat history state.
+ * If a chat already exists, it's replaced with the fetched one.
  * @param {Array} chats
  */
 function mergeFetchedChats(chats) {
-  const fetchedChats = new Map(
-    chats.map((chat) => [
-      chat.id,
-      {
-        id: chat.id,
-        title: chat.title,
-        page_url: chat.page_url,
-        page_id: chat.page_id,
-        created_at: chat.created_at,
-      },
-    ])
-  );
+  const fetchedChats = new Map(chats.map((chat) => [chat.id, chat]));
   const existingChats = new Map(
     state.chatHistory.map((chat) => [chat.id, chat])
   );
+
   for (const [id, newChat] of fetchedChats.entries()) {
-    existingChats.set(id, newChat);
+    existingChats.set(id, newChat); // overwrite or add
   }
+
   state.chatHistory = Array.from(existingChats.values());
 }
 
@@ -606,12 +599,17 @@ function mergeFetchedChats(chats) {
  */
 function showFetchingChatHistorySpinner(chatHistoryList) {
   if (!chatHistoryList) return;
+
+  // hide any texts
+  elements.chatHistoryEmpty.style.display = "none";
+  elements.chatHistoryFail.style.display = "none";
+
   let spinner = chatHistoryList.querySelector(".chat-history-spinner");
   if (spinner) spinner.remove();
   spinner = document.createElement("div");
   spinner.className = "chat-history-spinner";
   spinner.innerHTML = `
-    <div class="spinner" style="margin: 24px auto;"></div>
+    <div class="spinner" style="margin: 2rem auto;"></div>
     <div style="text-align:center;color:#888;font-size:14px;margin-top:8px;">Fetching chat history...</div>
   `;
   chatHistoryList.appendChild(spinner);
@@ -702,7 +700,7 @@ function createChatHistoryItem(chat) {
       }" target="_blank" rel="noopener noreferrer">
         ${chat.page_url}
       </a>
-      <span class="chat-history-date">${
+      <span class="chat-history-created-at">${
         chat.created_at ? new Date(chat.created_at).toLocaleTimeString() : ""
       }</span>
     </div>
@@ -756,7 +754,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
     return;
   }
 
-  // Prevent spamming
+  // prevent spams
   if (isFetchingChatHistoryItem) return;
   isFetchingChatHistoryItem = true;
 
@@ -770,8 +768,8 @@ async function handleChatHistoryItemClick(e, chat, item) {
   });
 
   if (navigator.onLine) {
-    // Fetch messages and original context if online
     try {
+      // try to get messages
       const fetchMessageResponse = await new Promise((resolve) => {
         chrome.runtime.sendMessage(
           { action: "fetch_chat_messages", chatId: chat.id },
@@ -780,12 +778,12 @@ async function handleChatHistoryItemClick(e, chat, item) {
       });
       messages = fetchMessageResponse.messages || [];
 
-      // Cache in IndexedDB
+      // cache message into indexedDB
       const found = await idbHandler.getChatById(chat.id);
       if (!found) await idbHandler.upsertChat(chat);
       await idbHandler.overwriteChatMessages(chat.id, messages);
 
-      // Get original page content
+      // try to get the original page context
       const getPageResponse = await new Promise((resolve) => {
         chrome.runtime.sendMessage(
           { action: "get_page", page_id: chat.page_id },
@@ -793,7 +791,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
         );
       });
 
-      // Update chatContext state
+      // update chat history context into state
       if (getPageResponse.success && getPageResponse.page) {
         const { page } = getPageResponse;
         chatContext = {
@@ -807,17 +805,12 @@ async function handleChatHistoryItemClick(e, chat, item) {
           extractionSuccess: true,
         };
 
-        // Handle states
+        // tell extension that we are using chat history context
         state.chatContext = chatContext;
         state.isUsingChatContext = true;
-      }
-      // If cant find page metadata, use current page context instead
-      else {
-        console.warn("Failed to fetch page context:", getPageResponse.error);
-        console.warn("Using default chat context");
+      } else {
+        // use current page context instead
         state.isUsingChatContext = false;
-
-        // Let user know that the chat will be continue using current page context
         showPopupAlert({
           title: "Information",
           message:
@@ -834,13 +827,14 @@ async function handleChatHistoryItemClick(e, chat, item) {
     messages = await idbHandler.getMessagesForChat(chat.id);
   }
 
-  // Update UI only after data is fetched
+  // update UI tasks
   clearMessagesFromMessageContainer();
   closeAllScreensAndPanels();
   switchToChat();
   resetSuggestedQuestionsContainer();
-  updateContentStatus(); // this will now pull from the correct context
+  updateContentStatus();
 
+  // add messages to screen
   const history = [];
   for (const message of messages) {
     addMessageToChat({
@@ -851,6 +845,7 @@ async function handleChatHistoryItemClick(e, chat, item) {
     history.push({ role: message.role, content: message.content });
   }
 
+  // update current chat state
   setCurrentChatState({ ...chat, history });
 
   isFetchingChatHistoryItem = false; // Release the lock
