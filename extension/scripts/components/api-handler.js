@@ -118,10 +118,6 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
           response.model,
           tempMessageId
         );
-
-        if (metadata.event === "summarize") {
-          persistPageSummary(assistantMessage);
-        }
       }
 
       return { success: true, message: assistantMessage };
@@ -225,24 +221,6 @@ async function persistChatAndMessages(
   } catch (error) {
     console.error("Failed to persist messages:", error);
   }
-}
-
-/**
- * Persist page summary
- * @param {String} assistantMessage
- */
-async function persistPageSummary(assistantMessage) {
-  const isChatContext = state.isUsingChatContext;
-  const contentSource = isChatContext ? state.chatContext : state.pageContent;
-
-  if (!contentSource) return;
-
-  chrome.runtime.sendMessage({
-    action: "store_page_summary",
-    page_url: contentSource.url,
-    summary: assistantMessage,
-    language: state.language,
-  });
 }
 
 /**

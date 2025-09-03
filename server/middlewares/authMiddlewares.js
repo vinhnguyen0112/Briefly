@@ -2,7 +2,6 @@ const authHelper = require("../helpers/authHelper");
 const { redisHelper } = require("../helpers/redisHelper");
 const Session = require("../models/session");
 const AnonSession = require("../models/anonSession");
-const { generateHash } = require("../helpers/commonHelper");
 const AppError = require("../models/appError");
 const { ERROR_CODES } = require("../errors");
 

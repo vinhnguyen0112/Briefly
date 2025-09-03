@@ -4,7 +4,6 @@ const { ERROR_CODES } = require("../errors");
 let pLimit = require("p-limit");
 const commonHelper = require("../helpers/commonHelper");
 const { redisHelper } = require("../helpers/redisHelper");
-const PageSummary = require("../models/pageSummary");
 const AnonSession = require("../models/anonSession");
 const {
   llmRequestsTotal,
@@ -64,14 +63,13 @@ const handleUserQuery = async (req, res, next) => {
 
     const isAuth = req.sessionType === "auth" && req.session?.id;
 
+    // Check for cached response
     let cachedResponse = null;
     if (isAuth) {
-      // Try to find a cached response first
       cachedResponse = await responseCachingService.searchSimilarResponseCache({
         userId: req.session.user_id,
         pageId: pageMeta.pageId,
         query: messages[messages.length - 1]?.content || "",
-        topK: 3,
       });
     }
 
@@ -82,84 +80,73 @@ const handleUserQuery = async (req, res, next) => {
           message: cachedResponse.response,
           usage: null,
           model: "cached",
-          cache_score: cachedResponse.score,
         },
       });
     }
 
     let assistantMessage;
-    // Get stored summary (fast path for summarize event)
-    if (metadata.event === "summarize") {
-      assistantMessage = await getStoredPageSummary(
-        pageMeta.pageId,
-        metadata.language
-      );
+    let useRag = Boolean(metadata.use_rag);
+
+    // RAG handling
+    if (!useRag && isAuth) {
+      const pageRow = await Page.getById(pageMeta.pageId);
+      const contentLen =
+        (pageRow?.page_content?.length || 0) +
+        (pageRow?.pdf_content?.length || 0);
+      useRag = contentLen > 4000;
     }
 
-    if (!assistantMessage) {
-      let useRag = Boolean(metadata.use_rag);
+    if (useRag && isAuth) {
+      const pageRow = await Page.getById(pageMeta.pageId);
+      if (pageRow) {
+        await ragService.ensurePageIngested({
+          userId: req.session.user_id,
+          pageId: pageMeta.pageId,
+          pageUrl: pageRow.page_url,
+          title: pageRow.title,
+          content: pageRow.page_content,
+          pdfContent: pageRow.pdf_content,
+          language: req.headers["accept-language"] || "",
+        });
 
-      // RAG handling
-      if (!useRag && isAuth) {
-        const pageRow = await Page.getById(pageMeta.pageId);
-        const contentLen =
-          (pageRow?.page_content?.length || 0) +
-          (pageRow?.pdf_content?.length || 0);
-        useRag = contentLen > 4000;
-      }
+        // Find relevant contexts
+        const { docs: contexts } = await ragService.queryPage({
+          userId: req.session.user_id,
+          pageId: pageMeta.pageId,
+          query: messages[messages.length - 1]?.content || "",
+          topK: 6,
+        });
 
-      if (useRag && isAuth) {
-        const pageRow = await Page.getById(pageMeta.pageId);
-        if (pageRow) {
-          await ragService.ensurePageIngested({
-            userId: req.session.user_id,
-            pageId: pageMeta.pageId,
-            pageUrl: pageRow.page_url,
-            title: pageRow.title,
-            content: pageRow.page_content,
-            pdfContent: pageRow.pdf_content,
-            language: req.headers["accept-language"] || "",
-          });
+        const contextBlock = contexts
+          .map((c) => `[#${c.meta.chunk_index}] ${c.text}`)
+          .join("\n\n");
 
-          // Find relevant contexts
-          const { docs: contexts } = await ragService.queryPage({
-            userId: req.session.user_id,
-            pageId: pageMeta.pageId,
-            query: messages[messages.length - 1]?.content || "",
-            topK: 6,
-          });
+        const ragMessages = [
+          messages[0],
+          {
+            role: "system",
+            content: `Context snippets from page ${pageRow.title || ""} (${
+              pageRow.page_url
+            }):\n\n${contextBlock}`,
+          },
+          messages[messages.length - 1],
+        ];
 
-          const contextBlock = contexts
-            .map((c) => `[#${c.meta.chunk_index}] ${c.text}`)
-            .join("\n\n");
-
-          const ragMessages = [
-            messages[0],
-            {
-              role: "system",
-              content: `Context snippets from page ${pageRow.title || ""} (${
-                pageRow.page_url
-              }):\n\n${contextBlock}`,
-            },
-            messages[messages.length - 1],
-          ];
-
-          assistantMessage = await generateAssistantResponse(
-            ragMessages,
-            metadata.max_tokens
-          );
-        }
-      }
-
-      if (!assistantMessage) {
         assistantMessage = await generateAssistantResponse(
-          messages,
+          ragMessages,
           metadata.max_tokens
         );
       }
     }
 
-    // Response caching
+    if (!assistantMessage) {
+      assistantMessage = await generateAssistantResponse(
+        messages,
+        metadata.max_tokens
+      );
+    }
+
+    // Cache response
     if (isAuth) {
       responseCachingService
         .storeResponseCache({
@@ -264,60 +251,6 @@ async function generateAssistantResponse(messages, max_tokens) {
     timer();
     throw err;
   }
-}
-
-/**
- * Try to get cached or stored page summary.
- * Returns null if not found or expired.
- * @param {String} pageId
- * @param {String} language
- * @returns {Promise<{message: string, usage: null, model: string} | null>}
- */
-async function getStoredPageSummary(pageId, language) {
-  // Try to get from Redis
-  const cached = await redisHelper.getPageSummary(pageId, language);
-  if (cached) {
-    console.log("Page summary cache hit");
-    return {
-      message: cached,
-      usage: null,
-      model: "cached",
-    };
-  }
-
-  console.log("Page summary cache missed");
-
-  // Try to get from database
-  const stored = await PageSummary.getByPageIdAndLanguage(pageId, language);
-  console.log("Stored summary: ", stored);
-  if (stored?.summary) {
-    const createdAt = new Date(stored.created_at);
-    const now = Date.now();
-
-    // If not expired
-    if (now - createdAt.getTime() <= FRESHNESS_THRESHOLD) {
-      // Update cache and return
-      await redisHelper.setPageSummary({
-        pageId: stored.page_id,
-        language: stored.language,
-        summary: stored.summary,
-      });
-
-      return {
-        message: stored.summary,
-        usage: null,
-        model: "cached",
-      };
-    }
-
-    // Otherwise, delete expired summary
-    await PageSummary.deleteByPageIdAndLanguage(
-      stored.page_id,
-      stored.language
-    );
-  }
-
-  return null;
 }
 
 /**

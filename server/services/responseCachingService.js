@@ -1,43 +1,37 @@
-const { OpenAI } = require("openai");
-const { v4: uuidv4 } = require("uuid");
-const { qdrantFetch } = require("../clients/qdrantClient");
-
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-
-const COLLECTION_NAME = "capstone2025_response";
+const { redisHelper } = require("../helpers/redisHelper");
+const crypto = require("crypto");
 
 /**
- * Generate embedding for text
- * @param {string} text
- * @returns {Promise<number[]|null>}
+ * Normalize and hash a question string.
+ * @param {string} question
+ * @returns {string} hash
  */
-async function embedQuery(text) {
-  if (!text) return null;
-  const resp = await openai.embeddings.create({
-    model: "text-embedding-3-small",
-    input: [text],
-  });
-  return resp.data[0].embedding;
+function normalizeAndHash(question) {
+  if (!question) return "";
+  const normalized = question.trim().toLowerCase();
+  return crypto.createHash("sha256").update(normalized).digest("hex");
 }
 
 /**
- * Derive tenant_id from user_id + page_id
+ * Compose a Redis key for user/page/question.
  * @param {string|number} userId
  * @param {string|number} pageId
+ * @param {string} question
  */
-function makeTenantId(userId, pageId) {
-  return `${userId}:${pageId}`;
+function makeCacheKey(userId, pageId, question) {
+  const qHash = normalizeAndHash(question);
+  return `${process.env.REDIS_PREFIX}:response:${userId}:${pageId}:${qHash}`;
 }
 
 /**
- * Store a response cache (multi-tenant).
+ * Store a response cache in Redis.
  * @param {Object} params
  * @param {string|number} params.userId
  * @param {string|number} params.pageId
  * @param {string} params.query
  * @param {string} params.response
  * @param {Object} params.metadata
- * @returns {Promise<string>} The cache entry ID
+ * @returns {Promise<void>}
  */
 async function storeResponseCache({
   userId,
@@ -46,104 +40,34 @@ async function storeResponseCache({
   response,
   metadata = {},
 }) {
-  const embedding = await embedQuery(query);
-  const id = uuidv4();
-  const tenantId = makeTenantId(userId, pageId);
-
-  const payload = {
-    tenant_id: tenantId,
-    user_id: userId,
-    page_id: pageId,
-    created_at: new Date().toISOString(),
-    query,
+  const key = makeCacheKey(userId, pageId, query);
+  const value = JSON.stringify({
     response,
-    ...metadata,
-  };
-
-  try {
-    await qdrantFetch(`/collections/${COLLECTION_NAME}/points`, {
-      method: "PUT",
-      body: JSON.stringify({
-        points: [
-          {
-            id,
-            vector: embedding,
-            payload,
-          },
-        ],
-      }),
-    });
-  } catch (err) {
-    console.error(`Failed to store response for tenant ${tenantId}:`, err);
-    throw err;
-  }
-  return id;
+    metadata,
+    created_at: new Date().toISOString(),
+  });
+  await redisHelper.client.set(key, value, { EX: 60 * 60 * 24 });
 }
 
 /**
- * Search for a similar cached response (multi-tenant).
+ * Search for an exact cached response in Redis.
  * @param {Object} params
  * @param {string|number} params.userId
  * @param {string|number} params.pageId
  * @param {string} params.query
- * @param {number} [params.topK]
- * @param {number} [params.similarityThreshold]
- * @returns {Promise<{response: string, score: number, metadata: Object}|null>}
+ * @returns {Promise<{response: string, metadata: Object}|null>}
  */
-async function searchSimilarResponseCache({
-  userId,
-  pageId,
-  query,
-  topK = 3,
-  similarityThreshold = 0.8,
-}) {
-  const embedding = await embedQuery(query);
-  const tenantId = makeTenantId(userId, pageId);
-
-  const filter = {
-    must: [{ key: "tenant_id", match: { value: tenantId } }],
-  };
-
-  try {
-    const result = await qdrantFetch(
-      `/collections/${COLLECTION_NAME}/points/search`,
-      {
-        method: "POST",
-        body: JSON.stringify({
-          vector: embedding,
-          filter,
-          limit: topK,
-          with_payload: true,
-          with_vector: false,
-          score_threshold: similarityThreshold,
-        }),
-      }
-    );
-
-    if (result?.result?.length > 0) {
-      console.log(`Suitable records for tenant ${tenantId}:`);
-      result.result.forEach((r, idx) => {
-        console.log(
-          `  [${idx + 1}] ID=${r.id} | Score=${r.score.toFixed(4)} | Query="${
-            r.payload?.query || "N/A"
-          }"`
-        );
-      });
-
-      const best = result.result[0];
-      return {
-        response: best.payload.response,
-        score: best.score,
-        metadata: best.payload,
-      };
-    } else {
-      console.log(`No suitable cached response found for tenant ${tenantId}`);
-    }
-    return null;
-  } catch (err) {
-    console.error(`Error searching cache for tenant ${tenantId}:`, err);
-    throw err;
+async function searchSimilarResponseCache({ userId, pageId, query }) {
+  const key = makeCacheKey(userId, pageId, query);
+  const value = await redisHelper.client.get(key);
+  if (value) {
+    const parsed = JSON.parse(value);
+    return {
+      response: parsed.response,
+      metadata: parsed.metadata,
+    };
   }
+  return null;
 }
 
 module.exports = {

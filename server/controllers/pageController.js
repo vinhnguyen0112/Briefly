@@ -51,7 +51,6 @@ const createPage = async (req, res, next) => {
     if (!page || isPageExpired(page.updated_at)) {
       expired = !!page; // only true if it existed and is expired
       if (expired) await Page.deleteById(id); // Invalidate old page
-      await redisHelper.deletePageSummaries(id); // Invalidate cached summaries
       page = await Page.create(insertBody);
     }
 

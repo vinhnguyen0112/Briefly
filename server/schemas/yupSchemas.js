@@ -109,12 +109,6 @@ const updatePageSchema = object({
   pdf_content: string().strict().trim().nullable(),
 });
 
-const createPageSummarySchema = object({
-  page_url: string().strict().trim().required(),
-  language: string().strict().trim().oneOf(["en", "vi"]).required(),
-  summary: string().strict().trim().required(),
-});
-
 const createNoteSchema = object({
   page_url: string().strict().trim().required(),
   note: string()
@@ -143,7 +137,6 @@ module.exports = {
   suggestedQuestionSchema,
   createPageSchema,
   updatePageSchema,
-  createPageSummarySchema,
   createNoteSchema,
   updateNoteSchema,
 };

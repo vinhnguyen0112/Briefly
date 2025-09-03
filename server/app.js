@@ -13,13 +13,8 @@ const noteRoutes = require("./routes/noteRoutes");
 const feedbackRoutes = require("./routes/feedbackRoutes");
 const queryRoutes = require("./routes/queryRoutes");
 const pageRoutes = require("./routes/pageRoutes");
-const pageSummaryRoutes = require("./routes/pageSummaryRoutes");
 const healthCheckRoutes = require("./routes/healthCheckRoutes");
 const metricsRoutes = require("./routes/metricsRoutes");
-const {
-  extractClientIp,
-  extractVisitorId,
-} = require("./middlewares/commonMiddlewares");
 const { globalErrorHandler } = require("./middlewares/errorMiddleware");
 
 const app = express();
@@ -41,14 +36,12 @@ if (
 }
 
 // routes
-app.use("/api", extractClientIp, extractVisitorId);
 app.use("/api/auth", authRoutes);
 app.use("/api/anon", anonRoutes);
 app.use("/api/chats", chatRoutes);
 app.use("/api/feedback", feedbackRoutes);
 app.use("/api/query", queryRoutes);
 app.use("/api/pages", pageRoutes);
-app.use("/api/page-summaries", pageSummaryRoutes);
 app.use("/status", healthCheckRoutes);
 app.use("/api/notes", noteRoutes);
 
