@@ -70,6 +70,7 @@ const handleUserQuery = async (req, res, next) => {
         userId: req.session.user_id,
         pageId: pageMeta.pageId,
         query: messages[messages.length - 1]?.content || "",
+        language: metadata.language,
       });
     }
 
@@ -154,10 +155,7 @@ const handleUserQuery = async (req, res, next) => {
           pageId: pageMeta.pageId,
           query: messages[messages.length - 1]?.content || "",
           response: assistantMessage.message,
-          metadata: {
-            normalized_page_url: pageMeta.normalizedPageUrl,
-            language: metadata.language,
-          },
+          metadata,
         })
         .catch((err) => {
           console.warn("Cache store error:", err);

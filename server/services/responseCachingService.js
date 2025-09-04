@@ -13,14 +13,16 @@ function normalizeAndHash(question) {
 }
 
 /**
- * Compose a Redis key for user/page/question.
+ * Compose a Redis key for user/page/question/language.
  * @param {string|number} userId
  * @param {string|number} pageId
  * @param {string} question
+ * @param {string} language
  */
-function makeCacheKey(userId, pageId, question) {
+function makeCacheKey(userId, pageId, question, language = "en") {
   const qHash = normalizeAndHash(question);
-  return `${process.env.REDIS_PREFIX}:response:${userId}:${pageId}:${qHash}`;
+  const lang = (language || "en").toLowerCase();
+  return `${process.env.REDIS_PREFIX}:response:${userId}:${pageId}:${qHash}:${lang}`;
 }
 
 /**
@@ -40,7 +42,7 @@ async function storeResponseCache({
   response,
   metadata = {},
 }) {
-  const key = makeCacheKey(userId, pageId, query);
+  const key = makeCacheKey(userId, pageId, query, metadata.language ?? "en");
   const value = JSON.stringify({
     response,
     metadata,
@@ -55,10 +57,16 @@ async function storeResponseCache({
  * @param {string|number} params.userId
  * @param {string|number} params.pageId
  * @param {string} params.query
+ * @param {string} params.language
  * @returns {Promise<{response: string, metadata: Object}|null>}
  */
-async function searchSimilarResponseCache({ userId, pageId, query }) {
-  const key = makeCacheKey(userId, pageId, query);
+async function searchSimilarResponseCache({
+  userId,
+  pageId,
+  query,
+  language = "en",
+}) {
+  const key = makeCacheKey(userId, pageId, query, language);
   const value = await redisHelper.client.get(key);
   if (value) {
     const parsed = JSON.parse(value);
