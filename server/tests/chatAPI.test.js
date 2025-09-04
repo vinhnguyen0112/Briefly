@@ -3,11 +3,15 @@ const jestVariables = require("./jestVariables");
 const { ERROR_CODES } = require("../errors");
 const app = require("../app");
 const { redisHelper } = require("../helpers/redisHelper");
-const { v4: uuiv4 } = require("uuid");
 const Chat = require("../models/chat");
-const commonHelper = require("../helpers/commonHelper");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
+const pageUrl = "https://www.example.com/";
+const createPageBody = {
+  page_url: pageUrl,
+  title: "Sample Page",
+  page_content: "Sample page content",
+};
 
 beforeAll(async () => {
   await redisHelper.client.connect();
@@ -19,7 +23,19 @@ afterAll(async () => {
 
 describe("POST /chats", () => {
   const chatTitle = "Example Chat";
-  const pageUrl = "https://www.example.com/";
+  let pageId;
+
+  beforeAll(async () => {
+    // Create a test page first
+    await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send(createPageBody)
+      .expect(200)
+      .then((response) => {
+        pageId = response.body.data.id;
+      });
+  });
 
   it("Should create a new chat if all parameters are correctly provided", async () => {
     await supertest(app)
@@ -94,7 +110,7 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if missing 'page_url'", async () => {
+  it("Should fail if missing 'page_id'", async () => {
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
@@ -108,13 +124,13 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if page's url is an invalid url", async () => {
+  it("Should fail if page url is invalid", async () => {
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
       .send({
         title: chatTitle,
-        page_url: "invalid page url",
+        page_url: "invalid url",
       })
       .expect(400)
       .then((response) => {
@@ -125,13 +141,13 @@ describe("POST /chats", () => {
       });
   });
 
-  it("Should fail if page's url is not a string", async () => {
+  it("Should fail if page_id is not a string", async () => {
     await supertest(app)
       .post("/api/chats")
       .set("Authorization", authHeader)
       .send({
         title: chatTitle,
-        page_url: 123456,
+        page_id: 123456,
       })
       .expect(400)
       .then((response) => {
@@ -144,16 +160,30 @@ describe("POST /chats", () => {
 });
 
 describe("GET /chats", () => {
+  let testPageIds = [];
+
   beforeAll(async () => {
-    const chats = [];
-    const count = 30;
-    for (let i = 0; i < count; i++) {
+    // Create test pages first
+    const pages = [];
+    for (let i = 0; i < 30; i++) {
       const pageUrl = `https://example.com/page${i + 1}`;
+      await supertest(app)
+        .post("/api/pages")
+        .set("Authorization", authHeader)
+        .send(createPageBody)
+        .expect(200)
+        .then((response) => {
+          testPageIds.push(response.body.data.id);
+        });
+    }
+
+    // Now create chats using the page IDs
+    const chats = [];
+    for (let i = 0; i < 30; i++) {
       chats.push({
         id: crypto.randomUUID(),
         user_id: jestVariables.userId,
-        page_id: commonHelper.generateHash(pageUrl),
-        page_url: pageUrl,
+        page_id: testPageIds[i],
         title: `Test Chat #${i + 1}`,
       });
     }
@@ -271,10 +301,21 @@ describe("GET /chats", () => {
 
 describe("GET /chats/:id", () => {
   let chatId;
+  let pageId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com/";
 
   beforeAll(async () => {
+    // Create a test page first
+    await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send(createPageBody)
+      .expect(200)
+      .then((response) => {
+        pageId = response.body.data.id;
+      });
+
     // Add a chat
     await supertest(app)
       .post(`/api/chats/`)
@@ -316,10 +357,21 @@ describe("GET /chats/:id", () => {
 
 describe("PUT /chats/:id", () => {
   let chatId;
+  let pageId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com";
 
   beforeAll(async () => {
+    // Create a test page first
+    await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send(createPageBody)
+      .expect(200)
+      .then((response) => {
+        pageId = response.body.data.id;
+      });
+
     // Add a chat
     await supertest(app)
       .post(`/api/chats/`)
@@ -433,10 +485,21 @@ describe("PUT /chats/:id", () => {
 
 describe("DELETE /chats/:id", () => {
   let chatId;
+  let pageId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com";
 
   beforeAll(async () => {
+    // Create a test page first
+    await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send(createPageBody)
+      .expect(200)
+      .then((response) => {
+        pageId = response.body.data.id;
+      });
+
     // Add a chat
     await supertest(app)
       .post(`/api/chats/`)
@@ -479,6 +542,8 @@ describe("DELETE /chats/:id", () => {
 });
 
 describe("DELETE /chats (all user chats)", () => {
+  let testPageIds = [];
+
   beforeAll(async () => {
     const createChatInDB = async (chat) => {
       await supertest(app)
@@ -493,7 +558,7 @@ describe("DELETE /chats (all user chats)", () => {
       promises.push(
         createChatInDB({
           title: "Example Chat",
-          pageUrl: "https://www.example.com",
+          pageUrl: `https://www.example-${i}.com`,
         })
       );
     }
@@ -501,7 +566,7 @@ describe("DELETE /chats (all user chats)", () => {
     await Promise.all(promises);
   });
 
-  it("Should sucesfully deleted all user's chats", async () => {
+  it("Should successfully delete all user's chats", async () => {
     await supertest(app)
       .delete("/api/chats")
       .set("Authorization", authHeader)
@@ -517,14 +582,25 @@ describe("DELETE /chats (all user chats)", () => {
 
 describe("POST /chats/:chat_id/messages", () => {
   let chatId;
+  let pageId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com";
 
   beforeAll(async () => {
+    // Create a test page first
+    await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send(createPageBody)
+      .expect(200)
+      .then((response) => {
+        pageId = response.body.data.id;
+      });
+
     await supertest(app)
       .post(`/api/chats/`)
       .set("Authorization", authHeader)
-      .send({ id: chatId, page_url: pageUrl, title: chatTitle })
+      .send({ page_url: pageUrl, title: chatTitle })
       .expect(200)
       .then((response) => {
         expect(response.body).toHaveProperty("success", true);
@@ -699,10 +775,21 @@ describe("POST /chats/:chat_id/messages", () => {
 
 describe("GET /chats/:chat_id/messages", () => {
   let chatId;
+  let pageId;
   const chatTitle = "Example Chat";
   const pageUrl = "https://www.example.com";
 
   beforeAll(async () => {
+    // Create a test page first
+    await supertest(app)
+      .post("/api/pages")
+      .set("Authorization", authHeader)
+      .send(createPageBody)
+      .expect(200)
+      .then((response) => {
+        pageId = response.body.data.id;
+      });
+
     // Add a chat
     await supertest(app)
       .post(`/api/chats/`)

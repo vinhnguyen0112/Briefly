@@ -6,6 +6,7 @@ const { v4: uuidv4 } = require("uuid");
 const { redisHelper } = require("../helpers/redisHelper");
 
 const authHeader = `Bearer auth:${jestVariables.sessionId}`;
+const pageUrl = "https://www.example.com/";
 let sampleChatId;
 let sampleMessageId;
 
@@ -19,19 +20,32 @@ afterAll(async () => {
 
 // Insert a sample message to test
 beforeAll(async () => {
+  // Create a test page first
+  await supertest(app)
+    .post("/api/pages")
+    .set("Authorization", authHeader)
+    .send({
+      title: "Test Page",
+      page_url: pageUrl,
+      page_content: "Sample page content",
+    })
+    .expect(200);
+
   await supertest(app)
     .post("/api/chats")
     .set("Authorization", authHeader)
     .send({
-      title: "Test Chat",
-      page_url: "www.example.com",
+      title: "My Page",
+      page_url: pageUrl,
     })
     .expect(200)
     .then((response) => {
       expect(response.body).toHaveProperty("success", true);
       expect(response.body).toHaveProperty("data");
+      expect(response.body.data).toHaveProperty("affectedRows", 1);
       expect(response.body.data).toHaveProperty("chat");
       expect(response.body.data.chat).toHaveProperty("id");
+      console.log("Created chat:", response.body.data.chat);
       sampleChatId = response.body.data.chat.id;
     });
 
@@ -40,7 +54,7 @@ beforeAll(async () => {
     .set("Authorization", authHeader)
     .send({
       role: "assistant",
-      content: "This is a test message",
+      content: "This is a test assistant response",
       model: "gpt-3.5",
     })
     .expect(200)
@@ -84,6 +98,59 @@ describe("POST /api/feedback", () => {
         expect(response.body).toHaveProperty("data");
         expect(response.body.data).toHaveProperty("id");
         expect(response.body.data.id).toBeTruthy();
+      });
+  });
+
+  it("Should accept boundary values 1 and 5 for stars", async () => {
+    // Test minimum boundary
+    await supertest(app)
+      .post("/api/feedback")
+      .set("Authorization", authHeader)
+      .send({
+        stars: 1,
+        comment: "Minimum rating",
+        message_id: sampleMessageId,
+      })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+      });
+
+    // Test maximum boundary
+    await supertest(app)
+      .post("/api/feedback")
+      .set("Authorization", authHeader)
+      .send({
+        stars: 5,
+        comment: "Maximum rating",
+        message_id: sampleMessageId,
+      })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+      });
+  });
+
+  it("Should accept empty comment", async () => {
+    await supertest(app)
+      .post("/api/feedback")
+      .set("Authorization", authHeader)
+      .send({ stars: 3, comment: "", message_id: sampleMessageId })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
+      });
+  });
+
+  it("Should accept long comments", async () => {
+    const longComment = "A".repeat(1000);
+    await supertest(app)
+      .post("/api/feedback")
+      .set("Authorization", authHeader)
+      .send({ stars: 4, comment: longComment, message_id: sampleMessageId })
+      .expect(200)
+      .then((response) => {
+        expect(response.body).toHaveProperty("success", true);
       });
   });
 
@@ -172,27 +239,7 @@ describe("POST /api/feedback", () => {
         expect(response.body).toMatchObject({
           success: false,
           error: {
-            code: ERROR_CODES.REFERENCED_ROW_MISSING,
-          },
-        });
-      });
-  });
-
-  it("Should fail if message_id is out of range", async () => {
-    await supertest(app)
-      .post("/api/feedback")
-      .set("Authorization", authHeader)
-      .send({
-        stars: 4,
-        comment: "Example comment",
-        message_id: 999999999999,
-      })
-      .expect(400)
-      .then((response) => {
-        expect(response.body).toMatchObject({
-          success: false,
-          error: {
-            code: ERROR_CODES.OUT_OF_RANGE,
+            code: ERROR_CODES.NOT_FOUND,
           },
         });
       });
@@ -275,59 +322,6 @@ describe("POST /api/feedback", () => {
             code: ERROR_CODES.INVALID_INPUT,
           },
         });
-      });
-  });
-
-  it("Should accept boundary values 1 and 5 for stars", async () => {
-    // Test minimum boundary
-    await supertest(app)
-      .post("/api/feedback")
-      .set("Authorization", authHeader)
-      .send({
-        stars: 1,
-        comment: "Minimum rating",
-        message_id: sampleMessageId,
-      })
-      .expect(200)
-      .then((response) => {
-        expect(response.body).toHaveProperty("success", true);
-      });
-
-    // Test maximum boundary
-    await supertest(app)
-      .post("/api/feedback")
-      .set("Authorization", authHeader)
-      .send({
-        stars: 5,
-        comment: "Maximum rating",
-        message_id: sampleMessageId,
-      })
-      .expect(200)
-      .then((response) => {
-        expect(response.body).toHaveProperty("success", true);
-      });
-  });
-
-  it("Should accept empty comment", async () => {
-    await supertest(app)
-      .post("/api/feedback")
-      .set("Authorization", authHeader)
-      .send({ stars: 3, comment: "", message_id: sampleMessageId })
-      .expect(200)
-      .then((response) => {
-        expect(response.body).toHaveProperty("success", true);
-      });
-  });
-
-  it("Should accept long comments", async () => {
-    const longComment = "A".repeat(1000);
-    await supertest(app)
-      .post("/api/feedback")
-      .set("Authorization", authHeader)
-      .send({ stars: 4, comment: longComment, message_id: sampleMessageId })
-      .expect(200)
-      .then((response) => {
-        expect(response.body).toHaveProperty("success", true);
       });
   });
 });

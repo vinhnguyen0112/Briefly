@@ -36,7 +36,6 @@ const createChat = async (req, res, next) => {
     const chat = {
       id: chatId,
       user_id: req.session.user_id,
-      page_url: normalizedPageUrl,
       page_id: pageId,
       title,
     };
@@ -207,7 +206,7 @@ const addMessage = async (req, res, next) => {
     const id = await Message.create({ chat_id, ...req.body });
     res.json({
       success: true,
-      message: "Chat added successfully",
+      message: "Message added successfully",
       data: {
         id,
       },
