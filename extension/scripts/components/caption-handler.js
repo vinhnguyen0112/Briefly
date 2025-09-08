@@ -108,11 +108,6 @@ async function callCaptionApi(images, content) {
     if (data.success && data.data && Array.isArray(data.data.captions)) {
       return data.data.captions;
     }
-
-    const data = await response.json();
-    return Array.isArray(data.captions)
-      ? data.captions
-      : images.map(() => null);
   } catch (error) {
     return images.map(() => null);
   }
