@@ -813,69 +813,6 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
 
-  /page-summaries:
-    post:
-      summary: Create a page summary
-      description: >
-        Creates and stores a summary for a specific page URL in a given language.
-        The page URL is normalized and a page ID is generated based on the URL hash.
-        The summary is also cached in Redis for faster retrieval.
-      tags:
-        - Page Summary
-      security:
-        - bearerAuth: []
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/CreatePageSummaryRequest"
-            example:
-              page_url: "https://example.com/article"
-              language: "en"
-              summary: "This article discusses the latest developments in artificial intelligence and machine learning technologies."
-      responses:
-        "200":
-          description: Page summary created successfully
-          content:
-            application/json:
-              schema:
-                type: object
-                properties:
-                  success:
-                    type: boolean
-                  message:
-                    type: string
-                  data:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        description: Generated ID for the page summary record
-              example:
-                success: true
-                message: "Page summary saved successfully"
-                data:
-                  id: "abc123def456"
-        "400":
-          description: Invalid input - missing required fields or validation errors
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "401":
-          description: Unauthorized or invalid session
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-        "500":
-          description: Internal server error
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse"
-
   /query/ask:
     post:
       summary: Handle user query with AI assistant
@@ -1459,30 +1396,6 @@ components:
           type: string
           format: date-time
 
-    PageSummary:
-      type: object
-      properties:
-        id:
-          type: string
-          description: Unique identifier for the page summary
-        page_id:
-          type: string
-          description: Generated hash ID based on normalized page URL
-        language:
-          type: string
-          description: Language code for the summary
-        summary:
-          type: string
-          description: Summary content
-        created_at:
-          type: string
-          format: date-time
-          description: Timestamp when the summary was created
-        updated_at:
-          type: string
-          format: date-time
-          description: Timestamp when the summary was last updated
-
     CreateChatRequest:
       type: object
       required:
@@ -1559,27 +1472,6 @@ components:
         pdf_content:
           type: string
           description: New PDF content (with metadata prepended)
-
-    CreatePageSummaryRequest:
-      type: object
-      required:
-        - page_url
-        - language
-        - summary
-      properties:
-        page_url:
-          type: string
-          format: uri
-          description: URL of the page to create summary for
-        language:
-          type: string
-          description: Language code for the summary (e.g., "en", "vi")
-          minLength: 2
-          maxLength: 5
-        summary:
-          type: string
-          description: Summary content for the page
-          minLength: 1
 
     QueryRequest:
       type: object
