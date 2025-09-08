@@ -1,5 +1,165 @@
 const DB_NAME = "briefly_db";
 const DB_VERSION = 1;
+const MAX_CAPTIONS_PER_STORE = 100;
+
+async function trimCaptionsIfNeeded(db) {
+  return new Promise((resolve, reject) => {
+    try {
+      const tx = db.transaction("captions", "readwrite");
+      const store = tx.objectStore("captions");
+
+      const countReq = store.count();
+      countReq.onsuccess = () => {
+        const count = countReq.result || 0;
+        if (count <= MAX_CAPTIONS_PER_STORE) return resolve();
+
+        const needDelete = count - MAX_CAPTIONS_PER_STORE;
+        const index = store.index("created_at");
+        let deleted = 0;
+
+        index.openCursor().onsuccess = (e) => {
+          const cursor = e.target.result;
+          if (cursor && deleted < needDelete) {
+            store.delete(cursor.primaryKey);
+            deleted++;
+            cursor.continue();
+          } else {
+            resolve();
+          }
+        };
+      };
+      countReq.onerror = (e) => reject(e.target.error);
+    } catch (err) {
+      reject(err);
+    }
+  });
+}
+
+/**
+ * Get all image captions for a given page_url
+ * @param {string} page_url
+ * @returns {Promise<Array<{img_url: string, caption: string}>>}
+ */
+async function getCaptionsByPage(page_url) {
+  const { db } = await openIndexedDB();
+  const normPage = processUrl(page_url);
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("captions", "readonly");
+    const store = tx.objectStore("captions");
+    const index = store.index("page_url");
+    const captions = [];
+    const req = index.openCursor(IDBKeyRange.only(normPage));
+    req.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        captions.push({
+          img_url: cursor.value.img_url,
+          caption: cursor.value.caption,
+        });
+        cursor.continue();
+      } else {
+        resolve(captions);
+      }
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function getCaptionByPageAndImageUrl(page_url, img_url) {
+  const { db } = await openIndexedDB();
+
+  const normImg = normalizeImageUrl(img_url);
+  const normPage = processUrl(page_url);
+  const id = await generateId(normPage, normImg);
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("captions", "readonly");
+    const store = tx.objectStore("captions");
+    const req = store.get(id);
+    req.onsuccess = (e) => resolve(e.target.result || null);
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+/**
+ * Batch-gets captions from IndexedDB for given page + images.
+ */
+async function getCaptionsByPageAndImageUrls(page_url, img_urls = []) {
+  const map = new Map();
+  if (!Array.isArray(img_urls) || img_urls.length === 0) return map;
+
+  const { db } = await openIndexedDB();
+  const normPage = processUrl(page_url);
+
+  const normPairs = await Promise.all(
+    img_urls.map(async (raw) => {
+      const normImg = normalizeImageUrl(raw);
+      const id = await generateId(normPage, normImg);
+      return { raw, id };
+    })
+  );
+
+  return new Promise((resolve) => {
+    const tx = db.transaction("captions", "readonly");
+    const store = tx.objectStore("captions");
+
+    normPairs.forEach(({ raw, id }) => {
+      const req = store.get(id);
+      req.onsuccess = (e) => {
+        const val = e.target.result;
+        if (val) map.set(raw, val);
+      };
+      // ignore errors, just skip
+    });
+
+    tx.oncomplete = () => resolve(map);
+    tx.onerror = () => resolve(map);
+  });
+}
+
+/**
+ * Save a caption entry to IndexedDB
+ * @param {Object} params
+ * @param {string} params.img_url
+ * @param {string} params.page_url
+ * @param {string} params.caption
+ * @returns {Promise<void>}
+ */
+async function saveCaption({ img_url, page_url, caption }) {
+  const { db } = await openIndexedDB();
+
+  const normImg = normalizeImageUrl(img_url);
+  const normPage = processUrl(page_url);
+  const id = await generateId(normPage, normImg);
+
+  const entry = {
+    id,
+    page_url: normPage,
+    img_url: normImg,
+    caption,
+    created_at: new Date(),
+  };
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("captions", "readwrite");
+    const store = tx.objectStore("captions");
+    const req = store.put(entry);
+    req.onsuccess = async () => {
+      try {
+        await trimCaptionsIfNeeded(db);
+        resolve();
+      } catch (err) {
+        console.warn("[IDB] trim failed (ignored):", err);
+        resolve();
+      }
+    };
+    req.onerror = (e) => {
+      console.error("[IDB] error saving caption:", e.target.error);
+      reject(e.target.error);
+    };
+  });
+}
 
 /**
  * Opens the IndexedDB and sets up object stores.
@@ -384,6 +544,9 @@ const idbHandler = {
   deleteChatById,
   getMessagesForChat,
   clearChats,
+  getCaptionByPageAndImageUrl,
+  getCaptionsByPageAndImageUrls,
+  getCaptionsByPage,
 };
 
 export default idbHandler;

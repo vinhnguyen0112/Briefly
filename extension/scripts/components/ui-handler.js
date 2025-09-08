@@ -779,6 +779,7 @@ export function handleContentMessage(message) {
       console.log("Auth state changed event received, updating UI!");
       handleAuthStateChange(message.isAuth);
       break;
+
     case "session_expired":
       showPopupDialog({
         title: "Session Expired",
@@ -786,11 +787,23 @@ export function handleContentMessage(message) {
           "Your session has expired and you have been signed out for security reasons",
       });
       break;
+
     case "anon_query_limit_reached":
       showSignInAlertPopup();
       break;
+
     case "sign_in_required":
       showSignInAlertPopup();
+      break;
+
+    case "image_processing_done":
+      const { success } = message;
+      if (success) {
+        console.log("Image processing done");
+        state.pageContent.imagesProcessing = false;
+      } else {
+        console.error("Image processing failed");
+      }
       break;
   }
 }

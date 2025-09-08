@@ -3,6 +3,7 @@ import {
   saveStoredPageUrl,
   saveUserSession,
   sendRequest,
+  state,
 } from "./components/state.js";
 import {
   authenticateWithFacebook,
@@ -748,17 +749,62 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   }
 
   if (message.action === "process_images") {
-    resetProcessedImages();
-    handleCaptionImages(message.images, message.content)
-      .then((captions) => {
-        chrome.tabs.sendMessage(sender.tab.id, {
-          action: "caption_results",
-          captions: captions,
+    getUserSession().then((session) => {
+      if (!session || !session.id) {
+        return sendResponse({
+          success: false,
+          error: { message: "Unauthorized" },
         });
-      })
-      .catch((error) => {
-        console.error("Failed to handle captions", error);
-      });
+      }
+
+      const tabId = sender.tab?.id;
+      const pageUrl = message.page_url || sender?.tab?.url || "";
+      if (!tabId) {
+        console.warn("[Background] Missing tabId for process_images");
+        return;
+      }
+
+      handleCaptionImages(message.images, message.content, pageUrl)
+        .then((captions) => {
+          if (captions.length > 0) {
+            // Cache captions
+            for (const captionObj of captions) {
+              idbHandler
+                .saveCaption({
+                  img_url: captionObj.src,
+                  page_url: pageUrl,
+                  caption: captionObj.caption,
+                })
+                .catch((err) => {
+                  console.error("[Background] Failed to save caption:", err);
+                });
+            }
+          }
+
+          // Notify original tab of results
+          chrome.tabs.sendMessage(tabId, {
+            action: "image_processing_done",
+            success: true,
+            page_url: pageUrl,
+            captions,
+          });
+        })
+        .catch((error) => {
+          console.error(
+            `[Background] Tab ${tabId}: Failed to handle captions`,
+            error
+          );
+
+          // Notify original tab about failure
+          chrome.tabs.sendMessage(tabId, {
+            action: "image_processing_done",
+            success: false,
+            page_url: pageUrl,
+            error: error.message || String(error),
+          });
+        });
+    });
+
     return true;
   }
 

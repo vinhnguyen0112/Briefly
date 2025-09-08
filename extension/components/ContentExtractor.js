@@ -284,6 +284,10 @@ async function detectPDF() {
   window.COCBOT_CONTENT_EXTRACTOR_READY = true;
 })();
 
+// ---------------- INTEGRATED CONTENT & IMAGE EXTRACTION ----------------
+
+const MAX_IMAGES_PER_PAGE = 5; // Limit to 5 images per page
+
 // The main show - pull content from the page
 function extractPageContent() {
   console.log("CocBot: Starting content extraction");
@@ -412,11 +416,23 @@ function extractPageContent() {
       ...pageMetadata,
       content: mainContent,
       structuredData: structuredData,
-      captions: collectedCaptions,
+      captions: [], // Empty initially
       extractionSuccess: true,
     };
 
-    console.log("CocBot: Content extraction complete");
+    console.log(
+      `Found ${foundImages.length} images for processing`,
+      foundImages
+    );
+
+    // Send images for captioning if found (async, non-blocking)
+    if (foundImages.length > 0) {
+      chrome.runtime.sendMessage({
+        action: "process_images",
+        images: foundImages,
+        content: mainContent,
+      });
+    }
     return result;
   } catch (error) {
     console.error("CocBot: Content extraction error:", error);
@@ -430,82 +446,41 @@ function extractPageContent() {
       timestamp: new Date().toISOString(),
       extractionSuccess: false,
       error: error.message,
+      captions: [],
+      imagesProcessing: false,
+      page_url: window.location.href,
     };
   }
 }
 
-// ---------------- IMAGE EXTRACTION + AUTO SEND LOOP ----------------
+// Helper function to check if element has substantial content
+function hasSubstantialContent(element) {
+  const text = element.innerText || "";
+  const wordCount = text.trim().split(/\s+/).length;
 
-const sentImages = new Set();
-let totalImagesSent = 0;
-const MAX_IMAGES_PER_PAGE = 10;
-let contentContext = null;
+  // Consider substantial if:
+  // - Has more than 50 words, OR
+  // - Has multiple paragraphs/headings, OR
+  // - Contains article-like structure
+  const hasEnoughWords = wordCount > 50;
+  const hasMultipleParagraphs = element.querySelectorAll("p").length > 2;
+  const hasHeadings = element.querySelectorAll("h1,h2,h3,h4,h5,h6").length > 0;
+  const hasLists = element.querySelectorAll("ul, ol").length > 0;
 
-function isSupportedImageFormat(src) {
-  if (!src || src.startsWith("data:image")) return false;
-  try {
-    const ext = new URL(src).pathname.split(".").pop().toLowerCase();
-    return ["jpg", "jpeg", "png"].includes(ext);
-  } catch {
-    return false;
-  }
+  return hasEnoughWords || hasMultipleParagraphs || hasHeadings || hasLists;
 }
 
-function isLogoOrIcon(img, src) {
-  const width = img.naturalWidth || img.width;
-  const height = img.naturalHeight || img.height;
-  const isSmall = width < 300 || height < 300;
-  const isLogoFile = /\.(svg|logo)/i.test(src || "");
-  return isSmall || isLogoFile;
-}
+/**
+ * Extract image urls from HTML containers
+ * @param {Array<HTMLElement>} containers
+ * @returns {Array<string>}
+ */
+function extractImagesFromMeaningfulContainers(containers) {
+  if (!containers || containers.length === 0) return [];
 
-function extractAllImageSources() {
-  const mainSelectors = [
-    "article",
-    "main",
-    ".content",
-    ".article-feed",
-    ".article",
-    ".post",
-    ".post-content",
-    ".entry-content",
-    ".page-content",
-    ".main-content",
-    "#content",
-    "#main",
-    "#article",
-    "#post",
-  ];
+  const foundImages = [];
+  const imageSet = new Set();
 
-  const excludedContainers = [
-    "header",
-    "footer",
-    "aside",
-    ".sidebar",
-    "#sidebar",
-    ".nav",
-    "#nav",
-    ".related-posts",
-    ".widget",
-  ];
-
-  const containers = [];
-
-  for (const selector of mainSelectors) {
-    const foundList = document.querySelectorAll(selector);
-    for (const found of foundList) {
-      if (isVisible(found)) {
-        containers.push(found);
-      }
-    }
-  }
-
-  if (containers.length === 0) {
-    console.log("No visible main content containers found, using <body>");
-    containers.push(document.body);
-  }
-
-  const images = new Set();
   for (const container of containers) {
     const foundImages = container.querySelectorAll("img");
     for (const img of foundImages) {

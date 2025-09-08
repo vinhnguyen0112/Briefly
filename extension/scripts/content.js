@@ -228,18 +228,21 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     sendResponse({ success: true });
-  } else if (message.action === "caption_results") {
-    const captions = message.captions.filter((c) => c && c.trim() !== "");
-    if (captions.length === 0) return;
+  } else if (message.action === "image_processing_done") {
+    if (message.page_url && message.page_url !== location.href) {
+      console.warn("Mismatch captions for page url:", message.page_url);
+      return;
+    }
 
-    collectedCaptions = collectedCaptions.concat(captions);
-
-    if (lastExtractedContent) {
-      lastExtractedContent.captions = collectedCaptions;
-      sendToSidebar(lastExtractedContent);
-    } else {
-      const pageContent = extractAndCachePageContent();
-      sendToSidebar(pageContent);
+    const iframe = document.getElementById("isal-sidebar-iframe");
+    if (iframe) {
+      iframe.contentWindow.postMessage(
+        {
+          action: "image_processing_done",
+          success: message.success,
+        },
+        "*"
+      );
     }
   } else if (message.action === "auth_session_changed") {
     const iframe = document.getElementById("isal-sidebar-iframe");
