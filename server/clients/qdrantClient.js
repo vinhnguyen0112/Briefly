@@ -23,16 +23,21 @@ async function qdrantFetch(path, options = {}) {
  * @param {number} vectorSize
  * @param {boolean} enableBinaryQuantization
  */
-async function ensureCollection(collectionName, vectorSize = 1536, enableBinaryQuantization = false) {
+async function ensureCollection(
+  collectionName,
+  vectorSize = 1536,
+  enableBinaryQuantization = false
+) {
   try {
     await qdrantFetch(`/collections/${collectionName}`);
     console.log(`Collection "${collectionName}" already exists.`);
   } catch (err) {
     // More robust error detection for collection not found
-    const isNotFound = err.message?.includes("404") || 
-                      err.status === 404 || 
-                      (err.response && err.response.status === 404);
-    
+    const isNotFound =
+      err.message?.includes("404") ||
+      err.status === 404 ||
+      (err.response && err.response.status === 404);
+
     if (isNotFound) {
       console.log(`Collection "${collectionName}" not found, creating...`);
 
@@ -51,7 +56,9 @@ async function ensureCollection(collectionName, vectorSize = 1536, enableBinaryQ
             rescore: true, // Enable automatic rescoring for better accuracy
           },
         };
-        console.log("Binary quantization enabled for collection with automatic rescoring");
+        console.log(
+          "Binary quantization enabled for collection with automatic rescoring"
+        );
       }
 
       // Create collection with multi-tenancy HNSW config
@@ -107,23 +114,38 @@ async function ensureCollection(collectionName, vectorSize = 1536, enableBinaryQ
 async function initializeCapstoneCollections(vectorSize = 1536) {
   // Validate inputs
   if (!vectorSize || vectorSize <= 0 || vectorSize > 65536) {
-    throw new Error(`Invalid vector size: ${vectorSize}. Must be between 1 and 65536.`);
+    throw new Error(
+      `Invalid vector size: ${vectorSize}. Must be between 1 and 65536.`
+    );
   }
-  
+
   // Safe environment variable parsing
   const binaryQuantEnv = process.env.QDRANT_ENABLE_BINARY_QUANTIZATION;
-  const enableBinaryQuantization = binaryQuantEnv === 'true';
-  
-  if (binaryQuantEnv && binaryQuantEnv !== 'true' && binaryQuantEnv !== 'false') {
-    console.warn(`Invalid QDRANT_ENABLE_BINARY_QUANTIZATION value: "${binaryQuantEnv}". Using default: false`);
+  const enableBinaryQuantization = binaryQuantEnv === "true";
+
+  if (
+    binaryQuantEnv &&
+    binaryQuantEnv !== "true" &&
+    binaryQuantEnv !== "false"
+  ) {
+    console.warn(
+      `Invalid QDRANT_ENABLE_BINARY_QUANTIZATION value: "${binaryQuantEnv}". Using default: false`
+    );
   }
-  
+
   try {
-    await ensureCollection("capstone2025_response", vectorSize, enableBinaryQuantization);
-    await ensureCollection("capstone2025_page", vectorSize, enableBinaryQuantization);
-    
+    // Temporarily disable response collection, response caching will be done via Redis
+    // await ensureCollection("capstone2025_response", vectorSize, enableBinaryQuantization);
+    await ensureCollection(
+      "capstone2025_page",
+      vectorSize,
+      enableBinaryQuantization
+    );
+
     if (enableBinaryQuantization) {
-      console.log("All collections initialized with binary quantization enabled");
+      console.log(
+        "All collections initialized with binary quantization enabled"
+      );
     } else {
       console.log("All collections initialized with standard configuration");
     }
