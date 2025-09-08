@@ -286,7 +286,7 @@ async function detectPDF() {
 
 // ---------------- INTEGRATED CONTENT & IMAGE EXTRACTION ----------------
 
-const MAX_IMAGES_PER_PAGE = 10;
+const MAX_IMAGES_PER_PAGE = 5; // Limit to 5 images per page
 
 // The main show - pull content from the page
 function extractPageContent() {
@@ -458,7 +458,10 @@ function extractPageContent() {
       imagesProcessing: foundImages.length > 0, // Flag to indicate images are being processed
     };
 
-    console.log(`Found images for processing`, foundImages);
+    console.log(
+      `Found ${foundImages.length} images for processing`,
+      foundImages
+    );
 
     // Send images for captioning if found (async, non-blocking)
     if (foundImages.length > 0) {
@@ -505,7 +508,11 @@ function hasSubstantialContent(element) {
   return hasEnoughWords || hasMultipleParagraphs || hasHeadings || hasLists;
 }
 
-// Extract images only from containers that have meaningful content
+/**
+ * Extract image urls from HTML containers
+ * @param {Array<HTMLElement>} containers
+ * @returns {Array<string>}
+ */
 function extractImagesFromMeaningfulContainers(containers) {
   if (!containers || containers.length === 0) return [];
 

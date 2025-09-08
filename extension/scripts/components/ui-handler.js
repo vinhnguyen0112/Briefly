@@ -796,7 +796,7 @@ export function handleContentMessage(message) {
     case "image_processing_done":
       const { success } = message;
       if (success) {
-        console.log("Image processing completed successfully");
+        console.log("Image processing done");
         state.pageContent.imagesProcessing = false;
       } else {
         console.error("Image processing failed");

@@ -223,33 +223,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
 
     sendResponse({ success: true });
-  }
-  // else if (message.action === "caption_results") {
-  //   if (message.page_url && message.page_url !== location.href) {
-  //     console.warn("[Caption] Ignored stale result for:", message.page_url);
-  //     return;
-  //   }
-
-  //   const captions = Array.isArray(message.captions)
-  //     ? message.captions.filter(
-  //         (c) => c && typeof c.caption === "string" && c.caption.trim() !== ""
-  //       )
-  //     : [];
-  //   if (captions.length === 0) return;
-
-  //   const iframe = document.getElementById("isal-sidebar-iframe");
-  //   if (iframe) {
-  //     iframe.contentWindow.postMessage(
-  //       {
-  //         action: "caption_update",
-  //         captions: captions,
-  //         page_url: message.page_url,
-  //       },
-  //       "*"
-  //     );
-  //   }
-  // }
-  else if (message.action === "image_processing_done") {
+  } else if (message.action === "image_processing_done") {
     if (message.page_url && message.page_url !== location.href) {
       console.warn("Mismatch captions for page url:", message.page_url);
       return;

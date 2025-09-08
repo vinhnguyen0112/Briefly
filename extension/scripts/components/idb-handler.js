@@ -1,6 +1,6 @@
 const DB_NAME = "briefly_db";
 const DB_VERSION = 1;
-const CAPTIONS_MAX = 100;
+const MAX_CAPTIONS_PER_STORE = 100;
 
 async function trimCaptionsIfNeeded(db) {
   return new Promise((resolve, reject) => {
@@ -11,9 +11,9 @@ async function trimCaptionsIfNeeded(db) {
       const countReq = store.count();
       countReq.onsuccess = () => {
         const count = countReq.result || 0;
-        if (count <= CAPTIONS_MAX) return resolve();
+        if (count <= MAX_CAPTIONS_PER_STORE) return resolve();
 
-        const needDelete = count - CAPTIONS_MAX;
+        const needDelete = count - MAX_CAPTIONS_PER_STORE;
         const index = store.index("created_at");
         let deleted = 0;
 
@@ -82,6 +82,9 @@ async function getCaptionByPageAndImageUrl(page_url, img_url) {
   });
 }
 
+/**
+ * Batch-gets captions from IndexedDB for given page + images.
+ */
 async function getCaptionsByPageAndImageUrls(page_url, img_urls = []) {
   const map = new Map();
   if (!Array.isArray(img_urls) || img_urls.length === 0) return map;
@@ -89,7 +92,6 @@ async function getCaptionsByPageAndImageUrls(page_url, img_urls = []) {
   const { db } = await openIndexedDB();
   const normPage = processUrl(page_url);
 
-  // build ids
   const normPairs = await Promise.all(
     img_urls.map(async (raw) => {
       const normImg = normalizeImageUrl(raw);
@@ -98,25 +100,22 @@ async function getCaptionsByPageAndImageUrls(page_url, img_urls = []) {
     })
   );
 
-  // single-gets in parallel (đơn giản, giữ nguyên version DB)
-  await Promise.all(
-    normPairs.map(
-      ({ raw, id }) =>
-        new Promise((resolve) => {
-          const tx = db.transaction("captions", "readonly");
-          const store = tx.objectStore("captions");
-          const req = store.get(id);
-          req.onsuccess = (e) => {
-            const val = e.target.result;
-            if (val) map.set(raw, val);
-            resolve();
-          };
-          req.onerror = () => resolve();
-        })
-    )
-  );
+  return new Promise((resolve) => {
+    const tx = db.transaction("captions", "readonly");
+    const store = tx.objectStore("captions");
 
-  return map;
+    normPairs.forEach(({ raw, id }) => {
+      const req = store.get(id);
+      req.onsuccess = (e) => {
+        const val = e.target.result;
+        if (val) map.set(raw, val);
+      };
+      // ignore errors, just skip
+    });
+
+    tx.oncomplete = () => resolve(map);
+    tx.onerror = () => resolve(map);
+  });
 }
 
 /**

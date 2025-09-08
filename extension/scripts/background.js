@@ -788,15 +788,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       }
 
       handleCaptionImages(message.images, message.content, pageUrl)
-        .then((captionPairs) => {
-          // Filter out empty captions
-          const captions = Array.isArray(captionPairs)
-            ? captionPairs.filter(
-                (c) =>
-                  c && typeof c.caption === "string" && c.caption.trim() !== ""
-              )
-            : [];
-
+        .then((captions) => {
           if (captions.length > 0) {
             // Cache captions
             for (const captionObj of captions) {
