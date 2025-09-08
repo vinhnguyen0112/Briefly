@@ -231,36 +231,6 @@ chrome.runtime.onMessage.addListener(async (message, sender, sendResponse) => {
   }
 });
 
-window.addEventListener("message", async (event) => {
-  if (event.data.action === "caption_update") {
-    const incoming = Array.isArray(event.data.captions)
-      ? event.data.captions
-      : [];
-    const pageUrlForDB =
-      state?.pageContent?.url || event.data.page_url || document.referrer || "";
-
-    for (const captionObj of incoming) {
-      try {
-        await idbHandler.saveCaption({
-          img_url: captionObj.src,
-          page_url: pageUrlForDB,
-          caption: captionObj.caption,
-        });
-      } catch (err) {
-        console.error("[Sidebar] Failed to save caption:", err);
-      }
-    }
-
-    if (state.pageContent) {
-      const prev = Array.isArray(state.pageContent.captions)
-        ? state.pageContent.captions
-        : [];
-      state.pageContent.captions = prev.concat(incoming.map((c) => c.caption));
-      state.pageContent.imagesProcessing = false;
-    }
-  }
-});
-
 /**
  * Helper function to pass store_page_metadata message to background script
  */

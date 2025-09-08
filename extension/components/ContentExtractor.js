@@ -453,7 +453,7 @@ function extractPageContent() {
       ...pageMetadata,
       content: mainContent,
       structuredData: structuredData,
-      captions: [], // Empty initially - will be populated by caption results
+      captions: [], // Empty initially
       extractionSuccess: true,
       imagesProcessing: foundImages.length > 0, // Flag to indicate images are being processed
     };

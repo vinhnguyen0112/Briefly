@@ -1,12 +1,24 @@
 import { sendRequest } from "./state.js";
 import idbHandler from "./idb-handler.js";
 
+const SERVER_URL = "http://localhost:3000";
+
+/**
+ * Generates or get cached captions for a list of image URLs.
+ * @param {Array<String>} imageUrls
+ * @param {String} content
+ * @param {String} pageUrl
+ * @returns {Promise<Array<{src: String, caption: String}>>}
+ */
 export async function handleCaptionImages(imageUrls, content, pageUrl) {
   if (!Array.isArray(imageUrls) || imageUrls.length === 0) return [];
 
   let idbMap = new Map();
   try {
-    idbMap = await idbHandler.getCaptionsForImages(pageUrl || "", imageUrls);
+    idbMap = await idbHandler.getCaptionsByPageAndImageUrls(
+      pageUrl || "",
+      imageUrls
+    );
   } catch (e) {
     console.warn(
       "[Caption] IDB lookup failed, will call API for all images:",
@@ -28,8 +40,10 @@ export async function handleCaptionImages(imageUrls, content, pageUrl) {
 
   let apiPairs = [];
   if (need.length > 0) {
+    // Get captions
     const captions = await callCaptionApi(need, content);
 
+    // Handle retry
     const retryTargets = [];
     captions.forEach((cap, i) => {
       if (!cap || !cap.trim()) retryTargets.push(need[i]);
@@ -67,13 +81,10 @@ export async function handleCaptionImages(imageUrls, content, pageUrl) {
 
 async function callCaptionApi(images, content) {
   try {
-    const data = await sendRequest(
-      "http://localhost:3000/api/query/captionize",
-      {
-        method: "POST",
-        body: { sources: images, context: content },
-      }
-    );
+    const data = await sendRequest(`${SERVER_URL}/api/query/captionize`, {
+      method: "POST",
+      body: { sources: images, context: content },
+    });
     if (data.success && data.data && Array.isArray(data.data.captions)) {
       return data.data.captions;
     }

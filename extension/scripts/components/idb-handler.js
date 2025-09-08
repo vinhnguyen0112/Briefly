@@ -35,7 +35,38 @@ async function trimCaptionsIfNeeded(db) {
   });
 }
 
-async function getCaptionByPageAndImage(page_url, img_url) {
+/**
+ * Get all image captions for a given page_url
+ * @param {string} page_url
+ * @returns {Promise<Array<{img_url: string, caption: string}>>}
+ */
+async function getCaptionsByPage(page_url) {
+  const { db } = await openIndexedDB();
+  const normPage = processUrl(page_url);
+
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction("captions", "readonly");
+    const store = tx.objectStore("captions");
+    const index = store.index("page_url");
+    const captions = [];
+    const req = index.openCursor(IDBKeyRange.only(normPage));
+    req.onsuccess = (event) => {
+      const cursor = event.target.result;
+      if (cursor) {
+        captions.push({
+          img_url: cursor.value.img_url,
+          caption: cursor.value.caption,
+        });
+        cursor.continue();
+      } else {
+        resolve(captions);
+      }
+    };
+    req.onerror = (e) => reject(e.target.error);
+  });
+}
+
+async function getCaptionByPageAndImageUrl(page_url, img_url) {
   const { db } = await openIndexedDB();
 
   const normImg = normalizeImageUrl(img_url);
@@ -51,7 +82,7 @@ async function getCaptionByPageAndImage(page_url, img_url) {
   });
 }
 
-async function getCaptionsForImages(page_url, img_urls = []) {
+async function getCaptionsByPageAndImageUrls(page_url, img_urls = []) {
   const map = new Map();
   if (!Array.isArray(img_urls) || img_urls.length === 0) return map;
 
@@ -574,8 +605,9 @@ const idbHandler = {
   deleteChatById,
   getMessagesForChat,
   clearChats,
-  getCaptionByPageAndImage,
-  getCaptionsForImages,
+  getCaptionByPageAndImageUrl,
+  getCaptionsByPageAndImageUrls,
+  getCaptionsByPage,
 };
 
 export default idbHandler;

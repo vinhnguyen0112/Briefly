@@ -73,7 +73,7 @@ export async function processUserQuery(query, metadata = { event: "ask" }) {
     }
 
     // Build prompt
-    const messages = constructPromptWithPageContent({
+    const messages = await constructPromptWithPageContent({
       query,
       pageContent: pageContext,
       history: state.currentChat.history,
@@ -287,9 +287,9 @@ export async function callOpenAI(messages, metadata) {
  * @param {Array} options.history
  * @param {Object} options.config
  * @param {string} [options.language]
- * @returns {Array} Array of messages to send to AI.
+ * @returns {Promise<Array>} Array of messages to send to AI.
  */
-export function constructPromptWithPageContent(options) {
+export async function constructPromptWithPageContent(options) {
   const {
     query,
     pageContent,
@@ -319,8 +319,8 @@ export function constructPromptWithPageContent(options) {
     ].join("\n\n"),
   };
 
-  const contextMessage = generateContextMessage(pageContent);
-
+  const contextMessage = await generateContextMessage(pageContent);
+  console.log("Context message: ", contextMessage);
   // Keep 6 recent messages
   const trimmedHistory = history.slice(-6);
 
@@ -370,9 +370,9 @@ function getLanguageInstructions(lang) {
 /**
  * Generate a context message for the AI based on the page content.
  * @param {Object} pageContent
- * @returns {Object} OpenAI chat message object
+ * @returns {Promise<Object>} OpenAI chat message object
  */
-function generateContextMessage(pageContent) {
+export async function generateContextMessage(pageContent) {
   const message = {
     role: "system",
     content: "PAGE CONTENT:\n",
@@ -388,11 +388,12 @@ function generateContextMessage(pageContent) {
     title = "Unknown",
     url = "Unknown",
     content = "",
-    captions = [],
     extractionSuccess = true,
     imagesProcessing = false,
     pdfContent = null,
   } = pageContent;
+
+  const captions = await idbHandler.getCaptionsByPage(url);
 
   if (!extractionSuccess) {
     message.content +=
@@ -412,8 +413,8 @@ function generateContextMessage(pageContent) {
   if (captions.length > 0) {
     message.content +=
       "\n\nNote: Some image captions were extracted to help explain the visuals on this page.\n";
-    captions.forEach((caption, index) => {
-      message.content += `• Image ${index + 1}: ${caption}\n`;
+    captions.forEach((captionObj, index) => {
+      message.content += `• Image ${index + 1}: ${captionObj.caption}\n`;
     });
   }
 

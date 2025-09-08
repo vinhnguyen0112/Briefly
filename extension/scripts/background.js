@@ -4,6 +4,7 @@ import {
   saveStoredPageUrl,
   saveUserSession,
   sendRequest,
+  state,
 } from "./components/state.js";
 import {
   authenticateWithFacebook,
@@ -788,10 +789,35 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
       handleCaptionImages(message.images, message.content, pageUrl)
         .then((captionPairs) => {
+          // Filter out empty captions
+          const captions = Array.isArray(captionPairs)
+            ? captionPairs.filter(
+                (c) =>
+                  c && typeof c.caption === "string" && c.caption.trim() !== ""
+              )
+            : [];
+
+          if (captions.length > 0) {
+            // Cache captions
+            for (const captionObj of captions) {
+              idbHandler
+                .saveCaption({
+                  img_url: captionObj.src,
+                  page_url: pageUrl,
+                  caption: captionObj.caption,
+                })
+                .catch((err) => {
+                  console.error("[Background] Failed to save caption:", err);
+                });
+            }
+          }
+
+          // Notify original tab of results
           chrome.tabs.sendMessage(tabId, {
-            action: "caption_results",
-            captions: captionPairs,
-            page_url: pageUrl, // avoid sending the late results
+            action: "image_processing_done",
+            success: true,
+            page_url: pageUrl,
+            captions,
           });
         })
         .catch((error) => {
@@ -799,6 +825,14 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
             `[Background] Tab ${tabId}: Failed to handle captions`,
             error
           );
+
+          // Notify original tab about failure
+          chrome.tabs.sendMessage(tabId, {
+            action: "image_processing_done",
+            success: false,
+            page_url: pageUrl,
+            error: error.message || String(error),
+          });
         });
     });
 
