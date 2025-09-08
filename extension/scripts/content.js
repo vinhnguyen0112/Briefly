@@ -88,16 +88,20 @@ function toggleSidebar(forceState) {
     // Ensure class reflects the correct state
     if (isActive) {
       container.classList.add("active");
-
       // Get saved width from storage
       chrome.storage.local.get(["sidebar_width"], (result) => {
         if (result.sidebar_width) {
-          // Apply saved width
           container.style.width = result.sidebar_width + "px";
         }
       });
     } else {
       container.classList.remove("active");
+      // Reset width to min when closing
+      const minWidth =
+        getComputedStyle(document.documentElement).getPropertyValue(
+          "--sidebar-min-width"
+        ) || "350px";
+      container.style.width = minWidth;
     }
 
     toggleButton.innerHTML = isActive ? "&gt;" : "&lt;";
