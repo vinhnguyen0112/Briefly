@@ -1,19 +1,14 @@
 import {
-  getStoredPageUrl,
-  saveStoredPageUrl,
+  getUserSession,
   saveUserSession,
   sendRequest,
-  state,
 } from "./components/state.js";
 import {
   authenticateWithFacebook,
   authenticateWithGoogle,
   signOut,
 } from "./components/auth-handler.js";
-import {
-  handleCaptionImages,
-  resetProcessedImages,
-} from "./components/caption-handler.js";
+import { handleCaptionImages } from "./components/caption-handler.js";
 import idbHandler from "./components/idb-handler.js";
 import chatHandler from "./components/chat-handler.js";
 

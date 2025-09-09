@@ -1,6 +1,6 @@
 const DB_NAME = "briefly_db";
 const DB_VERSION = 1;
-const MAX_CAPTIONS_PER_STORE = 100;
+const MAX_CAPTIONS_PER_STORE = 1000;
 
 async function trimCaptionsIfNeeded(db) {
   return new Promise((resolve, reject) => {
@@ -177,7 +177,7 @@ async function openIndexedDB() {
 
     request.onsuccess = (event) => {
       const db = event.target.result;
-      console.log(`IndexedDB '${DB_NAME}' opened successfully`);
+      // console.log(`IndexedDB '${DB_NAME}' opened successfully`);
       resolve({ db });
     };
 
@@ -201,6 +201,15 @@ function setupObjectStores(db) {
     chatsStore.createIndex("created_at", "created_at", { unique: false });
     chatsStore.createIndex("updated_at", "updated_at", { unique: false });
     chatsStore.createIndex("page_url", "page_url", { unique: false });
+  }
+
+  if (!db.objectStoreNames.contains("captions")) {
+    const captionsStore = db.createObjectStore("captions", {
+      keyPath: "id",
+    });
+    captionsStore.createIndex("page_url", "page_url", { unique: false });
+    captionsStore.createIndex("img_url", "img_url", { unique: false });
+    captionsStore.createIndex("created_at", "created_at", { unique: false });
   }
 
   console.log("Object stores created successfully");
@@ -533,8 +542,59 @@ async function clearChats() {
   });
 }
 
+function normalizeImageUrl(url) {
+  try {
+    const u = new URL(url, location.origin);
+    [
+      "utm_source",
+      "utm_medium",
+      "utm_campaign",
+      "utm_term",
+      "utm_content",
+      "fbclid",
+      "gclid",
+      "ver",
+      "cacheBust",
+    ].forEach((p) => u.searchParams.delete(p));
+    u.hash = "";
+    u.hostname = u.hostname.toLowerCase();
+    let s = u.toString();
+    if (s.endsWith("/")) s = s.slice(0, -1);
+    return s;
+  } catch (e) {
+    console.warn("Invalid image URL:", url);
+    return url;
+  }
+}
+
+function processUrl(url) {
+  try {
+    const u = new URL(url, location.origin);
+    u.search = "";
+    u.hash = "";
+    u.hostname = u.hostname.toLowerCase();
+    let s = u.toString();
+    if (s.endsWith("/")) s = s.slice(0, -1);
+    return s;
+  } catch {
+    return url;
+  }
+}
+
+async function generateId(page, img) {
+  const input = `${page}:${img}`;
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(input)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}
+
 // Add to the exported handler
 const idbHandler = {
+  saveCaption,
   openIndexedDB,
   upsertChat,
   getChatById,

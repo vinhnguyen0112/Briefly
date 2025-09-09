@@ -1,6 +1,8 @@
-const processedImages = new Set();
+import { sendRequest } from "./state.js";
+import idbHandler from "./idb-handler.js";
 
-const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+// const SERVER_URL = "http://localhost:3000";
 const MAX_CAPTIONS_PER_PAGE = 5;
 
 /**
@@ -44,7 +46,7 @@ export async function handleCaptionImages(imageUrls, content, pageUrl) {
     if (entry?.caption?.trim()) {
       captionsMap.set(src, entry.caption);
     } else {
-      retryList.push(src);
+      need.push(src);
     }
   }
 
@@ -98,8 +100,6 @@ export async function handleCaptionImages(imageUrls, content, pageUrl) {
 }
 
 async function callCaptionApi(images, content) {
-  console.log("Sending to caption API:", { sources: images, content });
-
   try {
     const data = await sendRequest(`${SERVER_URL}/api/query/captionize`, {
       method: "POST",
@@ -108,19 +108,10 @@ async function callCaptionApi(images, content) {
     if (data.success && data.data && Array.isArray(data.data.captions)) {
       return data.data.captions;
     }
+    console.error("Invalid response structure:", data);
+    return images.map(() => "");
   } catch (error) {
-    return images.map(() => null);
+    console.error("Caption API error:", error);
+    return images.map(() => "");
   }
-}
-
-export function resetProcessedImages() {
-  console.log(
-    "Resetting processedImages set. Before reset:",
-    Array.from(processedImages)
-  );
-  processedImages.clear();
-  console.log(
-    "After reset, processedImages set is now:",
-    Array.from(processedImages)
-  );
 }

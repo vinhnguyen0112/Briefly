@@ -437,11 +437,14 @@ const captionize = async (req, res, next) => {
               content: [
                 {
                   type: "text",
-                  text: context.slice(0, 100000),
+                  text: `Article context (excerpt): ${context.slice(0, 2000)}`,
                 },
                 {
                   type: "text",
-                  text: "Based on the article above, generate a short detail caption (no quotation marks) for the image below. Use the article to identify people, events, or context relevant to the image.",
+                  text: `
+                  Based on the article above, generate a short detail caption (no quotation marks) for the image below. 
+                  Use the article to identify people, events, or context relevant to the image. 
+                  If the article context is not helpful, fall back to a neutral descriptive caption`,
                 },
                 {
                   type: "image_url",
@@ -502,7 +505,7 @@ const captionize = async (req, res, next) => {
 
           console.log("Generated questions response: ", result);
 
-          return res.json(result);
+          return result;
         } catch (err) {
           console.error(`Caption error for image ${idx}:`, err);
           return {
