@@ -74,21 +74,15 @@ export function handleResize(e) {
   if (!state.isResizing) return;
 
   // figure out new width
-  const sidebarRect = elements.sidebar.getBoundingClientRect();
-  const newWidth = window.innerWidth - e.clientX;
+  const rect = elements.sidebar.getBoundingClientRect();
+  const newWidth = Math.round(rect.right - e.clientX);
 
   // keep it in bounds
-  const minWidth = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue(
-      "--sidebar-min-width"
-    )
-  );
-  const maxWidth = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue(
-      "--sidebar-max-width"
-    )
-  );
-
+  const rootStyle = getComputedStyle(document.documentElement);
+  const minWidth =
+    parseInt(rootStyle.getPropertyValue("--sidebar-min-width")) || 260;
+  const maxWidth =
+    parseInt(rootStyle.getPropertyValue("--sidebar-max-width")) || 560;
   const constrainedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
 
   // update width
@@ -108,28 +102,34 @@ export function handleResize(e) {
 }
 
 // done resizing
-export function stopResize() {
-  if (state.isResizing) {
-    state.isResizing = false;
-    elements.resizeHandle.classList.remove("active");
-    document.body.classList.remove("sidebar-resizing");
-    document.removeEventListener("mousemove", handleResize);
-    document.removeEventListener("mouseup", stopResize);
+export function stopResize(e) {
+  if (!state.isResizing) return;
+  state.isResizing = false;
 
-    // save the width
-    const currentWidth = getComputedStyle(elements.sidebar).width;
-    const widthValue = parseInt(currentWidth);
-    saveSidebarWidth(widthValue);
+  elements.resizeHandle.classList.remove("active");
+  document.body.classList.remove("sidebar-resizing");
 
-    // tell parent about final size
-    window.parent.postMessage(
-      {
-        action: "sidebar_width_changed",
-        width: widthValue,
-      },
-      "*"
-    );
+  try {
+    elements.resizeHandle.releasePointerCapture?.(e?.pointerId);
+  } catch {}
+
+  window.removeEventListener("pointermove", handleResize);
+
+  const cssWidth = getComputedStyle(document.documentElement).getPropertyValue(
+    "--sidebar-width"
+  );
+  let widthValue = parseInt(cssWidth);
+
+  if (!widthValue || Number.isNaN(widthValue)) {
+    widthValue = Math.round(elements.sidebar.getBoundingClientRect().width);
   }
+
+  saveSidebarWidth(widthValue);
+
+  window.parent.postMessage(
+    { action: "sidebar_width_changed", width: widthValue },
+    "*"
+  );
 }
 
 /**
