@@ -412,6 +412,10 @@ export async function sendRequest(url, options = {}) {
 
   const headers = new Headers(customHeaders);
 
+  // Always include the extension origin header
+  headers.set("Origin", `chrome-extension://${chrome.runtime.id}`);
+  headers.set("x-extension-id", chrome.runtime.id);
+
   if (withSession) {
     const userSession = await getUserSession();
     const anonSession = !userSession && (await getAnonSession());
@@ -444,6 +448,8 @@ export async function sendRequest(url, options = {}) {
     headers.set("Content-Type", "application/json");
     fetchOptions.body = JSON.stringify(fetchOptions.body);
   }
+
+  console.log("Headers: ", Object.fromEntries(headers.entries()));
 
   const response = await fetch(url, { ...fetchOptions, headers });
 

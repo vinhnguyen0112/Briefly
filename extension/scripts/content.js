@@ -262,8 +262,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       console.error("Iframe is not ready, cannot post message");
     }
     sendResponse({ success: true });
-  }
-  if (message.action === "session_expired") {
+  } else if (message.action === "session_expired") {
     const iframe = document.getElementById("isal-sidebar-iframe");
     const container = document.getElementById("isal-sidebar-container");
 
@@ -280,8 +279,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
     }
     sendResponse({ success: true });
-  }
-  if (message.action === "anon_query_limit_reached") {
+  } else if (message.action === "anon_query_limit_reached") {
     const iframe = document.getElementById("isal-sidebar-iframe");
     const container = document.getElementById("isal-sidebar-container");
 
@@ -298,8 +296,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
     }
     sendResponse({ success: true });
-  }
-  if (message.action === "sign_in_required") {
+  } else if (message.action === "sign_in_required") {
     const iframe = document.getElementById("isal-sidebar-iframe");
     const container = document.getElementById("isal-sidebar-container");
 

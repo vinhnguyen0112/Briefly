@@ -29,15 +29,14 @@ async function createChat({ page_url, title }) {
 async function getChatsForCurrentUser({ offset = 0, limit = 20 } = {}) {
   const userSession = await getUserSession();
   if (!userSession) throw new Error("No authenticated user session found");
-  const response = await fetch(`${API_BASE}?offset=${offset}&limit=${limit}`, {
-    method: "GET",
-    headers: {
-      Authorization: `Bearer auth:${userSession.id}`,
-    },
-  });
 
-  const data = await response.json();
-  return data;
+  const response = await sendRequest(
+    `${API_BASE}?offset=${offset}&limit=${limit}`,
+    {
+      method: "GET",
+    }
+  );
+  return response;
 }
 
 /**
