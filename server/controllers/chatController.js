@@ -37,6 +37,7 @@ const createChat = async (req, res, next) => {
       id: chatId,
       user_id: req.session.user_id,
       page_id: pageId,
+      page_url: normalizedPageUrl,
       title,
     };
 

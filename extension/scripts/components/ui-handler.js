@@ -254,7 +254,7 @@ export function createWelcomeContainer() {
 
   welcomeContainer.innerHTML = `
     <img
-      src="./icons/logo.png"
+      src="./icons/logo128.png"
       alt="logo"
       id="welcome-logo"
     />

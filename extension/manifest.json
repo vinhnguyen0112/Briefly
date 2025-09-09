@@ -4,14 +4,16 @@
   "version": "1.0.0",
   "description": "A Chrome extension that helps you read and understand webpages with the power of AI.",
   "icons": {
-    "16": "icons/logo.png",
-    "48": "icons/logo.png",
-    "128": "icons/logo.png"
+    "16": "icons/logo16.png",
+    "32": "icons/logo32.png",
+    "48": "icons/logo48.png",
+    "128": "icons/logo128.png"
   },
   "permissions": ["storage", "activeTab", "scripting", "identity"],
   "host_permissions": [
     "https://api.openai.com/*",
-    "https://dev-capstone-2025.coccoc.com/api/*"
+    "https://dev-capstone-2025.coccoc.com/api/*",
+    "https://capstone-2025.coccoc.com/api/*"
   ],
   "background": {
     "service_worker": "scripts/background.js",
@@ -19,9 +21,9 @@
   },
   "action": {
     "default_icon": {
-      "16": "icons/logo.png",
-      "48": "icons/logo.png",
-      "128": "icons/logo.png"
+      "16": "icons/logo16.png",
+      "48": "icons/logo48.png",
+      "128": "icons/logo128.png"
     }
   },
   "side_panel": {
