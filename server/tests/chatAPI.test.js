@@ -160,11 +160,10 @@ describe("POST /chats", () => {
 });
 
 describe("GET /chats", () => {
-  let testPageIds = [];
-
   beforeAll(async () => {
+    let testPageUrls = [];
+
     // Create test pages first
-    const pages = [];
     for (let i = 0; i < 30; i++) {
       const pageUrl = `https://example.com/page${i + 1}`;
       await supertest(app)
@@ -173,17 +172,16 @@ describe("GET /chats", () => {
         .send(createPageBody)
         .expect(200)
         .then((response) => {
-          testPageIds.push(response.body.data.id);
+          testPageUrls.push(pageUrl);
         });
     }
 
-    // Now create chats using the page IDs
     const chats = [];
     for (let i = 0; i < 30; i++) {
       chats.push({
         id: crypto.randomUUID(),
         user_id: jestVariables.userId,
-        page_id: testPageIds[i],
+        page_url: testPageUrls[i],
         title: `Test Chat #${i + 1}`,
       });
     }

@@ -24,7 +24,6 @@ let allowedOrigins = [];
 let allowNoOrigin = false;
 
 if (process.env.NODE_ENV === "test") {
-  allowedOrigins.push("*");
   allowNoOrigin = true;
 } else if (
   ["production", "development", "development_local"].includes(
@@ -37,6 +36,11 @@ if (process.env.NODE_ENV === "test") {
 app.use(
   cors({
     origin: function (origin, callback) {
+      // allow all in test environment
+      if (process.env.NODE_ENV === "test") {
+        return callback(null, true);
+      }
+
       if (!origin) {
         return callback(null, true);
       }
@@ -53,7 +57,7 @@ app.use(
 
 // fallback for requests send from background script
 app.use((req, res, next) => {
-  if (allowNoOrigin) next();
+  if (allowNoOrigin) return next();
   if (!req.headers.origin) {
     const extId = req.headers["x-extension-id"];
     if (extId === extensionId) {
@@ -62,7 +66,7 @@ app.use((req, res, next) => {
       return res.status(403).json({ error: "Not allowed by CORS" });
     }
   }
-  next();
+  return next();
 });
 
 app.use(express.json({ limit: "10mb" }));
