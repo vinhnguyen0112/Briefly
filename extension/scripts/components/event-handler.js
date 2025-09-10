@@ -37,6 +37,9 @@ import chatHandler from "./chat-handler.js";
 import { updateContentStatus, updatePdfStatus } from "./content-handler.js";
 
 export function setupEventListeners() {
+  if (state._resizeBound) return;
+  state._resizeBound = true;
+
   elements.closeSidebarButton.addEventListener("click", () => {
     window.parent.postMessage({ action: "close_sidebar" }, "*");
   });
@@ -74,13 +77,23 @@ export function setupEventListeners() {
     elements.chatScreen.style.display = "flex";
   });
 
-  elements.resizeHandle.addEventListener("mousedown", (e) => {
+  elements.resizeHandle.addEventListener("pointerdown", (e) => {
     e.preventDefault();
+    try {
+      elements.resizeHandle.setPointerCapture(e.pointerId);
+    } catch {}
+
     state.isResizing = true;
     elements.resizeHandle.classList.add("active");
     document.body.classList.add("sidebar-resizing");
-    document.addEventListener("mousemove", handleResize);
-    document.addEventListener("mouseup", stopResize);
+
+    window.addEventListener("pointermove", handleResize);
+    window.addEventListener("pointerup", stopResize, { once: true });
+  });
+
+  window.addEventListener("blur", () => stopResize());
+  document.addEventListener("visibilitychange", () => {
+    if (document.visibilityState !== "visible") stopResize();
   });
 
   // Handle submit via Enter key

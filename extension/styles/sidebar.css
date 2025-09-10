@@ -10,7 +10,7 @@
   --primary-foreground: hsl(0 0% 98%);
   --ring: hsl(240 5% 64.9%);
   --radius: 0.5rem;
-
+  --coccoc: #50B969;
   /* sidebar size params */
   /* Can we change this to 350px pls, cause the iframe is 350px, 
   setting this to 320px add weird ahh spacing */
@@ -253,7 +253,7 @@ body.sidebar-resizing * {
   appearance: none;
   width: 1rem;
   height: 1rem;
-  background: var(--primary-color, #4a86e8);
+  background: var(--coccoc);
   border-radius: 50%;
   cursor: pointer;
   transition: all 0.2s;
@@ -262,7 +262,6 @@ body.sidebar-resizing * {
 }
 
 .slider::-webkit-slider-thumb:hover {
-  background: var(--primary-hover, #3a76d8);
   transform: scale(1.1);
 }
 
@@ -322,7 +321,27 @@ body.sidebar-resizing * {
 }
 
 .radio-card input[type="radio"] {
-  margin-top: 0.25rem;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid #ccc;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+}
+
+.radio-card input[type="radio"]::before {
+  content: "";
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  transform: scale(0);
+  background-color: var(--coccoc);
+  transition: transform 0.1s ease-in-out;
+}
+
+.radio-card input[type="radio"]:checked::before {
+  transform: scale(1);
 }
 
 .radio-card-content {
@@ -349,7 +368,7 @@ body.sidebar-resizing * {
 
 .btn-primary {
   padding: 0.5rem 1rem;
-  background-color: var(--primary-color, #4a86e8);
+  background-color: var(--coccoc);
   color: white;
   border: none;
   border-radius: 0.375rem;
@@ -361,7 +380,7 @@ body.sidebar-resizing * {
 }
 
 .btn-primary:hover {
-  background-color: var(--primary-hover, #3a76d8);
+  background-color: #4a8c44;
 }
 
 .btn-primary:focus {
@@ -567,6 +586,7 @@ body.sidebar-resizing * {
 }
 
 @keyframes typing-dot {
+
   0%,
   80%,
   100% {
@@ -1271,7 +1291,7 @@ body.sidebar-resizing * {
 }
 
 #title-container:hover {
-  color: #76c152;
+  color: var(--coccoc);
 }
 
 /* .slider:before {
@@ -1285,15 +1305,15 @@ body.sidebar-resizing * {
   transition: 0.4s;
 } */
 
-input:checked + .slider {
+input:checked+.slider {
   background-color: var(--primary);
 }
 
-input:focus + .slider {
+input:focus+.slider {
   box-shadow: 0 0 1px var(--primary);
 }
 
-input:checked + .slider:before {
+input:checked+.slider:before {
   transform: translateX(16px);
 }
 
@@ -1524,7 +1544,7 @@ input:checked + .slider:before {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-decoration: none;
-  color: #3498db;
+  color: var(--coccoc);
   opacity: 0.8;
 }
 
@@ -1944,8 +1964,10 @@ input:checked + .slider:before {
   border-radius: 6px;
   padding: 6px 10px;
   width: 100%;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE 10+ */
+  scrollbar-width: none;
+  /* Firefox */
+  -ms-overflow-style: none;
+  /* IE 10+ */
 }
 
 .context-indicator-content {
@@ -1961,7 +1983,8 @@ input:checked + .slider:before {
 }
 
 .context-indicator::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Edge */
+  display: none;
+  /* Chrome, Safari, Edge */
 }
 
 .page-context-title {
@@ -2029,9 +2052,11 @@ input:checked + .slider:before {
   0% {
     opacity: 0.2;
   }
+
   50% {
     opacity: 1;
   }
+
   100% {
     opacity: 0.2;
   }
@@ -2148,10 +2173,10 @@ input:checked + .slider:before {
 
 .note-editor-url {
   font-size: 12px;
-  color: var(--primary);
   margin-top: 4px;
   word-break: break-all;
-  max-width: 250px;
+  /* max-width: 250px; */
+  color: var(--coccoc) !important;
   cursor: pointer;
   text-decoration: underline;
   transition: opacity 0.2s ease, color 0.2s ease;
@@ -2177,7 +2202,7 @@ input:checked + .slider:before {
   text-overflow: ellipsis;
   white-space: nowrap;
   text-decoration: none;
-  color: #3498db;
+  color: var(--coccoc);
   opacity: 0.8;
   cursor: pointer;
   transition: opacity 0.2s ease, color 0.2s ease;
@@ -2462,4 +2487,15 @@ input:checked + .slider:before {
 /* Sign in alert popup */
 #sign-in-alert-popup .popup-message {
   margin-bottom: 1rem;
+}
+
+
+.sidebar-resizing,
+.sidebar-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
+
+.resize-handle {
+  touch-action: none;
 }

@@ -69,67 +69,83 @@ export function closeAllScreensAndPanels() {
   }
 }
 
-// handle resize events
+let resizeTimeout;
+
 export function handleResize(e) {
   if (!state.isResizing) return;
 
-  // figure out new width
-  const sidebarRect = elements.sidebar.getBoundingClientRect();
-  const newWidth = window.innerWidth - e.clientX;
+  // Calculate width immediately - no throttling for visual updates
+  const rect = elements.sidebar.getBoundingClientRect();
+  const newWidth = Math.round(rect.right - e.clientX);
 
-  // keep it in bounds
-  const minWidth = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue(
-      "--sidebar-min-width"
-    )
-  );
-  const maxWidth = parseInt(
-    getComputedStyle(document.documentElement).getPropertyValue(
-      "--sidebar-max-width"
-    )
-  );
-
+  // Keep it in bounds
+  const rootStyle = getComputedStyle(document.documentElement);
+  const minWidth =
+    parseInt(rootStyle.getPropertyValue("--sidebar-min-width")) || 260;
+  const maxWidth =
+    parseInt(rootStyle.getPropertyValue("--sidebar-max-width")) || 560;
   const constrainedWidth = Math.min(Math.max(newWidth, minWidth), maxWidth);
 
-  // update width
+  // Update CSS immediately for smooth visual feedback
   document.documentElement.style.setProperty(
     "--sidebar-width",
     constrainedWidth + "px"
   );
+  elements.sidebar.style.width = constrainedWidth + "px";
 
-  // tell parent to resize too
-  window.parent.postMessage(
-    {
-      action: "sidebar_width_changed",
-      width: constrainedWidth,
-    },
-    "*"
-  );
+  // Store for final message
+  state.pendingWidth = constrainedWidth;
+
+  // Throttle only the message posting - not visual updates
+  if (!resizeTimeout) {
+    window.parent.postMessage(
+      { action: "sidebar_width_changed", width: constrainedWidth },
+      "*"
+    );
+
+    resizeTimeout = setTimeout(() => {
+      resizeTimeout = null;
+    }, 16);
+  }
 }
 
-// done resizing
-export function stopResize() {
-  if (state.isResizing) {
-    state.isResizing = false;
-    elements.resizeHandle.classList.remove("active");
-    document.body.classList.remove("sidebar-resizing");
-    document.removeEventListener("mousemove", handleResize);
-    document.removeEventListener("mouseup", stopResize);
+export function stopResize(e) {
+  if (!state.isResizing) return;
+  state.isResizing = false;
 
-    // save the width
-    const currentWidth = getComputedStyle(elements.sidebar).width;
-    const widthValue = parseInt(currentWidth);
-    saveSidebarWidth(widthValue);
+  elements.resizeHandle.classList.remove("active");
+  document.body.classList.remove("sidebar-resizing");
 
-    // tell parent about final size
+  try {
+    elements.resizeHandle.releasePointerCapture?.(e?.pointerId);
+  } catch {}
+  window.removeEventListener("pointermove", handleResize);
+
+  // Clear throttling
+  clearTimeout(resizeTimeout);
+  resizeTimeout = null;
+
+  // Get final width
+  const finalWidth =
+    state.pendingWidth ||
+    parseInt(
+      getComputedStyle(document.documentElement).getPropertyValue(
+        "--sidebar-width"
+      )
+    );
+
+  if (finalWidth && !Number.isNaN(finalWidth)) {
+    saveSidebarWidth(finalWidth);
+
+    // Send final message
     window.parent.postMessage(
-      {
-        action: "sidebar_width_changed",
-        width: widthValue,
-      },
+      { action: "sidebar_width_changed", width: finalWidth },
       "*"
     );
   }
+
+  // Reset pending width
+  state.pendingWidth = null;
 }
 
 /**
