@@ -820,32 +820,54 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
 
 // Observe change in storage
 chrome.storage.onChanged.addListener((changes, areaName) => {
-  // Notify all tabs if auth session changed
-  if (areaName === "local" && changes.auth_session) {
-    const isAuth = !!changes.auth_session.newValue; // Convert to boolean
-    console.log("Briefly: Auth state changed: ", isAuth);
+  if (areaName === "local") {
+    // Auth session change
+    if (changes.auth_session) {
+      const isAuth = !!changes.auth_session.newValue;
+      console.log("Auth state changed:", isAuth);
 
-    chrome.tabs.query({}, (tabs) => {
-      tabs.forEach((tab) => {
-        chrome.tabs.sendMessage(
-          tab.id,
-          {
-            action: "auth_session_changed",
-            isAuth,
-          },
-          () => {
-            if (chrome.runtime.lastError) {
-              console.error(
-                `Error sending message to tab ${tab.id}:`,
-                chrome.runtime.lastError.message
-              );
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(
+            tab.id,
+            { action: "auth_session_changed", isAuth },
+            () => {
+              if (chrome.runtime.lastError) {
+                console.error(
+                  `Error sending auth message to tab ${tab.id}:`,
+                  chrome.runtime.lastError.message
+                );
+              }
             }
-          }
-        );
+          );
+        });
       });
-    });
 
-    // Clear chats from IDB
-    idbHandler.clearChats();
+      // Clear chats from IDB
+      idbHandler.clearChats();
+    }
+
+    // Sidebar width change
+    if (changes.sidebar_width) {
+      const newWidth = changes.sidebar_width.newValue;
+      console.log("Sidebar width changed:", newWidth);
+
+      chrome.tabs.query({}, (tabs) => {
+        tabs.forEach((tab) => {
+          chrome.tabs.sendMessage(
+            tab.id,
+            { action: "sidebar_width_sync", width: newWidth },
+            () => {
+              if (chrome.runtime.lastError) {
+                console.error(
+                  `Error sending width message to tab ${tab.id}:`,
+                  chrome.runtime.lastError.message
+                );
+              }
+            }
+          );
+        });
+      });
+    }
   }
 });

@@ -195,7 +195,6 @@ function handleSidebarMessage(message) {
       );
       if (sidebarContainer && message.width) {
         sidebarContainer.style.width = message.width + "px";
-        console.log("CocBot: Updated container width to", message.width);
       }
       break;
   }
@@ -325,6 +324,19 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       );
     }
     sendResponse({ success: true });
+  } else if (message.action === "sidebar_width_sync") {
+    // Update container width to match sidebar
+    // const sidebarContainer = document.getElementById("isal-sidebar-container");
+    // if (sidebarContainer && message.width) {
+    //   sidebarContainer.style.width = message.width + "px";
+    // }
+
+    document.documentElement.style.setProperty(
+      "--sidebar-width",
+      message.width + "px"
+    );
+    document.getElementById("isal-sidebar-container").style.width =
+      message.width + "px";
   }
   return true;
 });
