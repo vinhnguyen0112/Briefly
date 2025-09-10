@@ -33,8 +33,13 @@ if (process.env.NODE_ENV === "test") {
 }
 
 const corsOptionsDelegate = (req, callback) => {
-  // Always allow health check
-  if (req.path === "/api/health" || req.path === "/status") {
+  // Always allow
+  if (
+    req.path === "/api/health" ||
+    req.path === "/status" ||
+    req.path === "/metrics" ||
+    req.path.startsWith("/api-docs")
+  ) {
     return callback(null, { origin: true, credentials: true });
   }
 
@@ -72,15 +77,6 @@ app.set("trust proxy", 1);
 
 app.use(metricsMiddleware);
 
-// swagger, only available in development environment
-if (
-  process.env.NODE_ENV === "development" ||
-  process.env.NODE_ENV === "development_local"
-) {
-  const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
-  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
-}
-
 const limiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 100,
@@ -90,7 +86,8 @@ const limiter = rateLimit({
   skip: (req) =>
     req.path === "/api/health" ||
     req.path === "/metrics" ||
-    req.path === "/status",
+    req.path === "/status" ||
+    req.path === "/api-docs",
 });
 
 // enable rate limiting except for test environment
@@ -99,6 +96,14 @@ if (process.env.NODE_ENV !== "test") {
 }
 
 // routes
+// swagger, only available in development environment
+if (
+  process.env.NODE_ENV === "development" ||
+  process.env.NODE_ENV === "development_local"
+) {
+  const swaggerDocument = yaml.load(fs.readFileSync("./openapi.yaml", "utf8"));
+  app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+}
 app.use("/api/auth", authRoutes);
 app.use("/api/anon", anonRoutes);
 app.use("/api/chats", chatRoutes);
