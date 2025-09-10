@@ -148,6 +148,14 @@ function handleSidebarMessage(message) {
       const container = document.getElementById("isal-sidebar-container");
       if (container) {
         container.classList.remove("active");
+
+        // Reset width to min when closing
+        const minWidth =
+          getComputedStyle(document.documentElement).getPropertyValue(
+            "--sidebar-min-width"
+          ) || "350px";
+        container.style.width = minWidth;
+
         document.getElementById("isal-toggle-button").innerHTML = "&lt;";
       }
       break;
