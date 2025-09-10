@@ -19,12 +19,11 @@ const { globalErrorHandler } = require("./middlewares/errorMiddleware");
 
 const app = express();
 const extensionId = "fnbbiklifmlapflfjcmbjlpklgfafllh";
+
 // cors
 let allowedOrigins = [];
-let allowNoOrigin = false;
 
 if (process.env.NODE_ENV === "test") {
-  allowNoOrigin = true;
 } else if (
   ["production", "development", "development_local"].includes(
     process.env.NODE_ENV
@@ -33,41 +32,39 @@ if (process.env.NODE_ENV === "test") {
   allowedOrigins.push(`chrome-extension://${extensionId}`);
 }
 
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      // allow all in test environment
-      if (process.env.NODE_ENV === "test") {
-        return callback(null, true);
-      }
-
-      if (!origin) {
-        return callback(null, true);
-      }
-
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      return callback(new Error("Not allowed by CORS"));
-    },
-    credentials: true,
-  })
-);
-
-// fallback for requests send from background script
-app.use((req, res, next) => {
-  if (allowNoOrigin) return next();
-  if (!req.headers.origin) {
-    const extId = req.headers["x-extension-id"];
-    if (extId === extensionId) {
-      return next();
-    } else {
-      return res.status(403).json({ error: "Not allowed by CORS" });
-    }
+const corsOptionsDelegate = (req, callback) => {
+  // Always allow health check
+  if (req.path === "/api/health" || req.path === "/status") {
+    return callback(null, { origin: true, credentials: true });
   }
-  return next();
-});
+
+  // Allow all in test env
+  if (process.env.NODE_ENV === "test") {
+    return callback(null, { origin: true, credentials: true });
+  }
+
+  const origin = req.header("Origin");
+
+  // Requests without Origin (e.g. background script, curl, health checks)
+  if (!origin) {
+    // Check header for extension ID
+    const extId = req.header("x-extension-id");
+    if (extId === extensionId) {
+      return callback(null, { origin: true, credentials: true });
+    }
+
+    return callback(new Error("Not allowed by CORS"), { origin: false });
+  }
+
+  // Allowed origins
+  if (allowedOrigins.includes(origin)) {
+    return callback(null, { origin: true, credentials: true });
+  }
+
+  return callback(new Error("Not allowed by CORS"), { origin: false });
+};
+
+app.use(cors(corsOptionsDelegate));
 
 app.use(express.json({ limit: "10mb" }));
 app.use(morgan("dev"));
