@@ -12,17 +12,12 @@ const { ERROR_CODES } = require("../errors");
 async function findOrCreateAnonSession(sessionId) {
   const cached = await redisHelper.getSession(sessionId, "anon");
   if (cached) {
-    console.log(`Cache hit for sessionId: ${sessionId}`);
     return { id: sessionId, anon_query_count: cached.anon_query_count || 0 };
   }
 
-  console.log(`Cache miss. Checking DB for sessionId: ${sessionId}`);
   let session = await AnonSession.getById(sessionId);
 
   if (!session) {
-    console.log(
-      `No session in DB. Creating new session for sessionId: ${sessionId}`
-    );
     await AnonSession.create({ id: sessionId, anon_query_count: 0 });
     session = { anon_query_count: 0 };
   }

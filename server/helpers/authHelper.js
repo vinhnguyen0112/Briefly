@@ -98,8 +98,6 @@ const extractFromAuthHeader = (req) => {
  */
 const refreshSessionTTL = async (sessionType, sessionId) => {
   try {
-    console.log("Refreshing session:", sessionId);
-
     const ttlSeconds = parseInt(process.env.SESSION_TTL, 10);
     const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
 

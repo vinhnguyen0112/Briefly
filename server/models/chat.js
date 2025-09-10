@@ -51,7 +51,6 @@ class Chat {
   async getById(id) {
     const query = "SELECT * FROM chats WHERE id = ?";
     const rows = await dbHelper.executeQuery(query, [id]);
-    console.log("Got chat rows:", rows);
     return rows[0];
   }
 

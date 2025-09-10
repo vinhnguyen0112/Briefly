@@ -45,7 +45,6 @@ beforeAll(async () => {
       expect(response.body.data).toHaveProperty("affectedRows", 1);
       expect(response.body.data).toHaveProperty("chat");
       expect(response.body.data.chat).toHaveProperty("id");
-      console.log("Created chat:", response.body.data.chat);
       sampleChatId = response.body.data.chat.id;
     });
 

@@ -503,8 +503,6 @@ const captionize = async (req, res, next) => {
             },
           };
 
-          console.log("Generated questions response: ", result);
-
           return result;
         } catch (err) {
           console.error(`Caption error for image ${idx}:`, err);

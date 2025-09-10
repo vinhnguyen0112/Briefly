@@ -65,7 +65,6 @@ async function executeQuery(query, params = []) {
     const [rowsOrOkPacket] = await connection.execute(query, params);
     endTimer();
     console.log("Query result: ", rowsOrOkPacket);
-    // console.log("Query result:", rowsOrOkPacket);
 
     const duration = (Date.now() - startTime) / 1000;
     metricsService.recordDbQuery(operation, table, "success", duration);
