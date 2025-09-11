@@ -325,18 +325,33 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
     sendResponse({ success: true });
   } else if (message.action === "sidebar_width_sync") {
-    // Update container width to match sidebar
-    // const sidebarContainer = document.getElementById("isal-sidebar-container");
-    // if (sidebarContainer && message.width) {
-    //   sidebarContainer.style.width = message.width + "px";
-    // }
-
     document.documentElement.style.setProperty(
       "--sidebar-width",
       message.width + "px"
     );
-    document.getElementById("isal-sidebar-container").style.width =
-      message.width + "px";
+
+    // Sync container width
+    const container = document.getElementById("isal-sidebar-container");
+    if (container && container.classList.contains("active") && message.width) {
+      container.style.width = message.width + "px";
+    }
+
+    // Sync sidebar width
+    const iframe = document.getElementById("isal-sidebar-iframe");
+
+    // Only update if the sidebar is currently open
+    if (iframe && container && container.classList.contains("active")) {
+      console.log("CocBot: Notifying sidebar to sync sidebar width");
+
+      // Send message to the sidebar and update the UI
+      iframe.contentWindow.postMessage(
+        {
+          action: "sidebar_width_sync",
+          width: message.width,
+        },
+        "*"
+      );
+    }
   }
   return true;
 });

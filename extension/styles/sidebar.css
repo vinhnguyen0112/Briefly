@@ -1981,6 +1981,10 @@ input:checked + .slider:before {
   text-align: left;
 }
 
+.context-indicator-content span {
+  text-wrap: auto;
+}
+
 .context-indicator::-webkit-scrollbar {
   display: none;
   /* Chrome, Safari, Edge */

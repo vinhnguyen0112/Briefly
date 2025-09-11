@@ -821,6 +821,14 @@ export function handleContentMessage(message) {
         console.error("Image processing failed");
       }
       break;
+
+    case "sidebar_width_sync":
+      if (message.width && !Number.isNaN(message.width)) {
+        const sidebar = document.querySelector(".sidebar");
+        if (sidebar) {
+          sidebar.style.width = message.width + "px";
+        }
+      }
   }
 }
 
