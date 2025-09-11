@@ -715,7 +715,7 @@ function createChatHistoryItem(chat) {
         ${chat.page_url}
       </a>
       <span class="chat-history-created-at">${
-        chat.created_at ? new Date(chat.created_at).toLocaleTimeString() : ""
+        chat.created_at ? new Date(chat.created_at).toLocaleString() : ""
       }</span>
     </div>
     <div class="chat-history-actions-menu hidden">

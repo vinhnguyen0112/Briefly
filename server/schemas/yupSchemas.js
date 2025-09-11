@@ -80,6 +80,8 @@ const querySchema = object({
 
     event: string().trim().default("ask"),
   }).required("metadata is required"),
+
+  captions: array().of(string().strict().trim()).optional(),
 });
 
 const suggestedQuestionSchema = object({

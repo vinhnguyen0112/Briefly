@@ -43,7 +43,7 @@ function getNormalizedPageMeta(pageUrl) {
  */
 const handleUserQuery = async (req, res, next) => {
   try {
-    const { messages, metadata } = req.body;
+    const { messages, metadata, captions } = req.body;
 
     const pageMeta = getNormalizedPageMeta(metadata.page_url);
     if (!pageMeta) {
@@ -122,15 +122,27 @@ const handleUserQuery = async (req, res, next) => {
           .map((c) => `[#${c.meta.chunk_index}] ${c.text}`)
           .join("\n\n");
 
+        // Build system message with context and captions
+        let systemContent = `Context snippets from page "${
+          pageRow.title || ""
+        }" (${pageRow.page_url}):\n\n${contextBlock}`;
+
+        if (Array.isArray(captions) && captions.length > 0) {
+          systemContent += `\n\n
+            This page also contains the following images with their captions. 
+            Treat these captions as part of the page content, 
+            and use them when answering any questions about visuals, images, or figures on this page:\n`;
+          captions.forEach((caption, idx) => {
+            systemContent += `Image ${idx + 1}: ${caption}\n`;
+          });
+        }
         const ragMessages = [
-          messages[0],
+          messages[0], // instructions
           {
             role: "system",
-            content: `Context snippets from page ${pageRow.title || ""} (${
-              pageRow.page_url
-            }):\n\n${contextBlock}`,
+            content: systemContent,
           },
-          messages[messages.length - 1],
+          messages[messages.length - 1], // user query
         ];
 
         assistantMessage = await generateAssistantResponse(
@@ -162,8 +174,8 @@ const handleUserQuery = async (req, res, next) => {
         });
     }
 
+    // handle anon query count increment
     let newCount = null;
-    // Increase anon query count
     if (req.sessionType === "anon") {
       const affectedRows = await AnonSession.increaseAnonQueryCount(
         req.session.id
