@@ -66,7 +66,12 @@ QDRANT_ENABLE_RESCORING=true
 
 Create another `.env` file inside the root directory (same level with `docker-compose.yml`) with the following structure:
 ```
+# App service
+APP_NAME=capstone-2025
+APP_PORT=3000
 
+# Nginx service
+NGINX_HOST_HTTP_PORT=8080
 ```
 
 ### 3. Start the Backend Server
@@ -79,14 +84,17 @@ npm run dev
 ```
 
 **3.2 Run with Docker**
+
 Run the server 
 ```bash
 docker compose up
 ```
+
 Run the monitoring stack 
 ```bash
 docker compose -f docker-compose.monitoring.yml up
 ```
+
 Run the server and monitoring at once
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up
