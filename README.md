@@ -28,64 +28,73 @@ git clone https://github.com/andrewcoldbrew/Briefly
 cd Briefly
 ```
 
-### 2. Install Server Dependencies
-
-```bash
-cd server
-npm install
-```
-
-### 3. Configure Environment
+### 2. Configure Environment
 
 Create a `.env` file inside the `/server` directory with the following structure:
 
 ```env
 # General
-LOCAL_DEV=true
 NODE_ENV=development
-PORT=3000
-EXTENSION_ID=<your-extension-id>
-GOOGLE_CLIENT_ID=<your-google-client-id>
-FACEBOOK_APP_ID=<your-facebook-app-id>
+EXTENSION_ID=fnbbiklifmlapflfjcmbjlpklgfafllh
+GOOGLE_CLIENT_ID=833310676000-755pdr3r9isck33epnmom0e8v2vfcsvs.apps.googleusercontent.com
+FACEBOOK_APP_ID=684792190680106
 FACEBOOK_APP_SECRET=<your-facebook-app-secret>
 SESSION_TTL=604800
+SUMMARY_TTL=86400
 OPENAI_API_KEY=<your-openai-api-key>
-FACEBOOK_TOKEN_DEBUG_URL=https://graph.facebook.com/debug_token
 
 # Redis config
-REDIS_HOST_1=<your-redis-host-1>
-REDIS_HOST_2=<your-redis-host-2>
-REDIS_HOST_3=<your-redis-host-3>
-REDIS_PORT=6379
+REDIS_HOST=<your-redis-host>
+REDIS_PORT=<your-redis-port>
 REDIS_USERNAME=<your-redis-username>
 REDIS_PASSWORD=<your-redis-password>
 REDIS_PREFIX=capstone
-LOCAL_REDIS_URL=redis://localhost:6379
 
 # MySQL config
 MYSQL_HOST=<your-mysql-host>
-MYSQL_PORT=6446
+MYSQL_PORT=<your-mysql-port>
 MYSQL_USERNAME=<your-mysql-username>
 MYSQL_PASSWORD=<your-mysql-password>
-MYSQL_DB=<your-database-name>
+MYSQL_DATABASE=<your-database-name>
 
-# Local dev config (optional)
-LOCAL_MYSQL_HOST=localhost
-LOCAL_MYSQL_PORT=3306
-LOCAL_MYSQL_USERNAME=root
-LOCAL_MYSQL_PASSWORD=<your-local-password>
-LOCAL_MYSQL_DB=coccoc
+# Qdrant config
+QDRANT_URL=<your-qdrant-url>
+QDRANT_API_KEY=<your-qdrant-api-key>
+QDRANT_ENABLE_BINARY_QUANTIZATION=true
+QDRANT_ENABLE_RESCORING=true
 ```
 
-### 4. Start the Backend Server
+Create another `.env` file inside the root directory (same level with `docker-compose.yml`) with the following structure:
+```
+
+```
+
+### 3. Start the Backend Server
+**3.1 Run with NodeJS**
 
 ```bash
-npm start
+cd server
+npm install
+npm run dev
 ```
 
-### 5. Load the Extension
+**3.2 Run with Docker**
+Run the server 
+```bash
+docker compose up
+```
+Run the monitoring stack 
+```bash
+docker compose -f docker-compose.monitoring.yml up
+```
+Run the server and monitoring at once
+```bash
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up
+```
 
-1. Open Chrome or Coc Coc, go to `chrome://extensions/`
+### 4. Load the Extension
+
+1. Open Chrome or Coc Coc or any Chromium browers, go to `chrome://extensions/`
 2. Enable **Developer Mode**
 3. Click **Load Unpacked**
 4. Select the `extension` folder from the repository
