@@ -11,16 +11,13 @@ export async function getFingerprint() {
 
 // Requests a new anon session from the server
 async function requestAnonSession(visitorId) {
-  const response = await sendRequest(
-    "https://dev-capstone-2025.coccoc.com/api/anon",
-    {
-      method: "POST",
-      headers: {
-        visitor: visitorId,
-      },
-      withSession: false,
-    }
-  );
+  const response = await sendRequest("http://localhost:3000/api/anon", {
+    method: "POST",
+    headers: {
+      visitor: visitorId,
+    },
+    withSession: false,
+  });
 
   return response.data;
 }

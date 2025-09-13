@@ -19,7 +19,7 @@ CocBot is a Chrome-compatible browser extension designed to help users read and 
 
 ---
 
-## 🛠️ Installation
+## 🛠️ Installation Guide
 
 ### 1. Clone the Repository
 
@@ -65,6 +65,7 @@ QDRANT_ENABLE_RESCORING=true
 ```
 
 Create another `.env` file inside the root directory (same level with `docker-compose.yml`) with the following structure:
+
 ```
 # App service
 APP_NAME=capstone-2025
@@ -75,6 +76,7 @@ NGINX_HOST_HTTP_PORT=8080
 ```
 
 ### 3. Start the Backend Server
+
 **3.1 Run with NodeJS**
 
 ```bash
@@ -85,17 +87,20 @@ npm run dev
 
 **3.2 Run with Docker**
 
-Run the server 
+Run the server
+
 ```bash
 docker compose up
 ```
 
-Run the monitoring stack 
+Run the monitoring stack
+
 ```bash
 docker compose -f docker-compose.monitoring.yml up
 ```
 
 Run the server and monitoring at once
+
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up
 ```
@@ -109,41 +114,61 @@ docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up
 
 ---
 
-## 🚀 Usage
+## 🚀 User Guide
 
-### 1. Launch the Sidebar
+### 1. Launch the extension
 
-- Click the CocBot icon in the browser toolbar. The sidebar appears on the right.
+Click the "Extensions" icon on the browser's toolbar
+Click on the Briefly extension logo to open the AI assistant.
 
-  <img src="assets/home-panel.png" alt="Home Panel" width="400"/>
+  <img src="assets/logo.png" alt="Logo" width="48"/>
 
-### 2. Summarize and Ask Questions
+The assistant will be a sidebar that looks like this
 
-- Type queries into the chat bar.
+  <img src="assets/sidebar.png" alt="Sidebar" width="350"/>
 
-  <img src="assets/chat-bar.png" alt="Chat Bar" width="400"/>
+### 2. Using the toolbar
 
-- Use Quick Action buttons to generate summaries, explanations or extract highlights.
+The toolbar is where you can access all features of Briefly.
 
-  <img src="assets/quick-actions.png" alt="Quick Actions" width="400"/>
+  <img src="assets/toolbar.png" alt="Chatbar" width="450"/>
 
-### 3. View Extracted Content
+From left to right, they are:
 
-- Click **View Page Content** to explore a structured version of the page (text, images, tables, etc.).
+- Start a new chat
+- View chat history
+- Take notes
+- Account & Settings
+- Close assistant
 
-  <img src="assets/view-content-panel.png" alt="View Content" width="400"/>
+We suggest you start with signing first as some features are limited and only available to authenticated users
 
-### 4. Add Personal Notes
+  <img src="assets/authentication.png" alt="Chatbar" width="450"/>
 
-- Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.
+### 3. Chatting & quick actions
 
-  <img src="assets/notes-panel.png" alt="Notes Panel" width="400"/>
+You can chat with the AI assistant using the chatbar
 
-### 5. Adjust AI Behavior
+  <img src="assets/chatbar.png" alt="Chatbar" width="350"/>
 
-- Visit **Configure** panel to choose Summary style and Max response length.
+Or you can click on the Quick Actions button to summarize the page,
+ask for key points, explaination or generate suggested question
 
-  <img src="assets/response-settings.png" alt="Response Settings UI" width="400"/>
+  <img src="assets/quick-actions.png" alt="Quick Action buttons" width="350"/>
+  
+  <img src="assets/suggested-questions.png" alt="Suggested questions" width="350"/>
+
+### 4. Access chat history
+
+To access chat history, click on the chat history icon on the toolbar at the
+
+### 5. Add Personal Notes
+
+Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.
+
+### 6. Adjust AI Behavior
+
+Visit **Configure** panel to choose Summary style and Max response length.
 
 ---
 

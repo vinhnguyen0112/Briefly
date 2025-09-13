@@ -521,13 +521,10 @@ async function showFeedbackModal(messageId) {
     });
 
     try {
-      const response = await sendRequest(
-        `https://dev-capstone-2025.coccoc.com/api/feedback`,
-        {
-          method: "POST",
-          body: { stars, comment, message_id: parseInt(messageId) },
-        }
-      );
+      const response = await sendRequest(`http://localhost:3000/api/feedback`, {
+        method: "POST",
+        body: { stars, comment, message_id: parseInt(messageId) },
+      });
 
       if (response.success) {
         updateToast(toastId, {
