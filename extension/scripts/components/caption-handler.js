@@ -1,8 +1,8 @@
 import { sendRequest } from "./state.js";
 import idbHandler from "./idb-handler.js";
 
-const SERVER_URL = "http://localhost:3000";
-// const SERVER_URL = "http://localhost:3000";
+const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
+// const SERVER_URL = "https://dev-capstone-2025.coccoc.com";
 const MAX_CAPTIONS_PER_PAGE = 5;
 
 /**

@@ -158,15 +158,17 @@ ask for key points, explaination or generate suggested question
   
   <img src="assets/suggested-questions.png" alt="Suggested questions" width="350"/>
 
-### 4. Access chat history
+### 4. Feedback
+
+### 5. Access chat history
 
 To access chat history, click on the chat history icon on the toolbar at the
 
-### 5. Add Personal Notes
+### 6. Add Personal Notes
 
 Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.
 
-### 6. Adjust AI Behavior
+### 7. Adjust AI Behavior
 
 Visit **Configure** panel to choose Summary style and Max response length.
 
