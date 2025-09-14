@@ -160,17 +160,30 @@ ask for key points, explaination or generate suggested question
 
 ### 4. Feedback
 
+Next to each response, there will be a small icon on the right, click it to send feedback for that specific response.
+
+  <img src="assets/feedback.png" alt="feedback" width="350"/>
+
+A feedback panel will appear, where you can rate and add comments.
+
+  <img src="assets/feedback-panel.png" alt="feedback panel" width="350"/>
+
 ### 5. Access chat history
 
 To access chat history, click on the chat history icon on the toolbar at the
+You can delete, rename, or click to continue any conversations.
+<img src="assets/History.png" alt="History tab" width="350"/>
 
 ### 6. Add Personal Notes
 
 Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.
+To make management easier, we split the notes into two lists — notes associated with the currently active URL and all notes
+<img src="assets/note.png" alt="Note tab" width="350"/>
 
 ### 7. Adjust AI Behavior
 
 Visit **Configure** panel to choose Summary style and Max response length.
+<img src="assets/setting.png" alt="Setting tab" width="350"/>
 
 ---
 
