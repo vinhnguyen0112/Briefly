@@ -171,19 +171,22 @@ A feedback panel will appear, where you can rate and add comments.
 ### 5. Access chat history
 
 To access chat history, click on the chat history icon on the toolbar at the.  
-You can delete, rename, or click to continue any conversations.  
-<img src="assets/History.png" alt="History tab" width="350"/>
+You can delete, rename, or click to continue any conversations.
+
+  <img src="assets/History.png" alt="History tab" width="350"/>
 
 ### 6. Add Personal Notes
 
 Use the **Notes** tab to jot down personal insights per page. Notes are saved and associated with the page URL.  
-To make management easier, we split the notes into two lists — notes associated with the currently active URL and all notes.  
-<img src="assets/note.png" alt="Note tab" width="350"/>
+To make management easier, we split the notes into two lists — notes associated with the currently active URL and all notes.
+
+  <img src="assets/note.png" alt="Note tab" width="350"/>
 
 ### 7. Adjust AI Behavior
 
-Visit **Configure** panel to choose Summary style and Max response length.  
-<img src="assets/setting.png" alt="Setting tab" width="350"/>
+Visit **Configure** panel to choose Summary style and Max response length.
+
+  <img src="assets/setting.png" alt="Setting tab" width="350"/>
 
 ---
 
