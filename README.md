@@ -14,7 +14,7 @@ CocBot is a Chrome-compatible browser extension designed to help users read and 
 - **Multilingual Support**: Works in English and Vietnamese.
 - **Personalization**: Configure response style, length, and language.
 - **Feedback**: Rate responses with stars and optional comments.
-- **Chat History:**: Browse and revisit your previous conversations
+- **Chat History**: Browse and revisit your previous conversations
 - **Offline Access**: Access previously opened chat even without Internet access
 
 ---
