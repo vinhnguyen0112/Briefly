@@ -9,12 +9,12 @@ CocBot is a Chrome-compatible browser extension designed to help users read and 
 - **On-page Assistant**: Chat with AI about the current page, ask context-aware questions, and receive summaries.
 - **Quick Actions**: Summarize, extract key points, and explain content instantly.
 - **Notes**: Add, edit, and manage notes per webpage.
-- **Understand PDF**:
-- **Understand onpage images**:
+- **Understand PDF**: Detect and extract text from embedded or linked PDFs.
+- **Understand onpage images**: Automatically generate captions for images on the page to enhance comprehension.
 - **Multilingual Support**: Works in English and Vietnamese.
 - **Personalization**: Configure response style, length, and language.
 - **Feedback**: Rate responses with stars and optional comments.
-- **Chat History:**:
+- **Chat History:**: Browse and revisit your previous conversations
 - **Offline Access**: Access previously opened chat even without Internet access
 
 ---
