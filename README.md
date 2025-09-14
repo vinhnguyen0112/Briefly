@@ -1,21 +1,21 @@
-# CocBot - AI Webpage Assistant
+# Briefly - AI Webpage Assistant
 
-CocBot is a Chrome-compatible browser extension designed to help users read and understand webpages using AI-powered summarization and contextual Q&A. Built for the Coc Coc browser and other Chromium-based platforms, CocBot integrates a sidebar assistant with multilingual support, image captioning, and note-taking capabilities.
+Briefly is a Chromium browser extension that helps you read and understand webpages with ease. Powered by AI, it provides on-page summarization and context-aware Q&A directly within the browser. With multilingual support, personalization options, offline access, and smart features like PDF and image understanding, Briefly brings you a convenient and efficient reading assistant right where you need it.
 
 ---
 
 ## ✨ Features
 
-- **On-page Assistant**: Chat with AI about the current page, ask context-aware questions, and receive summaries.
-- **Quick Actions**: Summarize, extract key points, and explain content instantly.
-- **Notes**: Add, edit, and manage notes per webpage.
-- **Understand PDF**: Detect and extract text from embedded or linked PDFs.
-- **Understand onpage images**: Automatically generate captions for images on the page to enhance comprehension.
-- **Multilingual Support**: Works in English and Vietnamese.
-- **Personalization**: Configure response style, length, and language.
-- **Feedback**: Rate responses with stars and optional comments.
-- **Chat History**: Browse and revisit your previous conversations
-- **Offline Access**: Access previously opened chat even without Internet access
+- **On-page Assistant**: Chat with Briefly directly on any webpage — ask context-aware questions and get concise summaries without switching tabs.
+- **Quick Actions**: Instantly summarize content, extract key points, or have complex text explained in simple terms.
+- **Notes**: Add, edit, and manage personal notes for each webpage to keep track of your insights.
+- **PDF Understanding**: Read and summarize PDFs right inside your browser, just like any other webpage.
+- **Image Understanding**: Automatically analyze on-page images to enhance comprehension.
+- **Multilingual Support**: Get responses in either English or Vietnamese, seamlessly switching between languages.
+- **Personalization**: Customize the response style, level of detail, and preferred language to match your needs.
+- **Feedback**: Rate AI responses with stars and comments to continuously improve your experience.
+- **Chat History**: Browse, revisit, and continue past conversations right from the sidebar.
+- **Offline Access**: Stay productive with access to your saved chats even when you’re offline.
 
 ---
 
