@@ -24,8 +24,8 @@ Briefly is a Chromium browser extension that helps you read and understand webpa
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/andrewcoldbrew/Briefly
-cd Briefly
+git clone https://git.itim.vn/coccoc/capstone-2025.git
+cd capstone-2025
 ```
 
 ### 2. Configure Environment
