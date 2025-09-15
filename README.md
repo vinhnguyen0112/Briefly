@@ -90,19 +90,19 @@ npm run dev
 Run the server
 
 ```bash
-docker compose up
+docker compose up --build
 ```
 
 Run the monitoring stack
 
 ```bash
-docker compose -f docker-compose.monitoring.yml up
+docker compose -f docker-compose.monitoring.yml up --build
 ```
 
 Run the server and monitoring at once
 
 ```bash
-docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up
+docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up --build
 ```
 
 ### 4. Load the Extension
