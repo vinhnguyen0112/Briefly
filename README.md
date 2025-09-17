@@ -170,7 +170,7 @@ A feedback panel will appear, where you can rate and add comments.
 
 ### 5. Access chat history
 
-To access chat history, click on the chat history icon on the toolbar at the.  
+To access chat history, click on the chat history icon on the toolbar.
 You can delete, rename, or click to continue any conversations.
 
   <img src="assets/History.png" alt="History tab" width="350"/>
